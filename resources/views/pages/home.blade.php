@@ -11,15 +11,15 @@
                             <span>Danh mục sản phẩm</span>
                         </div>
                         <ul>
-                            <li><a href="#">Sản phẩm chế biến</a></li>
-                            <li><a href="#">Nông sản</a></li>
-                            <li><a href="#">Gạo đặc sản</a></li>
-                            <li><a href="#">Thủ công mỹ nghệ</a></li>
-                            <li><a href="#">Sản phẩm làng nghề</a></li>
-                            <li><a href="#">Mỹ phẩm thiên nhiên</a></li>
-                            <li><a href="#">Ẩm thực Đất Sen Hồng</a></li>
-                           
+                            @foreach ($categories as $category)
+                                <li>
+                                    <a href="{{ route('categories.show', $category->id) }}">
+                                        {{ $category->name }}
+                                    </a>
+                                </li>
+                            @endforeach
                         </ul>
+
                     </div>
                 </div>
                 <div class="col-lg-9">
@@ -57,7 +57,7 @@
         </div>
     </section>
     <!-- Hero Section End -->
-    
+
     <!-- Categories Section Begin -->
     <section class="categories">
         <div class="container">
@@ -98,7 +98,7 @@
         </div>
     </section>
     <!-- Categories Section End -->
-    
+
     <!-- Featured Section Begin -->
     <section class="featured spad">
         <div class="container">
@@ -251,7 +251,7 @@
         </div>
     </section>
     <!-- Featured Section End -->
-    
+
     <!-- Banner Begin -->
     <div class="banner">
         <div class="container">
@@ -270,7 +270,7 @@
         </div>
     </div>
     <!-- Banner End -->
-    
+
     <!-- Latest Product Section Begin -->
     <section class="latest-product spad">
         <div class="container">
@@ -474,7 +474,7 @@
         </div>
     </section>
     <!-- Latest Product Section End -->
-    
+
     <!-- Blog Section Begin -->
     <section class="from-blog spad">
         <div class="container">

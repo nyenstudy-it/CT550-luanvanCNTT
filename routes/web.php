@@ -11,6 +11,8 @@ use Termwind\Components\Raw;
 // Trang chủ khách hàng
 Route::get('/', [HomeController::class, 'index'])->name('pages.home');
 Route::get('/trangchu', [HomeController::class, 'index'])->name('pages.trangchu');
+Route::get('/categories/{id}', [HomeController::class, 'showCategory'])->name('categories.show');
+
 
 //Đăng ký ADMIN/STAFF
 Route::middleware(['auth', 'role:admin'])
@@ -99,15 +101,16 @@ Route::middleware(['auth', 'role:admin,staff'])
         // Quản lý danh mục
         Route::get('/categories', [CategoryProductController::class, 'list'])
             ->name('admin.categories.list');
-
         Route::get('/categories/create', [CategoryProductController::class, 'create'])
             ->name('admin.categories.create');
-
-        Route::get('/categories/edit', [CategoryProductController::class, 'edit'])
+        Route::get('/categories/edit/{id}', [CategoryProductController::class, 'edit'])
             ->name('admin.categories.edit');
-
-        
-
-
+        Route::post('/categories/store', [CategoryProductController::class, 'store'])
+            ->name('admin.categories.store');
+        Route::post('/categories/update/{id}', [CategoryProductController::class, 'update'])
+            ->name('admin.categories.update');
+        Route::delete('/categories/destroy/{id}', [CategoryProductController::class, 'destroy'])
+            ->name('admin.categories.destroy');
+    
     });
 
