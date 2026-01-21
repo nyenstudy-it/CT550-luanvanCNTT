@@ -1,0 +1,66 @@
+@extends('admin.layouts.layout_admin')
+
+@section('content')
+    <div class="container-fluid pt-4 px-4">
+        <div class="bg-light rounded h-100 p-4">
+            <h6 class="mb-4">Chỉnh sửa nhà phân phối</h6>
+
+            @if ($errors->any())
+                <div class="alert alert-danger">
+                    <ul class="mb-0">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <form method="POST" action="{{ route('admin.suppliers.update', $supplier->id) }}">
+                @csrf
+
+                {{-- Tên --}}
+                <div class="row mb-3">
+                    <label class="col-sm-2 col-form-label">Tên nhà phân phối</label>
+                    <div class="col-sm-10">
+                        <input type="text" name="name" class="form-control" value="{{ old('name', $supplier->name) }}"
+                            required>
+                    </div>
+                </div>
+
+                {{-- SĐT --}}
+                <div class="row mb-3">
+                    <label class="col-sm-2 col-form-label">Số điện thoại</label>
+                    <div class="col-sm-10">
+                        <input type="text" name="phone" class="form-control" value="{{ old('phone', $supplier->phone) }}">
+                    </div>
+                </div>
+
+                {{-- Địa chỉ --}}
+                <div class="row mb-3">
+                    <label class="col-sm-2 col-form-label">Địa chỉ</label>
+                    <div class="col-sm-10">
+                        <input type="text" name="address" class="form-control"
+                            value="{{ old('address', $supplier->address) }}">
+                    </div>
+                </div>
+
+                {{-- Mô tả --}}
+                <div class="row mb-3">
+                    <label class="col-sm-2 col-form-label">Mô tả</label>
+                    <div class="col-sm-10">
+                        <textarea name="description" class="form-control"
+                            rows="3">{{ old('description', $supplier->description) }}</textarea>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    Cập nhật
+                </button>
+
+                <a href="{{ route('admin.suppliers.list') }}" class="btn btn-secondary">
+                    Quay lại
+                </a>
+            </form>
+        </div>
+    </div>
+@endsection

@@ -19,6 +19,7 @@
     <!-- Icon Font Stylesheet -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
 
     <!-- Libraries Stylesheet -->
     <link href="{{ asset('backend/lib/owlcarousel/assets/owl.carousel.min.css') }}" rel="stylesheet">
@@ -45,14 +46,16 @@
     @include('admin.layouts.sidebar')
 
     {{-- Content --}}
-    <div class="content">
+    <div class="content d-flex flex-column vh-100 overflow-auto">
 
         {{-- Navbar --}}
         @include('admin.layouts.navbar')
 
         {{-- Page Content --}}
+    <main class="flex-grow-1">
+        @include('admin.partials.alert')
         @yield('content')
-
+    </main>
         <!-- Footer Start -->
         @include('admin.layouts.footer')
 
@@ -64,6 +67,7 @@
     <!-- JavaScript Libraries -->
     <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
     <script src="{{ asset('backend/lib/chart/chart.min.js') }}"></script>
     <script src="{{ asset('backend/lib/easing/easing.min.js') }}"></script>
     <script src="{{ asset('backend/lib/waypoints/waypoints.min.js') }}"></script>
@@ -74,6 +78,12 @@
 
     <!-- Template Javascript -->
     <script src="{{ asset('backend/js/main.js') }}"></script>
+    <script>
+        setTimeout(() => {
+            document.querySelectorAll('.alert').forEach(el => el.remove());
+        }, 5000);
+    </script>
+
 </body>
 
 </html>
