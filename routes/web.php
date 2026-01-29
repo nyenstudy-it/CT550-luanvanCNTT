@@ -111,6 +111,20 @@ Route::middleware(['auth', 'role:admin,staff'])
             ->name('admin.categories.update');
         Route::delete('/categories/destroy/{id}', [CategoryProductController::class, 'destroy'])
             ->name('admin.categories.destroy');
+
+        // Quản lý sản phẩm
+        Route::get('/products', [\App\Http\Controllers\ProductController::class, 'list'])
+            ->name('admin.products.list');
+        Route::get('/products/create', [\App\Http\Controllers\ProductController::class, 'create'])
+            ->name('admin.products.create');    
+        Route::post('/products/store', [\App\Http\Controllers\ProductController::class, 'store'])
+            ->name('admin.products.store');
+        Route::get('/products/edit/{id}', [\App\Http\Controllers\ProductController::class, 'edit'])
+            ->name('admin.products.edit');
+        Route::post('/products/update/{id}', [\App\Http\Controllers\ProductController::class, 'update'])
+            ->name('admin.products.update');
+        Route::delete('/products/destroy/{id}', [\App\Http\Controllers\ProductController::class, 'destroy'])
+            ->name('admin.products.destroy');
     
     });
 

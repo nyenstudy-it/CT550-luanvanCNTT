@@ -84,8 +84,20 @@
                     </a>
                 </div>
             </div>
-        </div>
-
+            {{-- SẢN PHẨM (ADMIN + STAFF) --}}
+            <div class="nav-item dropdown">
+                <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fa fa-laptop me-2"></i>Sản phẩm
+                </a>
+                <div class="dropdown-menu bg-transparent border-0">
+                    <a href="{{ route('admin.products.list') }}" class="dropdown-item">
+                        Danh sách sản phẩm
+                    </a>
+                    <a href="{{ route('admin.products.create') }}" class="dropdown-item">
+                        Thêm sản phẩm
+                    </a>  
+                </div>
+            </div>
     </nav>
 </div>
 <!-- Sidebar End -->
