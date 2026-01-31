@@ -38,27 +38,30 @@
                 <div class="row mb-3">
                     <label class="col-sm-2 col-form-label">Chức vụ</label>
                     <div class="col-sm-10">
-                        <select name="position" class="form-select">
-                            <option value="sales" {{ $staff->position == 'sales' ? 'selected' : '' }}>Bán hàng</option>
-                            <option value="warehouse" {{ $staff->position == 'warehouse' ? 'selected' : '' }}>Kho</option>
-                            <option value="import" {{ $staff->position == 'import' ? 'selected' : '' }}>Nhập hàng</option>
-                            <option value="support" {{ $staff->position == 'support' ? 'selected' : '' }}>Hỗ trợ</option>
+                        <select name="position" class="form-select" required>
+                            <option value="">-- Chọn chức vụ --</option>
+                            <option value="cashier" {{ $staff->position === 'cashier' ? 'selected' : '' }}>Thu ngân</option>
+                            <option value="warehouse" {{ $staff->position === 'warehouse' ? 'selected' : '' }}>Nhân viên kho
+                            </option>
+                            <option value="delivery" {{ $staff->position === 'delivery' ? 'selected' : '' }}>Giao hàng
+                            </option>
                         </select>
                     </div>
                 </div>
 
-                {{-- Trạng thái --}}
+                {{-- Trạng thái làm việc --}}
                 <div class="row mb-3">
                     <label class="col-sm-2 col-form-label">Trạng thái</label>
                     <div class="col-sm-10">
-                        <select name="employment_status" class="form-select">
-                            <option value="probation" {{ $staff->employment_status == 'probation' ? 'selected' : '' }}>Thử
-                                việc
+                        <select name="employment_status" class="form-select" required>
+                            <option value="probation" {{ $staff->employment_status === 'probation' ? 'selected' : '' }}>
+                                Thử việc
                             </option>
-                            <option value="official" {{ $staff->employment_status == 'official' ? 'selected' : '' }}>Chính
-                                thức
+                            <option value="official" {{ $staff->employment_status === 'official' ? 'selected' : '' }}>
+                                Chính thức
                             </option>
-                            <option value="resigned" {{ $staff->employment_status == 'resigned' ? 'selected' : '' }}>Nghỉ việc
+                            <option value="resigned" {{ $staff->employment_status === 'resigned' ? 'selected' : '' }}>
+                                Nghỉ việc
                             </option>
                         </select>
                     </div>
@@ -72,8 +75,9 @@
                             value="{{ old('start_date', $staff->start_date) }}">
                     </div>
                 </div>
+
                 {{-- Avatar --}}
-                <div class="row mb-3">
+                <div class="row mb-4">
                     <label class="col-sm-2 col-form-label">Ảnh đại diện</label>
                     <div class="col-sm-10">
                         <div class="mb-2">
@@ -85,7 +89,6 @@
                         <input type="file" name="avatar" class="form-control">
                     </div>
                 </div>
-
 
                 <button class="btn btn-primary">Cập nhật</button>
                 <a href="{{ route('admin.staff.list') }}" class="btn btn-secondary">

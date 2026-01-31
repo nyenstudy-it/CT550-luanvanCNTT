@@ -14,6 +14,8 @@ class AttendanceController extends Controller
     // ADMIN xem toàn bộ phân ca
     public function index()
     {
+        abort_unless(Auth::user()->role === 'admin', 403);
+
         $attendances = Attendance::with('staff.user')
             ->orderBy('work_date', 'desc')
             ->get();
@@ -24,9 +26,11 @@ class AttendanceController extends Controller
     // STAFF xem ca của chính mình
     public function staffIndex()
     {
-        $staff = Auth::user()->staff;
+        $user = Auth::user();
 
-        $attendances = Attendance::where('staff_id', $staff->user_id)
+        abort_unless($user->staff, 403);
+
+        $attendances = Attendance::where('staff_id', $user->id)
             ->orderBy('work_date', 'desc')
             ->get();
 
@@ -36,28 +40,31 @@ class AttendanceController extends Controller
     // ADMIN tạo phân ca
     public function create()
     {
+        abort_unless(Auth::user()->role === 'admin', 403);
+
         $staffs = Staff::with('user')->get();
 
-        $attendances = Attendance::with('staff.user')->get();
-
-        $calendarEvents = $attendances->map(function ($a) {
-            return [
-                'title' => $a->staff->user->name . ' - ' . ($a->shift === 'morning' ? 'Ca sáng' : 'Ca chiều'),
-                'start' => $a->work_date . 'T' . $a->expected_check_in,
-                'end'   => $a->work_date . 'T' . $a->expected_check_out,
-                'color' => $a->shift === 'morning' ? '#0d6efd' : '#198754',
-            ];
-        })->values()->toArray();
+        $calendarEvents = Attendance::with('staff.user')->get()
+            ->map(function ($a) {
+                return [
+                    'title' => $a->staff->user->name . ' - ' .
+                        ($a->shift === 'morning' ? 'Ca sáng' : 'Ca chiều'),
+                    'start' => $a->work_date . 'T' . $a->expected_check_in,
+                    'end'   => $a->work_date . 'T' . $a->expected_check_out,
+                ];
+            });
 
         return view('admin.staff.attendance_create', compact(
             'staffs',
-            'attendances',
             'calendarEvents'
         ));
     }
 
+    // ADMIN lưu phân ca
     public function store(Request $request)
     {
+        abort_unless(Auth::user()->role === 'admin', 403);
+
         $request->validate([
             'staff_id' => 'required|exists:staffs,user_id',
             'work_date' => 'required|date',
@@ -65,11 +72,15 @@ class AttendanceController extends Controller
             'expected_check_in' => 'required',
             'expected_check_out' => 'required',
 
-            Rule::unique('attendances')->where(function ($query) use ($request) {
-                return $query->where('staff_id', $request->staff_id)
-                    ->where('work_date', $request->work_date)
-                    ->where('shift', $request->shift);
-            }),
+            'staff_id' => [
+                'required',
+                Rule::unique('attendances')->where(
+                    fn($q) =>
+                    $q->where('staff_id', $request->staff_id)
+                        ->where('work_date', $request->work_date)
+                        ->where('shift', $request->shift)
+                ),
+            ],
         ]);
 
         Attendance::create([
@@ -78,7 +89,6 @@ class AttendanceController extends Controller
             'shift' => $request->shift,
             'expected_check_in' => $request->expected_check_in,
             'expected_check_out' => $request->expected_check_out,
-            'status' => 'scheduled',
         ]);
 
         return redirect()
@@ -89,75 +99,64 @@ class AttendanceController extends Controller
     // STAFF check-in
     public function checkIn(Attendance $attendance)
     {
-        
-        $staff = Auth::user()->staff;
+        $user = Auth::user();
+        $staff = $user->staff;
         $now = Carbon::now('Asia/Ho_Chi_Minh');
 
-        // Nhân viên bị khóa
-        if (Auth::user()->status !== 'active') {
-            return back()->with('error', 'Tài khoản của bạn đã bị khóa');
+        abort_unless($staff, 403);
+
+        if ($user->status !== 'active') {
+            return back()->with('error', 'Tài khoản đã bị khóa');
         }
 
-        // Đúng ca của mình
-        if ($attendance->staff_id !== $staff->user_id) {
+        if ($attendance->staff_id !== $user->id) {
             abort(403);
         }
 
-        // Đúng ngày
         if ($attendance->work_date !== $now->toDateString()) {
             return back()->with('error', 'Chưa tới ngày làm việc');
         }
 
-        // Đã check-in rồi
         if ($attendance->check_in) {
-            return back()->with('error', 'Bạn đã check-in rồi');
+            return back()->with('error', 'Bạn đã check-in');
         }
 
-        $startTime = Carbon::parse(
+        $start = Carbon::parse(
             $attendance->work_date . ' ' . $attendance->expected_check_in,
             'Asia/Ho_Chi_Minh'
         );
 
-        $lateMinutes = $startTime->diffInMinutes(now(), false);
+        $lateMinutes = $start->diffInMinutes($now, false);
 
-        // Chưa tới giờ
         if ($lateMinutes < 0) {
-            return back()->with('error', 'Chưa tới giờ làm việc');
+            return back()->with('error', 'Chưa tới giờ làm');
         }
 
-        // Trễ quá 120 phút → cấm
         if ($lateMinutes > 120) {
-            return back()->with('error', 'Bạn đã đi trễ quá 2 tiếng, không thể chấm công');
+            return back()->with('error', 'Trễ quá 2 tiếng, không thể chấm công');
         }
-
-        // Trễ 15–120 phút → đánh dấu trễ
-        $isLate = $lateMinutes > 15;
 
         $attendance->update([
-            'check_in' => now(),
-            'is_late' => $isLate,
-            'status' => 'working',
+            'check_in' => $now,
+            'is_late' => $lateMinutes > 15,
         ]);
 
-        return back()->with(
-            'success',
-            $isLate
-                ? 'Check-in thành công (bạn đã đi trễ)'
-                : 'Check-in thành công'
-        );
+        return back()->with('success', 'Check-in thành công');
     }
 
     // STAFF check-out
     public function checkOut(Attendance $attendance)
     {
-        $staff = Auth::user()->staff;
+        $user = Auth::user();
+        $staff = $user->staff;
 
-        // Nhân viên bị khóa
-        if (Auth::user()->status !== 'active') {
-            return back()->with('error', 'Tài khoản của bạn đã bị khóa');
+        abort_unless($staff, 403);
+
+        if ($user->status !== 'active') {
+            return back()->with('error', 'Tài khoản đã bị khóa');
         }
 
-        if ($attendance->staff_id !== $staff->user_id) {
+        if ($attendance->staff_id !== $user->id) {
             abort(403);
         }
 
@@ -166,12 +165,11 @@ class AttendanceController extends Controller
         }
 
         if ($attendance->check_out) {
-            return back()->with('error', 'Bạn đã check-out rồi');
+            return back()->with('error', 'Bạn đã check-out');
         }
 
         $attendance->update([
             'check_out' => Carbon::now('Asia/Ho_Chi_Minh'),
-            'status' => 'completed',
         ]);
 
         return back()->with('success', 'Check-out thành công');

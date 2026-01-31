@@ -39,6 +39,16 @@ class User extends Authenticatable
         return $this->hasOne(Staff::class, 'user_id');
     }
 
+    public function isStaff()
+    {
+        return in_array($this->role, ['cashier', 'warehouse', 'delivery']);
+    }
+
+    public function isAdmin()
+    {
+        return $this->role === 'admin';
+    }
+
     public function customer(){
         return $this->hasOne(Customer::class, 'user_id');
     }

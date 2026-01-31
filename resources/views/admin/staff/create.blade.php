@@ -3,17 +3,17 @@
 @section('content')
     <div class="container-fluid pt-4 px-4">
         <div class="bg-light rounded h-100 p-4">
-            <h6 class="mb-4">Thêm Nhân Viên</h6>
+            <h6 class="mb-4">Thêm nhân viên</h6>
+
             <form method="POST" action="{{ route('admin.staff.store') }}" enctype="multipart/form-data">
                 @csrf
 
                 {{-- Tên --}}
                 <div class="row mb-3">
-                    <label  class="col-sm-2 col-form-label">Tên nhân viên</label>
+                    <label class="col-sm-2 col-form-label">Tên nhân viên</label>
                     <div class="col-sm-10">
                         <input type="text" name="name" class="form-control" required>
                     </div>
-
                 </div>
 
                 {{-- Email --}}
@@ -32,16 +32,7 @@
                     </div>
                 </div>
 
-
-                {{-- Xác nhận mật khẩu --}}
-                {{-- <div class="row mb-3">
-                    <label class="col-sm-2 col-form-label">Xác nhận mật khẩu</label>
-                    <div class="col-sm-10">
-                        <input type="password" name="password_confirmation" class="form-control" required>
-                    </div>
-                </div> --}}
-
-                {{-- Số điện thoại --}}
+                {{-- SĐT --}}
                 <div class="row mb-3">
                     <label class="col-sm-2 col-form-label">Số điện thoại</label>
                     <div class="col-sm-10">
@@ -71,24 +62,34 @@
                     <div class="col-sm-10">
                         <select name="position" class="form-select" required>
                             <option value="">-- Chọn chức vụ --</option>
-                            <option value="sales">Nhân viên bán hàng</option>
+                            <option value="cashier">Thu ngân</option>
                             <option value="warehouse">Nhân viên kho</option>
-                            <option value="import">Nhân viên nhập hàng</option>
-                            <option value="support">Nhân viên hỗ trợ</option>
-                            <option value="part_time">Nhân viên part-time</option>
+                            <option value="delivery">Nhân viên giao hàng</option>
                         </select>
                     </div>
                 </div>
 
-                {{-- Ngày bắt đầu làm --}}
+                {{-- Trạng thái làm việc --}}
                 <div class="row mb-3">
-                    <label class="col-sm-2 col-form-label">Ngày bắt đầu làm</label>
+                    <label class="col-sm-2 col-form-label">Trạng thái</label>
+                    <div class="col-sm-10">
+                        <select name="employment_status" class="form-select" required>
+                            <option value="probation">Thử việc</option>
+                            <option value="official">Chính thức</option>
+                            <option value="resigned">Nghỉ việc</option>
+                        </select>
+                    </div>
+                </div>
+
+                {{-- Ngày vào làm --}}
+                <div class="row mb-3">
+                    <label class="col-sm-2 col-form-label">Ngày vào làm</label>
                     <div class="col-sm-10">
                         <input type="date" name="start_date" class="form-control">
                     </div>
                 </div>
 
-                {{-- Thử việc --}}
+                {{-- Thời gian thử việc --}}
                 <div class="row mb-3">
                     <div class="col-sm-6">
                         <label class="form-label">Bắt đầu thử việc</label>
@@ -100,18 +101,6 @@
                     </div>
                 </div>
 
-                {{-- Trạng thái --}}
-                <div class="row mb-3">
-                    <label class="col-sm-2 col-form-label">Trạng thái làm việc</label>
-                    <div class="col-sm-10">
-                        <select name="employment_status" class="form-select" required>
-                            <option value="probation">Thử việc</option>
-                            <option value="official">Chính thức</option>
-                            <option value="resigned">Nghỉ việc</option>
-                        </select>
-                    </div>
-                </div>
-
                 {{-- Avatar --}}
                 <div class="row mb-3">
                     <label class="col-sm-2 col-form-label">Ảnh đại diện</label>
@@ -120,7 +109,9 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary">Thêm nhân viên</button>
+                <button type="submit" class="btn btn-primary">
+                    Thêm nhân viên
+                </button>
             </form>
         </div>
     </div>

@@ -3,22 +3,17 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Product;
-use App\Models\ProductVariant;  
+use App\Models\ProductVariant;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class ProductImage extends Model
+
+class Inventory extends Model
 {
     protected $fillable = [
-        'product_id',
         'product_variant_id',
-        'image_path',
-        'is_primary'
+        'quantity'
     ];
 
-    public function product()
-    {
-        return $this->belongsTo(Product::class);
-    }
     public function variant()
     {
         return $this->belongsTo(ProductVariant::class, 'product_variant_id');

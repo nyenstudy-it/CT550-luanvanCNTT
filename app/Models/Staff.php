@@ -31,6 +31,13 @@ class Staff extends Model
         'created_at',
     ];
 
+    protected $casts = [
+        'date_of_birth' => 'date',
+        'start_date' => 'date',
+        'probation_start' => 'date',
+        'probation_end' => 'date',
+    ];
+
     /**
      * Quan hệ: Staff thuộc về User
      */
@@ -42,11 +49,17 @@ class Staff extends Model
     /**
      * Quan hệ: Staff có nhiều ca làm
      */
-    // public function attendances()
-    // {
-    //     return $this->hasMany(Attendance::class, 'staff_id', 'user_id');
-    // }
+    public function attendances()
+     {
+        return $this->hasMany(Attendance::class, 'staff_id', 'user_id');
+     }
 
+
+    // helper
+    public function isResigned()
+    {
+        return $this->employment_status === 'resigned';
+    }
     // /**
     //  * Quan hệ: Staff có nhiều bảng lương
     //  */

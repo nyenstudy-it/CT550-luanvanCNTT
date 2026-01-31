@@ -15,31 +15,40 @@
                 <table class="table table-bordered table-hover align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th>STT</th>
-                            <th>Ảnh</th>
+                            <th width="50">STT</th>
+                            <th width="80">Ảnh</th>
                             <th>Tên sản phẩm</th>
                             <th>Danh mục</th>
                             <th>Nhà cung cấp</th>
                             <th>Giá</th>
                             <th>OCOP</th>
                             <th>Trạng thái</th>
-                            <th width="170">Thao tác</th>
+                            <th class="text-center">Số biến thể</th>
+                            <th width="180">Thao tác</th>
                         </tr>
                     </thead>
 
                     <tbody>
-                        @foreach ($products as $index => $product)
+                        @forelse ($products as $index => $product)
                             <tr>
                                 <td>{{ $index + 1 }}</td>
 
-                                <td>
-                                    @if ($product->image)
-                                        <img src="{{ asset('storage/' . $product->image) }}" width="60" height="60"
-                                            class="rounded object-fit-cover">
+                                {{-- ẢNH ĐẠI DIỆN SẢN PHẨM --}}
+                                @php
+                                    $primaryImage = optional(
+                                        $product->variants->firstWhere(fn($v) => $v->primaryImage)
+                                    )->primaryImage;
+                                @endphp
+
+                                <td class="text-center">
+                                    @if ($primaryImage)
+                                        <img src="{{ asset('storage/' . $primaryImage->image_path) }}" width="60" height="60"
+                                            class="rounded border" style="object-fit: cover">
                                     @else
-                                        —
+                                        <span class="text-muted">—</span>
                                     @endif
                                 </td>
+
 
                                 <td>{{ $product->name }}</td>
 
@@ -47,17 +56,38 @@
 
                                 <td>{{ $product->supplier->name ?? '—' }}</td>
 
-                                <td>{{ number_format($product->price, 0, ',', '.') }} đ</td>
+                                {{-- GIÁ (THEO VARIANT) --}}
+                                <td>
+                                    @if ($product->variants->count())
+                                        @php
+                                            $minPrice = $product->variants->min('price');
+                                            $maxPrice = $product->variants->max('price');
+                                        @endphp
 
+                                        @if ($minPrice == $maxPrice)
+                                            {{ number_format($minPrice, 0, ',', '.') }} đ
+                                        @else
+                                            {{ number_format($minPrice, 0, ',', '.') }}
+                                            –
+                                            {{ number_format($maxPrice, 0, ',', '.') }} đ
+                                        @endif
+                                    @else
+                                        <span class="text-muted">Chưa có giá</span>
+                                    @endif
+                                </td>
+
+                                {{-- OCOP --}}
                                 <td>
                                     @if ($product->ocop_star)
                                         {{ $product->ocop_star }} ⭐
-                                        ({{ $product->ocop_year }})
+                                        <br>
+                                        <small class="text-muted">({{ $product->ocop_year }})</small>
                                     @else
                                         —
                                     @endif
                                 </td>
 
+                                {{-- TRẠNG THÁI --}}
                                 <td>
                                     @if ($product->status === 'active')
                                         <span class="badge bg-success">Đang bán</span>
@@ -66,13 +96,25 @@
                                     @endif
                                 </td>
 
+                                {{-- SỐ BIẾN THỂ --}}
+                                <td class="text-center">
+                                    {{ $product->variants_count }}
+                                </td>
+
+                                {{-- THAO TÁC --}}
                                 <td>
-                                    <a href="{{ route('admin.products.edit', $product->id) }}" class="btn btn-sm btn-warning">
+                                    <a href="{{ route('admin.products.edit', $product->id) }}"
+                                        class="btn btn-sm btn-warning mb-1">
                                         Sửa
                                     </a>
 
+                                    <a href="{{ route('admin.products.variants.index', $product->id) }}"
+                                        class="btn btn-sm btn-info mb-1">
+                                        Biến thể
+                                    </a>
+
                                     <form action="{{ route('admin.products.destroy', $product->id) }}" method="POST"
-                                        class="d-inline" onsubmit="return confirm('Vô hiệu hóa sản phẩm này?')">
+                                        class="d-inline" onsubmit="return confirm('Vô hiệu hoá sản phẩm này?')">
                                         @csrf
                                         @method('DELETE')
                                         <button class="btn btn-sm btn-danger">
@@ -81,19 +123,17 @@
                                     </form>
                                 </td>
                             </tr>
-                        @endforeach
-
-                        @if ($products->isEmpty())
+                        @empty
                             <tr>
-                                <td colspan="9" class="text-center">
+                                <td colspan="10" class="text-center text-muted">
                                     Chưa có sản phẩm nào
                                 </td>
                             </tr>
-                        @endif
+                        @endforelse
                     </tbody>
+
                 </table>
             </div>
-
         </div>
     </div>
 @endsection

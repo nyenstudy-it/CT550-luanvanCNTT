@@ -17,9 +17,11 @@
                         <div class="row mb-3">
                             <label class="col-sm-2 col-form-label">Tên sản phẩm</label>
                             <div class="col-sm-10">
-                                <input type="text" name="name"
+                                <input type="text"
+                                       name="name"
                                        class="form-control"
-                                       value="{{ old('name') }}" required>
+                                       value="{{ old('name') }}"
+                                       required>
                             </div>
                         </div>
 
@@ -57,11 +59,14 @@
 
                         {{-- Giá --}}
                         <div class="row mb-3">
-                            <label class="col-sm-2 col-form-label">Giá</label>
+                            <label class="col-sm-2 col-form-label">Giá (VNĐ)</label>
                             <div class="col-sm-10">
-                                <input type="number" name="price"
+                                <input type="number"
+                                       name="price"
                                        class="form-control"
-                                       value="{{ old('price') }}" required>
+                                       value="{{ old('price') }}"
+                                       min="0"
+                                       required>
                             </div>
                         </div>
 
@@ -71,7 +76,7 @@
                             <div class="col-sm-10">
                                 <textarea name="description"
                                           class="form-control"
-                                          style="height: 120px;">{{ old('description') }}</textarea>
+                                          rows="4">{{ old('description') }}</textarea>
                             </div>
                         </div>
 
@@ -81,7 +86,7 @@
                             <div class="col-sm-10">
                                 <textarea name="usage_instructions"
                                           class="form-control"
-                                          style="height: 120px;">{{ old('usage_instructions') }}</textarea>
+                                          rows="4">{{ old('usage_instructions') }}</textarea>
                             </div>
                         </div>
 
@@ -89,34 +94,29 @@
                         <div class="row mb-3">
                             <label class="col-sm-2 col-form-label">Ngày SX</label>
                             <div class="col-sm-4">
-                                <input type="date" name="manufacture_date"
+                                <input type="date"
+                                       name="manufacture_date"
                                        class="form-control"
                                        value="{{ old('manufacture_date') }}">
                             </div>
 
                             <label class="col-sm-2 col-form-label">Hạn sử dụng</label>
                             <div class="col-sm-4">
-                                <input type="date" name="expiry_date"
+                                <input type="date"
+                                       name="expiry_date"
                                        class="form-control"
                                        value="{{ old('expiry_date') }}">
                             </div>
                         </div>
 
-                        {{-- Bảo quản + Khối lượng --}}
-                        <div class="row mb-3">
+                        {{-- Bảo quản --}}
+                        <div class="row mb-4">
                             <label class="col-sm-2 col-form-label">Bảo quản</label>
-                            <div class="col-sm-4">
-                                <input type="text" name="storage_instructions"
+                            <div class="col-sm-10">
+                                <input type="text"
+                                       name="storage_instructions"
                                        class="form-control"
                                        value="{{ old('storage_instructions') }}">
-                            </div>
-
-                            <label class="col-sm-2 col-form-label">Khối lượng</label>
-                            <div class="col-sm-4">
-                                <input type="text" name="weight_volume"
-                                       class="form-control"
-                                       value="{{ old('weight_volume') }}"
-                                       placeholder="VD: 500g / 1L">
                             </div>
                         </div>
 
@@ -124,15 +124,18 @@
                         <div class="row mb-3">
                             <label class="col-sm-2 col-form-label">OCOP ⭐</label>
                             <div class="col-sm-4">
-                                <input type="number" name="ocop_star"
-                                       min="0" max="5"
+                                <input type="number"
+                                       name="ocop_star"
+                                       min="0"
+                                       max="5"
                                        class="form-control"
                                        value="{{ old('ocop_star') }}">
                             </div>
 
                             <label class="col-sm-2 col-form-label">Năm OCOP</label>
                             <div class="col-sm-4">
-                                <input type="number" name="ocop_year"
+                                <input type="number"
+                                       name="ocop_year"
                                        class="form-control"
                                        value="{{ old('ocop_year') }}">
                             </div>
@@ -140,9 +143,20 @@
 
                         {{-- Hình ảnh --}}
                         <div class="row mb-3">
-                            <label class="col-sm-2 col-form-label">Hình ảnh</label>
+                            <label class="col-sm-2 col-form-label">
+                                Hình ảnh
+                                <br>
+                                <small class="text-muted">
+                                    Ảnh đầu tiên là ảnh đại diện
+                                </small>
+                            </label>
                             <div class="col-sm-10">
-                                <input type="file" name="images[]" class="form-control" multiple>
+                                <input type="file"
+                                       name="images[]"
+                                       class="form-control"
+                                       multiple
+                                       accept="image/*"
+                                       required>
                             </div>
                         </div>
 
