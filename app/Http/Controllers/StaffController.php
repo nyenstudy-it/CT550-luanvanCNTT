@@ -22,7 +22,7 @@ class StaffController extends Controller
             'address' => 'nullable|string',
 
             // POSITION = nghiệp vụ
-            'position' => 'required|in:cashier,warehouse,delivery',
+            'position' => 'required|in:cashier,warehouse,order_staff',
 
             'start_date' => 'nullable|date',
             'probation_start' => 'nullable|date',

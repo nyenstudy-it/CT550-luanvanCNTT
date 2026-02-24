@@ -60,7 +60,10 @@ class AdminController extends Controller
     // ADMIN ONLY
     public function staffManagement()
     {
-        $staffs = Staff::with('user')->get();
+        $staffs = Staff::with('user')
+            ->orderBy('user_id', 'asc')
+            ->paginate(10);
+
         return view('admin.staff.list', compact('staffs'));
     }
 
@@ -117,7 +120,7 @@ class AdminController extends Controller
                 'name'   => 'required|string|max:255',
                 'email'  => 'required|email|unique:users,email',
                 'password' => 'required|min:8',
-                'position' => 'required|in:cashier,warehouse,delivery',
+                'position' => 'required|in:cashier,warehouse,order_staff',
                 'employment_status' => 'required|in:probation,official,resigned',
             ]);
 
@@ -177,7 +180,7 @@ class AdminController extends Controller
         try {
             $request->validate([
                 'name'   => 'required|string|max:255',
-                'position' => 'required|in:cashier,warehouse,delivery',
+                'position' => 'required|in:cashier,warehouse,order_staff',
                 'employment_status' => 'required|in:probation,official,resigned',
             ]);
 

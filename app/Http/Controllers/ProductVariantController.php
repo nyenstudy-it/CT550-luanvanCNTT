@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ProductImage;
+use App\Models\Inventory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -83,6 +84,11 @@ class ProductVariantController extends Controller
             }
         }
 
+        Inventory::firstOrCreate(
+            ['product_variant_id' => $variant->id],
+            ['quantity' => 0]
+        );
+
         return redirect()
             ->route('admin.products.variants.index', $product->id)
             ->with('success', 'Đã thêm biến thể');
@@ -98,7 +104,9 @@ class ProductVariantController extends Controller
 
     public function update(Request $request, $id)
     {
-        $variant = ProductVariant::with('images')->findOrFail($id);
+        $variant = ProductVariant::with(['product', 'images'])->findOrFail($id);
+
+        //Update thông tin biến thể
         $variant->update([
             'color'            => $request->color,
             'size'             => $request->size,
@@ -108,14 +116,34 @@ class ProductVariantController extends Controller
             'manufacture_date' => $request->manufacture_date,
             'expired_at'       => $request->expired_at,
         ]);
+
+        //Sinh SKU CHỈ 1 LẦN (nếu chưa có)
+        if (empty($variant->sku)) {
+
+            $skuParts = array_filter([
+                $variant->color,
+                $variant->size,
+                $variant->volume,
+                $variant->weight,
+            ]);
+
+            $variant->sku = strtoupper(
+                Str::slug(
+                    $variant->product->name . '-' . implode('-', $skuParts),
+                    ''
+                ) . '-' . Str::random(4)
+            );
+
+            $variant->save();
+        }
+
+        // Đổi ảnh chính nếu có
         if ($request->filled('primary_image_id')) {
 
-            // reset toàn bộ ảnh về không primary
             $variant->images()->update([
                 'is_primary' => 0
             ]);
 
-            // set ảnh được chọn làm primary
             ProductImage::where('id', $request->primary_image_id)
                 ->where('product_variant_id', $variant->id)
                 ->update([
@@ -123,6 +151,7 @@ class ProductVariantController extends Controller
                 ]);
         }
 
+        // Thêm ảnh mới
         if ($request->hasFile('images')) {
 
             $hasPrimary = $variant->images()
@@ -134,7 +163,7 @@ class ProductVariantController extends Controller
                 $path = $file->store('variants', 'public');
 
                 ProductImage::create([
-                    'product_id'         => null,          // ✅ chỉ dành cho variant
+                    'product_id'         => null,
                     'product_variant_id' => $variant->id,
                     'image_path'         => $path,
                     'is_primary'         => !$hasPrimary && $index === 0,
@@ -146,6 +175,7 @@ class ProductVariantController extends Controller
             ->route('admin.products.variants.index', $variant->product_id)
             ->with('success', 'Cập nhật biến thể thành công');
     }
+    
     public function destroy($id)
     {
         $variant = ProductVariant::with('images')->findOrFail($id);

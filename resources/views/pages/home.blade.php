@@ -1,62 +1,8 @@
 @extends('layout')
+@section('hero')
+    @include('pages.components.hero', ['showBanner' => true])
+@endsection
 @section('content')
-    <!-- Hero Section Begin -->
-    <section class="hero">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-3">
-                    <div class="hero__categories">
-                        <div class="hero__categories__all">
-                            <i class="fa fa-bars"></i>
-                            <span>Danh mục sản phẩm</span>
-                        </div>
-                        <ul>
-                            @foreach ($categories as $category)
-                                <li>
-                                    <a href="{{ route('categories.show', $category->id) }}">
-                                        {{ $category->name }}
-                                    </a>
-                                </li>
-                            @endforeach
-                        </ul>
-
-                    </div>
-                </div>
-                <div class="col-lg-9">
-                    <div class="hero__search">
-                        <div class="hero__search__form">
-                            <form action="#">
-                                <div class="hero__search__categories">
-                                    Tất cả danh mục
-                                    <span class="arrow_carrot-down"></span>
-                                </div>
-                                <input type="text" placeholder="Bạn cần tìm gì?">
-                                <button type="submit" class="site-btn">TÌM</button>
-                            </form>
-                        </div>
-                        <div class="hero__search__phone">
-                            <div class="hero__search__phone__icon">
-                                <i class="fa fa-phone"></i>
-                            </div>
-                            <div class="hero__search__phone__text">
-                                <h5>+84 346 600 661</h5>
-                                <span>Hỗ trợ 24/7 </span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="hero__item set-bg" data-setbg="{{ asset('frontend/images/hero/banner.jpg') }}">
-                        <div class="hero__text">
-                            <span>FRUIT FRESH</span>
-                            <h2>Vegetable <br />100% Organic</h2>
-                            <p>Free Pickup and Delivery Available</p>
-                            <a href="#" class="primary-btn">SHOP NOW</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-    <!-- Hero Section End -->
 
     <!-- Categories Section Begin -->
     <section class="categories">
@@ -120,40 +66,43 @@
                     </div>
 
                     <div class="row featured__filter">
-                        @foreach ($products as $product)
-                            @php
+                    @foreach ($products as $product)
+                                    @php
     $variant = $product->variants->first();
-    $image = $variant?->primaryImage?->image_path;
-                            @endphp
+                                    @endphp
 
-                            <div class="col-lg-3 col-md-4 col-sm-6 mix cat-{{ $product->category_id }}">
-                                <div class="featured__item">
-                                    <div class="featured__item__pic set-bg"
-                                        data-setbg="{{ $image ? asset('storage/' . $image) : asset('images/no-image.png') }}">
-                                        <ul class="featured__item__pic__hover">
-                                            <li><a href="#"><i class="fa fa-heart"></i></a></li>
-                                            <li><a href="#"><i class="fa fa-retweet"></i></a></li>
-                                            <li>
-                                                <a href="{{ route('products.show', $product->id) }}">
-                                                    <i class="fa fa-shopping-cart"></i>
-                                                </a>
-                                            </li>
-                                        </ul>
-                                    </div>
+                                    <div class="col-lg-3 col-md-4 col-sm-6 mix cat-{{ $product->category_id }}">
+                                        <div class="featured__item">
 
-                                    <div class="featured__item__text">
-                                        <h6>
-                                            <a href="{{ route('products.show', $product->id) }}">
-                                                {{ $product->name }}
-                                            </a>
-                                        </h6>
-                                        <h5>
-                                            {{ number_format($variant?->price ?? 0) }} đ
-                                        </h5>
+                                            <div class="featured__item__pic set-bg" data-setbg="{{ $product->image
+        ? asset('storage/' . $product->image)
+        : asset('images/no-image.png') }}">
+
+                                                <ul class="featured__item__pic__hover">
+                                                    <li><a href="#"><i class="fa fa-heart"></i></a></li>
+                                                    <li><a href="#"><i class="fa fa-retweet"></i></a></li>
+                                                    <li>
+                                                        <a href="{{ route('products.show', $product->id) }}">
+                                                            <i class="fa fa-shopping-cart"></i>
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+
+                                            <div class="featured__item__text">
+                                                <h6>
+                                                    <a href="{{ route('products.show', $product->id) }}">
+                                                        {{ $product->name }}
+                                                    </a>
+                                                </h6>
+                                                <h5>
+                                                    {{ number_format($variant?->price ?? 0) }} đ
+                                                </h5>
+                                            </div>
+
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        @endforeach
+                    @endforeach
 
                     </div>
 
@@ -193,30 +142,34 @@
                         <div class="latest-product__slider owl-carousel">
                             @foreach ($latestProducts->chunk(3) as $chunk)
                                 <div class="latest-prdouct__slider__item">
+
                                     @foreach ($chunk as $product)
-                                        @php
-                                            $variant = $product->variants->first();
-                                            $image = $variant?->primaryImage?->image_path;
-                                        @endphp
+                                                            @php
+        $variant = $product->variants->first();
+                                                            @endphp
 
-                                        <a href="{{ route('products.show', $product->id) }}" class="latest-product__item">
+                                                            <a href="{{ route('products.show', $product->id) }}" class="latest-product__item">
 
-                                            <div class="latest-product__item__pic">
-                                                <img src="{{ $image ? asset('storage/' . $image) : asset('images/no-image.png') }}" width="60" height="60"
-                                                    class="rounded" style="object-fit: cover" alt="{{ $product->name }}">
-                                            </div>
+                                                                <div class="latest-product__item__pic">
+                                                                    <img src="{{ $product->image
+            ? asset('storage/' . $product->image)
+            : asset('images/no-image.png') }}" width="60" height="60" class="rounded"
+                                                                        style="object-fit: cover" alt="{{ $product->name }}">
+                                                                </div>
 
-                                            <div class="latest-product__item__text">
-                                                <h6>{{ $product->name }}</h6>
-                                                <span>
-                                                    {{ number_format($variant?->price ?? 0) }} đ
-                                                </span>
-                                            </div>
-                                        </a>
+                                                                <div class="latest-product__item__text">
+                                                                    <h6>{{ $product->name }}</h6>
+                                                                    <span>
+                                                                        {{ number_format($variant?->price ?? 0) }} đ
+                                                                    </span>
+                                                                </div>
 
+                                                            </a>
                                     @endforeach
+
                                 </div>
                             @endforeach
+
                         </div>
                     </div>
                 </div>

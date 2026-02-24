@@ -9,7 +9,6 @@ use App\Models\ProductVariant;
 use App\Models\ProductImage;
 use App\Models\Supplier;
 use App\Models\CategoryProduct;
-use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -52,7 +51,6 @@ class ProductController extends Controller
             'images.*'    => 'image|max:2048',
         ]);
 
-    
         $product = Product::create([
             'category_id' => $data['category_id'],
             'supplier_id' => $data['supplier_id'],
@@ -65,25 +63,26 @@ class ProductController extends Controller
             'ocop_year'   => $request->ocop_year,
         ]);
 
-        $sku = strtoupper(
-            Str::slug($product->name, '')
-                . '-' . Str::random(4)
-        );
-
         $variant = ProductVariant::create([
             'product_id' => $product->id,
             'price'      => $data['price'],
-            'sku'        => $sku,
         ]);
 
         foreach ($request->file('images') as $index => $file) {
 
             $path = $file->store('products', 'public');
 
+            if ($index === 0) {
+                $product->update([
+                    'image' => $path
+                ]);
+                continue;
+            }
+
             ProductImage::create([
                 'product_variant_id' => $variant->id,
                 'image_path' => $path,
-                'is_primary' => $index === 0,
+                'is_primary' => $index === 1, 
             ]);
         }
 
@@ -115,7 +114,7 @@ class ProductController extends Controller
             'ocop_star'   => 'nullable|integer|min:0|max:5',
             'ocop_year'   => 'nullable|integer|min:1900|max:' . date('Y'),
             'status'      => 'required|in:active,inactive',
-            'image'       => 'nullable|image|max:2048', 
+            'image'       => 'nullable|image|max:2048', // ảnh đại diện mới
         ]);
 
         // xử lý đổi ảnh đại diện
@@ -150,13 +149,28 @@ class ProductController extends Controller
     public function show($id)
     {
         $product = Product::with([
+            'images',
+            'variants.inventory',
             'variants.images',
-            'supplier',
+            'variants.primaryImage',
             'category',
-        ])
-            ->where('status', 'active')
-            ->findOrFail($id);
+            'supplier',
+        ])->findOrFail($id);
 
-        return view('pages.product.show', compact('product'));
+        return view('pages.product_detail', compact('product'));
+    }
+
+
+    public function showPopup($id)
+    {
+        $product = Product::with([
+            'category',
+            'supplier',
+            
+            'variants.images',
+            'variants.inventory'
+        ])->findOrFail($id);
+
+        return view('admin.products.popup', compact('product'));
     }
 }

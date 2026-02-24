@@ -9,10 +9,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Inventory extends Model
 {
-    protected $fillable = [
-        'product_variant_id',
-        'quantity'
-    ];
+    protected $primaryKey = 'product_variant_id';
+    public $incrementing = false;
+
+    protected $fillable = ['product_variant_id', 'quantity'];
 
     public function variant()
     {

@@ -7,8 +7,8 @@
         <div class="d-flex align-items-center ms-4 mb-4">
             <div class="position-relative">
                 <img src="{{ Auth::user()->avatar
-                    ? asset('storage/' . Auth::user()->avatar)
-                    : asset('img/user.jpg') }}" class="rounded-circle" style="width: 40px; height: 40px;" alt="Avatar">
+    ? asset('storage/' . Auth::user()->avatar)
+    : asset('img/user.jpg') }}" class="rounded-circle" style="width: 40px; height: 40px;" alt="Avatar">
 
                 <div
                     class="bg-success rounded-circle border border-2 border-white position-absolute end-0 bottom-0 p-1">
@@ -98,6 +98,26 @@
                     </a>  
                 </div>
             </div>
+
+            {{-- TỒN KHO --}}
+            {{-- KHO HÀNG (ADMIN + STAFF) --}}
+            <div class="nav-item dropdown">
+                <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fa fa-warehouse me-2"></i>Kho hàng
+                </a>
+                <div class="dropdown-menu bg-transparent border-0">
+                    <a href="{{ route('admin.imports.create') }}" class="dropdown-item">
+                        Nhập kho
+                    </a>
+                    <a href="{{ route('admin.imports.list') }}" class="dropdown-item">
+                        Phiếu nhập
+                    </a>
+                    <a href="{{ route('admin.inventories.list') }}" class="dropdown-item">
+                        Tồn kho
+                    </a>
+                </div>
+            </div>
+
     </nav>
 </div>
 <!-- Sidebar End -->

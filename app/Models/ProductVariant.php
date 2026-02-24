@@ -38,7 +38,7 @@ class ProductVariant extends Model
 
     public function images()
     {
-        return $this->hasMany(ProductImage::class);
+        return $this->hasMany(ProductImage::class, 'product_variant_id');
     }
 
     public function primaryImage()
@@ -46,4 +46,5 @@ class ProductVariant extends Model
         return $this->hasOne(ProductImage::class)
             ->where('is_primary', 1);
     }
+    
 }

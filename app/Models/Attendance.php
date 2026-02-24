@@ -5,7 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Staff;
-use Carbon\Carbon;  
+use App\Models\User;
+use Carbon\Carbon;
 
 class Attendance extends Model
 {
@@ -22,10 +23,22 @@ class Attendance extends Model
         'is_late',
     ];
 
+    protected $appends = [
+        'worked_minutes',
+        'salary_amount',
+        'is_early_leave',
+        'computed_status'
+    ];
+
     public function staff()
     {
         return $this->belongsTo(Staff::class, 'staff_id', 'user_id');
     }
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'staff_id');
+    }
+
 
     public function getStatusAttribute()
     {
@@ -49,7 +62,6 @@ class Attendance extends Model
         $now = Carbon::now('Asia/Ho_Chi_Minh');
 
         $start = Carbon::parse($this->work_date . ' ' . $this->expected_check_in);
-        $end   = Carbon::parse($this->work_date . ' ' . $this->expected_check_out);
 
         if ($this->check_in && $this->check_out) {
             return 'completed';
@@ -59,11 +71,73 @@ class Attendance extends Model
             return 'working';
         }
 
-        // quá giờ 2 tiếng mà chưa check-in
+        // quá 2 tiếng chưa check-in => vắng
         if (!$this->check_in && $now->gt($start->copy()->addHours(2))) {
             return 'absent';
         }
 
         return 'scheduled';
+    }
+
+    public function getWorkedMinutesAttribute()
+    {
+        if (!$this->check_in || !$this->check_out) {
+            return 0;
+        }
+
+        $shiftStart = Carbon::parse($this->work_date . ' ' . $this->expected_check_in);
+        $shiftEnd   = Carbon::parse($this->work_date . ' ' . $this->expected_check_out);
+
+        $checkIn  = Carbon::parse($this->check_in);
+        $checkOut = Carbon::parse($this->check_out);
+
+        // Nếu check-in sau khi ca kết thúc → 0 giờ
+        if ($checkIn->gte($shiftEnd)) {
+            return 0;
+        }
+
+        // ===== Clamp check-in =====
+        if ($checkIn->lte($shiftStart)) {
+            $effectiveStart = $shiftStart;
+        } else {
+            $lateMinutes = $shiftStart->diffInMinutes($checkIn);
+
+            // Trễ <= 15 phút vẫn tính full
+            $effectiveStart = $lateMinutes <= 15 ? $shiftStart : $checkIn;
+        }
+
+        // ===== Clamp check-out =====
+        if ($checkOut->gte($shiftEnd)) {
+            $effectiveEnd = $shiftEnd;
+        } else {
+            $effectiveEnd = $checkOut;
+        }
+
+        // Bảo vệ tuyệt đối không cho âm
+        if ($effectiveEnd->lessThanOrEqualTo($effectiveStart)) {
+            return 0;
+        }
+
+        return abs($effectiveEnd->diffInMinutes($effectiveStart));
+    }
+
+    public function getSalaryAmountAttribute()
+    {
+        $hourlyRate = 25000;
+
+        if ($this->worked_minutes <= 0) {
+            return 0;
+        }
+
+        return round(($this->worked_minutes / 60) * $hourlyRate);
+    }
+
+    public function getIsEarlyLeaveAttribute()
+    {
+        if (!$this->check_out) {
+            return false;
+        }
+
+        return $this->check_out < $this->expected_check_out;
     }
 }

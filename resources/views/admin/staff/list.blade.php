@@ -39,12 +39,15 @@
                                 @switch($staff->position)
                                     @case('cashier') Thu ngân @break
                                     @case('warehouse') Nhân viên kho @break
-                                    @case('delivery') Giao hàng @break
+                                    @case('order_staff') Nhân viên xử lý đơn hàng @break
                                     @default -
                                 @endswitch
                             </td>
 
-                            <td>{{ $staff->start_date ?? '-' }}</td>
+                            <td>
+    {{ $staff->start_date ? $staff->start_date->format('d/m/Y') : '-' }}
+</td>
+
 
                             <td>
                                 @if ($staff->employment_status === 'probation')

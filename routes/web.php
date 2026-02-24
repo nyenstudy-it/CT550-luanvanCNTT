@@ -7,7 +7,13 @@ use App\Http\Controllers\CategoryProductController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductImageController;
 use App\Http\Controllers\ProductVariantController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\ImportController;
+use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\StaffController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\SalaryController;
 use Illuminate\Support\Facades\Route;
 use Termwind\Components\Raw;
 
@@ -15,10 +21,27 @@ use Termwind\Components\Raw;
 Route::get('/', [HomeController::class, 'index'])->name('pages.home');
 Route::get('/trangchu', [HomeController::class, 'index'])->name('pages.trangchu');
 Route::get('/categories/{id}', [HomeController::class, 'showCategory'])->name('categories.show');
+Route::get('/products/{id}', [ProductController::class, 'show'])->name('products.show');
+Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
+Route::get('/cart', [CartController::class, 'list'])->name('cart.list');
+Route::post('/cart/update', [CartController::class, 'update'])->name('cart.update');
+Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
 
 
-Route::get('/products/{id}', [ProductController::class, 'show'])
-    ->name('products.show');
+Route::middleware('auth')->group(function () {
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
+    Route::post('/checkout/store', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::get('/my-orders', [CheckoutController::class, 'myOrders'])
+        ->name('orders.my');
+
+    Route::get('/my-orders/{id}', [CheckoutController::class, 'orderDetail'])
+        ->name('orders.detail');
+
+    Route::post('/my-orders/{id}/cancel', [CheckoutController::class, 'cancel'])
+        ->name('orders.cancel');
+});
+
+
 
 //Đăng ký ADMIN/STAFF
 Route::middleware(['auth', 'role:admin'])
@@ -60,6 +83,18 @@ Route::middleware(['auth', 'role:admin'])
             ->name('admin.staff.attendances.create');
         Route::post('/staff/attendances', [AttendanceController::class, 'store'])
             ->name('admin.staff.attendances.store');
+    Route::get('/staff/attendances/{attendance}/edit',[AttendanceController::class, 'edit']
+            )->name('admin.staff.attendances.edit');
+
+    Route::post('/staff/attendances/{attendance}',[AttendanceController::class, 'update']
+            )->name('admin.staff.attendances.update');
+    Route::delete('/staff/attendances/{attendance}',[AttendanceController::class, 'destroy']
+            )->name('admin.staff.attendances.destroy');
+
+    Route::get('/staff/salaries', [SalaryController::class, 'index'])
+            ->name('admin.staff.salaries');
+        Route::post('/staff/salaries/calculate', [SalaryController::class, 'calculate'])
+            ->name('admin.staff.salaries.calculate');
     });
 
 // ADMIN + STAFF
@@ -93,9 +128,15 @@ Route::middleware(['auth', 'role:admin,staff'])
         Route::post('/products/update/{id}', [ProductController::class, 'update'])->name('admin.products.update');
         Route::delete('/products/destroy/{id}', [ProductController::class, 'destroy'])->name('admin.products.destroy');
         Route::delete('/products/images/{id}', [ProductController::class, 'deleteImage'])->name('admin.products.images.delete');
+        Route::get(
+        '/products/{id}/popup',
+        [ProductController::class, 'showPopup']
+    )->name('admin.products.popup');
 
-        // Product Variants
-        Route::get('/products/{productId}/variants', [ProductVariantController::class, 'index'])
+
+
+    // Product Variants
+    Route::get('/products/{productId}/variants', [ProductVariantController::class, 'index'])
             ->name('admin.products.variants.index');
         Route::get('/products/{productId}/variants/create', [ProductVariantController::class, 'create'])
             ->name('admin.products.variants.create');
@@ -107,6 +148,18 @@ Route::middleware(['auth', 'role:admin,staff'])
             ->name('admin.products.variants.store');
         Route::delete('/products/variants/{id}/destroy', [ProductVariantController::class, 'destroy'])
             ->name('admin.products.variants.destroy');
+
+        // IMPORT 
+        Route::get('/imports', [ImportController::class, 'list'])->name('admin.imports.list');
+        Route::get('/imports/create', [ImportController::class, 'create'])->name('admin.imports.create');
+        Route::post('/imports/store', [ImportController::class, 'store'])->name('admin.imports.store'); 
+        Route::get('/imports/{id}', [ImportController::class, 'show'])->name('admin.imports.show');
+        Route::get('/imports/{id}/print', [ImportController::class, 'print'])->name('admin.imports.print');
+
+
+        // INVENTORY
+        Route::get('/inventories', [InventoryController::class, 'list'])->name('admin.inventories.list');
+
     });
 
 // STAFF ATTENDANCE

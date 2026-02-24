@@ -75,9 +75,11 @@
     <script src="{{ asset('backend/lib/tempusdominus/js/moment.min.js') }}"></script>
     <script src="{{ asset('backend/lib/tempusdominus/js/moment-timezone.min.js') }}"></script>
     <script src="{{ asset('backend/lib/tempusdominus/js/tempusdominus-bootstrap-4.min.js') }}"></script>
+    
 
     <!-- Template Javascript -->
     <script src="{{ asset('backend/js/main.js') }}"></script>
+    @stack('scripts')
     <script>
         setTimeout(() => {
             document.querySelectorAll('.alert').forEach(el => el.remove());
