@@ -40,7 +40,6 @@ class ProductVariantController extends Controller
             'images.*'         => 'nullable|image|max:2048',
         ]);
 
-        // Bắt buộc có ít nhất 1 thuộc tính
         if (
             empty($data['volume']) &&
             empty($data['weight']) &&
@@ -52,7 +51,6 @@ class ProductVariantController extends Controller
                 ->withInput();
         }
 
-        // Tạo SKU
         $skuParts = array_filter([
             $data['color']  ?? null,
             $data['size']   ?? null,
@@ -69,17 +67,16 @@ class ProductVariantController extends Controller
 
         $variant = ProductVariant::create($data);
 
-        // Lưu ảnh biến thể
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $index => $file) {
 
                 $path = $file->store('variants', 'public');
 
                 ProductImage::create([
-                    'product_id'         => null,          // ✅ NHẤT QUÁN
+                    'product_id'         => null,          
                     'product_variant_id' => $variant->id,
                     'image_path'         => $path,
-                    'is_primary'         => $index === 0,   // ảnh đầu là chính
+                    'is_primary'         => $index === 0,   
                 ]);
             }
         }
@@ -106,7 +103,6 @@ class ProductVariantController extends Controller
     {
         $variant = ProductVariant::with(['product', 'images'])->findOrFail($id);
 
-        //Update thông tin biến thể
         $variant->update([
             'color'            => $request->color,
             'size'             => $request->size,
@@ -117,7 +113,6 @@ class ProductVariantController extends Controller
             'expired_at'       => $request->expired_at,
         ]);
 
-        //Sinh SKU CHỈ 1 LẦN (nếu chưa có)
         if (empty($variant->sku)) {
 
             $skuParts = array_filter([
@@ -137,7 +132,6 @@ class ProductVariantController extends Controller
             $variant->save();
         }
 
-        // Đổi ảnh chính nếu có
         if ($request->filled('primary_image_id')) {
 
             $variant->images()->update([
@@ -151,7 +145,6 @@ class ProductVariantController extends Controller
                 ]);
         }
 
-        // Thêm ảnh mới
         if ($request->hasFile('images')) {
 
             $hasPrimary = $variant->images()

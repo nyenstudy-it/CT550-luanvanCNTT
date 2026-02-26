@@ -9,7 +9,6 @@
             <form action="{{ route('admin.imports.store') }}" method="POST">
                 @csrf
 
-                {{-- Nhà phân phối --}}
                 <div class="mb-3">
                     <label class="form-label">Nhà phân phối</label>
                     <select name="supplier_id" class="form-select" required>
@@ -21,8 +20,6 @@
                         @endforeach
                     </select>
                 </div>
-
-                {{-- Ngày nhập --}}
                 <div class="mb-3">
                     <label class="form-label">Ngày nhập</label>
                     <input type="date" name="import_date" class="form-control" required>
@@ -82,7 +79,6 @@
         </div>
     </div>
 
-    {{-- JS thêm dòng --}}
     <script>
         let index = 1;
 

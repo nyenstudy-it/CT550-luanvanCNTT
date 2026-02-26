@@ -15,7 +15,6 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class ImportController extends Controller
 {
-    // DANH SÁCH PHIẾU NHẬP
     public function list()
     {
         $imports = Import::with(['supplier', 'staff'])
@@ -25,7 +24,6 @@ class ImportController extends Controller
         return view('admin.imports.list', compact('imports'));
     }
 
-    // FORM TẠO PHIẾU NHẬP
     public function create()
     {
         return view('admin.imports.create', [
@@ -34,7 +32,6 @@ class ImportController extends Controller
         ]);
     }
 
-    // LƯU PHIẾU NHẬP + CỘNG KHO
     public function store(Request $request)
     {
         $request->validate([
@@ -47,13 +44,10 @@ class ImportController extends Controller
 
         DB::transaction(function () use ($request) {
 
-            // Lấy staff theo user đang đăng nhập
             $staff = Staff::where('user_id', Auth::id())->first();
             if (!$staff) {
                 abort(403, 'Tài khoản này không phải nhân viên');
             }
-
-            // Tạo phiếu nhập
             $import = Import::create([
                 'supplier_id' => $request->supplier_id,
                 'staff_id'    => $staff->user_id,
@@ -65,7 +59,6 @@ class ImportController extends Controller
 
             foreach ($request->items as $item) {
 
-                // Lưu chi tiết phiếu nhập
                 ImportItem::create([
                     'import_id' => $import->id,
                     'product_variant_id' => $item['product_variant_id'],
@@ -73,7 +66,6 @@ class ImportController extends Controller
                     'unit_price' => $item['unit_price'],
                 ]);
 
-                // Cộng tồn kho
                 $inventory = Inventory::firstOrCreate(
                     ['product_variant_id' => $item['product_variant_id']],
                     ['quantity' => 0]
@@ -84,7 +76,6 @@ class ImportController extends Controller
                 $total += $item['quantity'] * $item['unit_price'];
             }
 
-            // Cập nhật tổng tiền
             $import->update([
                 'total_amount' => $total
             ]);
@@ -95,7 +86,6 @@ class ImportController extends Controller
             ->with('success', 'Nhập kho thành công');
     }
 
-    // CHI TIẾT PHIẾU NHẬP
     public function show($id)
     {
         $import = Import::with([
@@ -107,7 +97,6 @@ class ImportController extends Controller
         return view('admin.imports.show', compact('import'));
     }
 
-    // IN / TẢI PDF PHIẾU NHẬP
     public function print($id)
     {
         $import = Import::with([

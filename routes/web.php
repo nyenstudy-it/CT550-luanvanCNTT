@@ -77,24 +77,44 @@ Route::middleware(['auth', 'role:admin'])
         Route::post('/staff/{id}/unlock', [AdminController::class, 'staffUnlock'])
             ->name('admin.staff.unlock');
 
-        Route::get('/staff/attendances', [AttendanceController::class, 'index'])
-            ->name('admin.staff.attendances');
-        Route::get('/staff/attendances/create', [AttendanceController::class, 'create'])
-            ->name('admin.staff.attendances.create');
-        Route::post('/staff/attendances', [AttendanceController::class, 'store'])
-            ->name('admin.staff.attendances.store');
-    Route::get('/staff/attendances/{attendance}/edit',[AttendanceController::class, 'edit']
-            )->name('admin.staff.attendances.edit');
+        Route::get('/attendances/pending',[AttendanceController::class, 'pending']
+            )->name('admin.attendances.pending');
 
-    Route::post('/staff/attendances/{attendance}',[AttendanceController::class, 'update']
-            )->name('admin.staff.attendances.update');
-    Route::delete('/staff/attendances/{attendance}',[AttendanceController::class, 'destroy']
-            )->name('admin.staff.attendances.destroy');
+        Route::post('/attendances/{attendance}/approve-late',[AttendanceController::class, 'approveLate']
+            )->name('admin.attendances.approveLate');
 
-    Route::get('/staff/salaries', [SalaryController::class, 'index'])
-            ->name('admin.staff.salaries');
-        Route::post('/staff/salaries/calculate', [SalaryController::class, 'calculate'])
-            ->name('admin.staff.salaries.calculate');
+        Route::post('/attendances/{attendance}/reject-late',[AttendanceController::class, 'rejectLate']
+            )->name('admin.attendances.rejectLate');
+
+        Route::post('/attendances/{attendance}/approve-early',[AttendanceController::class, 'approveEarly']
+            )->name('admin.attendances.approveEarly');
+
+        Route::post('/attendances/{attendance}/reject-early',[AttendanceController::class, 'rejectEarly']
+            )->name('admin.attendances.rejectEarly');
+
+        Route::get('/attendances', [AttendanceController::class, 'index'])
+            ->name('admin.attendances.index');
+
+        Route::get('/attendances/create', [AttendanceController::class, 'create'])
+            ->name('admin.attendances.create');
+
+        Route::post('/attendances', [AttendanceController::class, 'store'])
+            ->name('admin.attendances.store');
+
+        Route::get('/attendances/{attendance}/edit', [AttendanceController::class, 'edit'])
+            ->name('admin.attendances.edit');
+
+        Route::post('/attendances/{attendance}', [AttendanceController::class, 'update'])
+            ->name('admin.attendances.update');
+
+        Route::delete('/attendances/{attendance}', [AttendanceController::class, 'destroy'])
+            ->name('admin.attendances.destroy');
+
+        Route::get('/salaries',[SalaryController::class, 'index']
+            )->name('admin.salaries.index');
+
+        Route::get('/salaries/calculate/{staffId}/{month}/{year}',[SalaryController::class, 'calculateMonthly']
+            )->name('admin.salaries.calculate');
     });
 
 // ADMIN + STAFF
@@ -129,14 +149,14 @@ Route::middleware(['auth', 'role:admin,staff'])
         Route::delete('/products/destroy/{id}', [ProductController::class, 'destroy'])->name('admin.products.destroy');
         Route::delete('/products/images/{id}', [ProductController::class, 'deleteImage'])->name('admin.products.images.delete');
         Route::get(
-        '/products/{id}/popup',
-        [ProductController::class, 'showPopup']
-    )->name('admin.products.popup');
+            '/products/{id}/popup',
+            [ProductController::class, 'showPopup']
+        )->name('admin.products.popup');
 
 
 
-    // Product Variants
-    Route::get('/products/{productId}/variants', [ProductVariantController::class, 'index'])
+        // Product Variants
+        Route::get('/products/{productId}/variants', [ProductVariantController::class, 'index'])
             ->name('admin.products.variants.index');
         Route::get('/products/{productId}/variants/create', [ProductVariantController::class, 'create'])
             ->name('admin.products.variants.create');
@@ -152,14 +172,13 @@ Route::middleware(['auth', 'role:admin,staff'])
         // IMPORT 
         Route::get('/imports', [ImportController::class, 'list'])->name('admin.imports.list');
         Route::get('/imports/create', [ImportController::class, 'create'])->name('admin.imports.create');
-        Route::post('/imports/store', [ImportController::class, 'store'])->name('admin.imports.store'); 
+        Route::post('/imports/store', [ImportController::class, 'store'])->name('admin.imports.store');
         Route::get('/imports/{id}', [ImportController::class, 'show'])->name('admin.imports.show');
         Route::get('/imports/{id}/print', [ImportController::class, 'print'])->name('admin.imports.print');
 
 
         // INVENTORY
         Route::get('/inventories', [InventoryController::class, 'list'])->name('admin.inventories.list');
-
     });
 
 // STAFF ATTENDANCE
@@ -175,4 +194,10 @@ Route::middleware(['auth', 'role:staff'])
 
         Route::post('/attendances/{attendance}/check-out', [AttendanceController::class, 'checkOut'])
             ->name('staff.attendances.check_out');
+
+        Route::post('/attendances/{attendance}/late-reason',[AttendanceController::class, 'submitLateReason'])
+            ->name('staff.attendances.submitLateReason');
+
+        Route::post('/attendances/{attendance}/early-reason',[AttendanceController::class, 'submitEarlyReason'])
+            ->name('staff.attendances.submitEarlyReason');
     });

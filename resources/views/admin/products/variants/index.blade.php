@@ -30,17 +30,12 @@
                 <tbody>
                     @forelse ($product->variants as $index => $variant)
                                     <tr>
-                                        {{-- STT --}}
                                         <td class="text-center">
                                             {{ $index + 1 }}
                                         </td>
-
-                                        {{-- SKU --}}
                                         <td>
                                             <span class="fw-bold">{{ $variant->sku }}</span>
                                         </td>
-
-                                        {{-- Ảnh --}}
                                         <td class="text-center">
                                             @if ($variant->primaryImage)
                                                 <img src="{{ asset('storage/' . $variant->primaryImage->image_path) }}" width="60" height="60"
@@ -49,8 +44,6 @@
                                                 <span class="text-muted">—</span>
                                             @endif
                                         </td>
-
-                                        {{-- Thuộc tính biến thể --}}
                                         <td>
                                             @php
     $attrs = [];
@@ -74,27 +67,19 @@
                                                 <span class="text-muted">—</span>
                                             @endif
                                         </td>
-
-                                        {{-- Giá --}}
                                         <td class="text-end">
                                             {{ number_format($variant->price) }} đ
                                         </td>
-
-                                        {{-- NSX --}}
                                         <td class="text-center">
                                             {{ $variant->manufacture_date
         ? \Carbon\Carbon::parse($variant->manufacture_date)->format('d/m/Y')
         : '—' }}
                                         </td>
-
-                                        {{-- HSD --}}
                                         <td class="text-center">
                                             {{ $variant->expired_at
         ? \Carbon\Carbon::parse($variant->expired_at)->format('d/m/Y')
         : '—' }}
                                         </td>
-
-                                        {{-- Thao tác --}}
                                         <td class="text-center">
                                             <a href="{{ route('admin.products.variants.edit', $variant->id) }}" class="btn btn-sm btn-warning mb-1">
                                                 Sửa

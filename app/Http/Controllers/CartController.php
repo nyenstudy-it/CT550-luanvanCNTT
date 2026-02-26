@@ -9,9 +9,6 @@ use App\Models\ProductImage;
 
 class CartController extends Controller
 {
-    // ===============================
-    // DANH SÁCH GIỎ HÀNG
-    // ===============================
     public function list()
     {
         $cart = session()->get('cart', []);
@@ -24,9 +21,6 @@ class CartController extends Controller
         return view('pages.cart', compact('cart', 'total'));
     }
 
-    // ===============================
-    // THÊM VÀO GIỎ
-    // ===============================
     public function add(Request $request)
     {
         $request->validate([
@@ -51,12 +45,10 @@ class CartController extends Controller
             ? $cart[$variant->id]['quantity']
             : 0;
 
-        // 🔥 FIX QUAN TRỌNG
         if ($currentQty + $qtyRequest > $stock) {
             return back()->with('error', 'Số lượng vượt quá tồn kho');
         }
 
-        // Lấy ảnh chính
         $image = ProductImage::where('product_variant_id', $variant->id)
             ->orderByDesc('is_primary')
             ->first();
@@ -93,13 +85,10 @@ class CartController extends Controller
         return back()->with('success', 'Đã thêm vào giỏ hàng');
     }
 
-    // CẬP NHẬT SỐ LƯỢNG
-    // CẬP NHẬT SỐ LƯỢNG
     public function update(Request $request)
     {
         $cart = session()->get('cart', []);
 
-        // ===== CẬP NHẬT 1 SẢN PHẨM =====
         if ($request->has('variant_id')) {
 
             $variantId = $request->variant_id;
@@ -128,7 +117,6 @@ class CartController extends Controller
             }
         }
 
-        // ===== CẬP NHẬT NHIỀU SẢN PHẨM =====
         if ($request->has('quantities')) {
 
             foreach ($request->quantities as $variantId => $quantity) {
@@ -158,8 +146,6 @@ class CartController extends Controller
         return back()->with('success', 'Cập nhật giỏ hàng thành công');
     }
 
-
-    // XOÁ SẢN PHẨM
     public function remove(Request $request)
     {
         $cart = session()->get('cart', []);

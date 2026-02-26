@@ -43,10 +43,8 @@ class ProductController extends Controller
             'name'        => 'required|string|max:255',
             'status'      => 'required|in:active,inactive',
 
-            // variant mặc định
             'price'       => 'required|numeric|min:0',
 
-            // images
             'images'      => 'required|array|min:1',
             'images.*'    => 'image|max:2048',
         ]);
@@ -114,10 +112,9 @@ class ProductController extends Controller
             'ocop_star'   => 'nullable|integer|min:0|max:5',
             'ocop_year'   => 'nullable|integer|min:1900|max:' . date('Y'),
             'status'      => 'required|in:active,inactive',
-            'image'       => 'nullable|image|max:2048', // ảnh đại diện mới
+            'image'       => 'nullable|image|max:2048', 
         ]);
 
-        // xử lý đổi ảnh đại diện
         if ($request->hasFile('image')) {
 
             if ($product->image && Storage::disk('public')->exists($product->image)) {

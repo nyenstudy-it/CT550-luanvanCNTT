@@ -21,7 +21,6 @@ class StaffController extends Controller
             'date_of_birth' => 'nullable|date',
             'address' => 'nullable|string',
 
-            // POSITION = nghiệp vụ
             'position' => 'required|in:cashier,warehouse,order_staff',
 
             'start_date' => 'nullable|date',

@@ -10,6 +10,7 @@ class Salary extends Model
         'staff_id',
         'month',
         'year',
+        'total_minutes',
         'total_hours',
         'total_salary',
     ];

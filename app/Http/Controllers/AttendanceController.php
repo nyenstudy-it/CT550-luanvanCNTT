@@ -15,9 +15,9 @@ class AttendanceController extends Controller
     {
         abort_unless(Auth::user()->role === 'admin', 403);
 
-        $attendances = Attendance::with('user')
+        $attendances = Attendance::with('staff.user')
             ->orderBy('work_date', 'asc')
-            ->orderBy('shift', 'asc')
+            ->orderByRaw("FIELD(shift, 'morning', 'afternoon')")
             ->get();
 
         $calendarEvents = $attendances->map(function ($a) {
@@ -30,7 +30,6 @@ class AttendanceController extends Controller
                 'title' => $a->staff->user->name . ' - ' . $shiftLabel,
                 'start' => $a->work_date . 'T' . $a->expected_check_in,
                 'end'   => $a->work_date . 'T' . $a->expected_check_out,
-
                 'extendedProps' => [
                     'name' => $a->staff->user->name,
                     'date' => $a->work_date,
@@ -47,7 +46,7 @@ class AttendanceController extends Controller
             ];
         });
 
-        return view('admin.staff.attendances', compact(
+        return view('admin.attendances.index', compact(
             'attendances',
             'calendarEvents'
         ));
@@ -58,10 +57,18 @@ class AttendanceController extends Controller
         $user = Auth::user();
 
         $attendances = Attendance::where('staff_id', $user->id)
-            ->orderBy('work_date', 'desc')
-            ->get();
+            ->orderBy('work_date', 'asc')
+            ->orderByRaw("FIELD(shift, 'morning', 'afternoon')")
+            ->paginate(10);
 
-        return view('admin.staff.staff_attendances', compact('attendances'));
+        $totalWorkedMinutes = Attendance::where('staff_id', $user->id)
+            ->sum('worked_minutes');
+
+        $totalSalary = Attendance::where('staff_id', $user->id)
+            ->sum('salary_amount');
+
+
+        return view('admin.attendances.staff_attendances', compact('attendances', 'totalWorkedMinutes', 'totalSalary'));
     }
 
     public function create()
@@ -80,13 +87,13 @@ class AttendanceController extends Controller
                 ];
             });
 
-        return view('admin.staff.attendance_create', compact(
+        return view('admin.attendances.create
+        ', compact(
             'staffs',
             'calendarEvents'
         ));
     }
 
-    // ================= STORE =================
     public function store(Request $request)
     {
         abort_unless(Auth::user()->role === 'admin', 403);
@@ -117,11 +124,10 @@ class AttendanceController extends Controller
         ]));
 
         return redirect()
-            ->route('admin.staff.attendances')
+            ->route('admin.attendances.index')
             ->with('success', 'Phân ca làm việc thành công.');
     }
 
-    // ================= EDIT =================
     public function edit($id)
     {
         abort_unless(Auth::user()->role === 'admin', 403);
@@ -139,14 +145,13 @@ class AttendanceController extends Controller
                 ];
             });
 
-        return view('admin.staff.attendance_edit', compact(
+        return view('admin.attendances.edit', compact(
             'attendance',
             'staffs',
             'calendarEvents'
         ));
     }
 
-    // ================= UPDATE =================
     public function update(Request $request, $id)
     {
         abort_unless(Auth::user()->role === 'admin', 403);
@@ -169,11 +174,10 @@ class AttendanceController extends Controller
         ]));
 
         return redirect()
-            ->route('admin.staff.attendances')
+            ->route('admin.attendances.index')
             ->with('success', 'Cập nhật phân ca thành công!');
     }
 
-    // ================= DELETE =================
     public function destroy($id)
     {
         abort_unless(Auth::user()->role === 'admin', 403);
@@ -189,11 +193,10 @@ class AttendanceController extends Controller
         return back()->with('success', 'Xoá ca thành công!');
     }
 
-    // ================= CHECK IN =================
-    public function checkIn(Attendance $attendance)
+    public function checkIn(Request $request, Attendance $attendance)
     {
         $user = Auth::user();
-        $now = Carbon::now('Asia/Ho_Chi_Minh');
+        $now  = Carbon::now('Asia/Ho_Chi_Minh');
 
         if ($attendance->staff_id !== $user->id) {
             abort(403);
@@ -222,35 +225,278 @@ class AttendanceController extends Controller
             return back()->with('error', 'Trễ quá 2 tiếng');
         }
 
-        $attendance->update([
-            'check_in' => $now,
-            'is_late' => $lateMinutes > 15,
-        ]);
+        $isLate = $lateMinutes > 15;
+
+        $reasonType = $request->input('reason_type');
+        $reason     = $request->input('reason');
+
+        if ($isLate) {
+
+            if (!$reason || $reasonType !== 'late') {
+                return back()
+                    ->with('require_reason', true)
+                    ->with('attendance_id', $attendance->id)
+                    ->with('reason_type', 'late');
+            }
+
+            $attendance->update([
+                'check_in'     => $now,
+                'is_late'      => 1,
+                'late_reason'  => $reason,
+                'late_status'  => 'pending',
+            ]);
+        } else {
+
+            $attendance->update([
+                'check_in'    => $now,
+                'is_late'     => $lateMinutes > 0 ? 1 : 0,
+                'late_status' => null,
+            ]);
+        }
 
         return back()->with('success', 'Check-in thành công');
     }
 
-    // ================= CHECK OUT =================
-    public function checkOut(Attendance $attendance)
+    public function checkOut(Request $request, Attendance $attendance)
     {
-        $user = Auth::user();
+        $user  = Auth::user();
+        $staff = $user->staff;
 
-        if ($attendance->staff_id !== $user->id) {
+        if (!$staff || $attendance->staff_id !== $staff->user_id) {
             abort(403);
         }
 
         if (!$attendance->check_in) {
-            return back()->with('error', 'Bạn chưa check-in');
+            return back()->with('error', 'Chưa check-in.');
         }
 
         if ($attendance->check_out) {
-            return back()->with('error', 'Bạn đã check-out');
+            return back()->with('error', 'Đã check-out rồi.');
         }
 
-        $attendance->update([
-            'check_out' => Carbon::now('Asia/Ho_Chi_Minh'),
+        $now = Carbon::now('Asia/Ho_Chi_Minh');
+        $attendance->check_out = $now;
+
+        $checkIn  = Carbon::parse($attendance->check_in);
+        $checkOut = Carbon::parse($attendance->check_out);
+
+        $expectedStart = Carbon::parse($attendance->work_date . ' ' . $attendance->expected_check_in);
+        $expectedEnd   = Carbon::parse($attendance->work_date . ' ' . $attendance->expected_check_out);
+
+        if ($checkOut->lte($checkIn)) {
+            return back()->with('error', 'Thời gian không hợp lệ.');
+        }
+
+        if ($checkOut->lt($expectedEnd)) {
+
+            $attendance->is_early_leave = 1;
+
+            $reasonType = $request->input('reason_type');
+            $reason     = $request->input('reason');
+
+            if (!$reason || $reasonType !== 'early') {
+                return back()->with('error', 'Bạn đang check-out trước giờ. Vui lòng nhập lý do.');
+            }
+
+            $attendance->early_leave_reason = $reason;
+            $attendance->early_leave_status = 'pending';
+        } else {
+            $attendance->is_early_leave = 0;
+        }
+
+        $fullShiftMinutes = $expectedStart->diffInMinutes($expectedEnd);
+        $workedMinutes    = $fullShiftMinutes;
+
+        if ($attendance->is_late) {
+
+            $lateMinutes = $expectedStart->diffInMinutes($checkIn);
+
+            if ($attendance->late_status !== 'approved') {
+                $workedMinutes -= $lateMinutes;
+            }
+        }
+
+        if ($attendance->is_early_leave) {
+
+            $earlyMinutes = $checkOut->diffInMinutes($expectedEnd);
+
+            if ($attendance->early_leave_status !== 'approved') {
+                $workedMinutes -= $earlyMinutes;
+            }
+        }
+
+        if ($workedMinutes < 0) {
+            $workedMinutes = 0;
+        }
+
+        $hourlyRate = $staff->employment_status === 'official'
+            ? $staff->official_hourly_wage
+            : $staff->probation_hourly_wage;
+
+        $salary = ($workedMinutes / 60) * $hourlyRate;
+
+        $attendance->worked_minutes = $workedMinutes;
+        $attendance->salary_amount  = round($salary);
+        $attendance->is_completed   = 1;
+
+        $attendance->save();
+
+        return back()->with('success', 'Check-out thành công.');
+    }
+
+    public function pending()
+    {
+        abort_unless(Auth::user()->role === 'admin', 403);
+
+        $attendances = Attendance::with('staff')
+            ->where(function ($q) {
+                $q->where('late_status', 'pending')
+                    ->orWhere('early_leave_status', 'pending');
+            })
+            ->orderBy('work_date', 'desc')
+            ->get();
+
+        return view('admin.attendances.pending', compact('attendances'));
+    }
+
+    public function approveLate(Attendance $attendance)
+    {
+        abort_unless(Auth::user()->role === 'admin', 403);
+
+        if ($attendance->late_status !== 'pending') {
+            return back()->with('error', 'Không có yêu cầu duyệt.');
+        }
+
+        $attendance->late_status = 'approved';
+
+        $staff = $attendance->staff;
+
+        $hourlyRate = $staff->employment_status === 'official'
+            ? $staff->official_hourly_wage
+            : $staff->probation_hourly_wage;
+
+        $expectedMinutes = 180;
+
+        $attendance->worked_minutes = $expectedMinutes;
+        $attendance->salary_amount  = round(($expectedMinutes / 60) * $hourlyRate);
+
+        $attendance->save();
+
+        return back()->with('success', 'Đã duyệt đi trễ và tính đủ lương ca.');
+    }
+
+    public function rejectLate(Attendance $attendance)
+    {
+        abort_unless(Auth::user()->role === 'admin', 403);
+
+        if ($attendance->late_status !== 'pending') {
+            return back()->with('error', 'Không có yêu cầu duyệt.');
+        }
+
+        $attendance->late_status = 'rejected';
+
+        $attendance->save();
+
+        return back()->with('success', 'Đã từ chối đi trễ.');
+    }
+
+    public function approveEarly(Attendance $attendance)
+    {
+        abort_unless(Auth::user()->role === 'admin', 403);
+
+        if ($attendance->early_leave_status !== 'pending') {
+            return back()->with('error', 'Không có yêu cầu duyệt.');
+        }
+
+        $attendance->early_leave_status = 'approved';
+
+        $staff = $attendance->staff;
+
+        $hourlyRate = $staff->employment_status === 'official'
+            ? $staff->official_hourly_wage
+            : $staff->probation_hourly_wage;
+
+        $expectedMinutes = 180;
+
+        if (($attendance->worked_minutes ?? 0) < $expectedMinutes) {
+
+            $attendance->worked_minutes = $expectedMinutes;
+            $attendance->salary_amount  = round(($expectedMinutes / 60) * $hourlyRate);
+        }
+
+        $attendance->save();
+
+        return back()->with('success', 'Đã duyệt về sớm và tính đủ lương ca.');
+    }
+
+    public function rejectEarly(Attendance $attendance)
+    {
+        abort_unless(Auth::user()->role === 'admin', 403);
+
+        if ($attendance->early_leave_status !== 'pending') {
+            return back()->with('error', 'Không có yêu cầu duyệt.');
+        }
+
+        $attendance->early_leave_status = 'rejected';
+
+        $attendance->save();
+
+        return back()->with('success', 'Đã từ chối về sớm.');
+    }
+
+    public function submitLateReason(Request $request, Attendance $attendance)
+    {
+        $staff = Auth::user()->staff;
+
+        if (!$staff || $attendance->staff_id !== $staff->id) {
+            abort(403);
+        }
+
+        if (!$attendance->is_late) {
+            return back()->with('error', 'Ca này không có đi trễ.');
+        }
+
+        if (in_array($attendance->late_status, ['approved', 'rejected'])) {
+            return back()->with('error', 'Yêu cầu đã được xử lý.');
+        }
+
+        $request->validate([
+            'late_reason' => 'required|string|max:500'
         ]);
 
-        return back()->with('success', 'Check-out thành công');
+        $attendance->update([
+            'late_reason' => $request->late_reason,
+            'late_status' => 'pending'
+        ]);
+
+        return back()->with('success', 'Đã gửi lý do đi trễ.');
+    }
+
+    public function submitEarlyReason(Request $request, Attendance $attendance)
+    {
+        $staff = Auth::user()->staff;
+
+        if (!$staff || $attendance->staff_id !== $staff->id) {
+            abort(403);
+        }
+
+        if (!$attendance->is_early_leave) {
+            return back()->with('error', 'Ca này không có về sớm.');
+        }
+
+        if (in_array($attendance->early_leave_status, ['approved', 'rejected'])) {
+            return back()->with('error', 'Yêu cầu đã được xử lý.');
+        }
+
+        $request->validate([
+            'early_leave_reason' => 'required|string|max:500'
+        ]);
+
+        $attendance->update([
+            'early_leave_reason' => $request->early_leave_reason,
+            'early_leave_status' => 'pending'
+        ]);
+
+        return back()->with('success', 'Đã gửi lý do về sớm.');
     }
 }

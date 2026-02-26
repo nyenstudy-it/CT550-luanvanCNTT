@@ -41,7 +41,7 @@ class User extends Authenticatable
 
     public function isStaff()
     {
-        return in_array($this->role, ['cashier', 'warehouse', 'delivery']);
+        return $this->role === 'staff';
     }
 
     public function isAdmin()

@@ -32,9 +32,6 @@
                                 @forelse ($products as $index => $product)
                                                             <tr>
                                                                 <td>{{ $index + 1 }}</td>
-
-                                                                {{-- ẢNH ĐẠI DIỆN SẢN PHẨM --}}
-                                                        
                                                                 <td class="text-center">
                                                                     @if ($product->image)
                                                                         <img src="{{ asset('storage/' . $product->image) }}" width="60" height="60"
@@ -51,7 +48,6 @@
 
                                                                 <td>{{ $product->supplier->name ?? '—' }}</td>
 
-                                                                {{-- GIÁ (THEO VARIANT) --}}
                                                                 <td>
                                                                     @if ($product->variants->count())
                                                                         @php
@@ -82,7 +78,6 @@
                                                                     @endif
                                                                 </td> --}}
 
-                                                                {{-- TRẠNG THÁI --}}
                                                                 <td>
                                                                     @if ($product->status === 'active')
                                                                         <span class="badge bg-success">Đang bán</span>
@@ -91,12 +86,9 @@
                                                                     @endif
                                                                 </td>
 
-                                                                {{-- SỐ BIẾN THỂ --}}
                                                                 <td class="text-center">
                                                                     {{ $product->variants_count }}
                                                                 </td>
-
-                                                                {{-- THAO TÁC --}}
                                                                 <td>
                                                                     <a href="{{ route('admin.products.edit', $product->id) }}"
                                                                         class="btn btn-sm btn-warning mb-1">

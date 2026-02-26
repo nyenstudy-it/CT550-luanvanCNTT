@@ -1,4 +1,3 @@
-{{-- THÔNG TIN SẢN PHẨM --}}
 <div class="row mb-4">
 <div class="col-md-4">
     @if ($product->image)
@@ -60,7 +59,6 @@
 
 <hr>
 
-{{-- DANH SÁCH BIẾN THỂ --}}
 <h6 class="mb-3">Danh sách biến thể</h6>
 
 <table class="table table-bordered align-middle">

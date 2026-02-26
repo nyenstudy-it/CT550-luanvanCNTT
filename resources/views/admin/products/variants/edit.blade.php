@@ -7,8 +7,6 @@
         <h6 class="mb-4">
             Chỉnh sửa biến thể – {{ $product->name }}
         </h6>
-
-        {{-- Hiển thị lỗi --}}
         @if ($errors->any())
             <div class="alert alert-danger">
                 <ul class="mb-0">
@@ -24,30 +22,24 @@
               enctype="multipart/form-data">
             @csrf
 
-            {{-- THUỘC TÍNH BIẾN THỂ --}}
             <div class="row">
-                {{-- MÀU SẮC --}}
                 <div class="col-md-3 mb-3">
                     <label>Màu sắc</label>
                     <input type="text" name="color" class="form-control"
                            value="{{ old('color', $variant->color) }}">
                 </div>
 
-                {{-- KÍCH CỠ --}}
                 <div class="col-md-3 mb-3">
                     <label>Kích cỡ</label>
                     <input type="text" name="size" class="form-control"
                            value="{{ old('size', $variant->size) }}">
                 </div>
 
-                {{-- DUNG TÍCH --}}
                 <div class="col-md-3 mb-3">
                     <label>Dung tích</label>
                     <input type="text" name="volume" class="form-control"
                            value="{{ old('volume', $variant->volume) }}">
                 </div>
-
-                {{-- KHỐI LƯỢNG --}}
                 <div class="col-md-3 mb-3">
                     <label>Khối lượng</label>
                     <input type="text" name="weight" class="form-control"
@@ -58,8 +50,6 @@
             <small class="text-muted d-block mb-3">
                 * Phải nhập ít nhất 1 trong các thuộc tính trên để tạo biến thể
             </small>
-
-            {{-- GIÁ --}}
             <div class="mb-3">
                 <label>Giá <span class="text-danger">*</span></label>
                 <input type="number" name="price" class="form-control"
@@ -68,14 +58,11 @@
             </div>
 
             <div class="row">
-                {{-- NSX --}}
                 <div class="col-md-6 mb-3">
                     <label>Ngày sản xuất</label>
                     <input type="date" name="manufacture_date" class="form-control"
                            value="{{ old('manufacture_date', $variant->manufacture_date) }}">
                 </div>
-
-                {{-- HSD --}}
                 <div class="col-md-6 mb-3">
                     <label>Hạn sử dụng</label>
                     <input type="date" name="expired_at" class="form-control"
@@ -83,7 +70,6 @@
                 </div>
             </div>
 
-            {{-- THÊM ẢNH MỚI --}}
             <div class="mb-3">
                 <label>Ảnh biến thể (thêm mới)</label>
                 <input type="file" name="images[]" class="form-control"
@@ -93,7 +79,6 @@
                 </small>
             </div>
 
-            {{-- ẢNH HIỆN TẠI --}}
             @if ($variant->images->count())
                 <div class="mb-3">
                     <label class="fw-bold">Ảnh hiện tại (chọn ảnh đại diện)</label>

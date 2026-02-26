@@ -2,76 +2,70 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Attendance;
 use App\Models\Salary;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Attendance;
+use App\Models\Staff;
+use Carbon\Carbon;
 
 class SalaryController extends Controller
 {
-    // ADMIN xem bảng lương
-    public function index(Request $request)
+    public function index()
     {
-        abort_unless(Auth::user()->role === 'admin', 403);
+        $query = Salary::with('staff');
 
-        $month = $request->month ?? now()->month;
-        $year = $request->year ?? now()->year;
-
-        $salaries = Salary::with('staff.user')
-            ->where('month', $month)
-            ->where('year', $year)
-            ->get();
-
-        return view('admin.staff.salaries', compact(
-            'salaries',
-            'month',
-            'year'
-        ));
-    }
-
-    //  tính lương theo tháng
-    public function calculate(Request $request)
-    {
-        abort_unless(Auth::user()->role === 'admin', 403);
-
-        $request->validate([
-            'month' => 'required|integer|min:1|max:12',
-            'year' => 'required|integer|min:2020'
-        ]);
-
-        $month = $request->month;
-        $year = $request->year;
-
-        // Lấy tất cả ca đã hoàn thành trong tháng
-        $attendances = Attendance::whereMonth('work_date', $month)
-            ->whereYear('work_date', $year)
-            ->whereNotNull('check_in')
-            ->whereNotNull('check_out')
-            ->get()
-            ->groupBy('staff_id');
-
-        foreach ($attendances as $staffId => $records) {
-
-            $totalMinutes = $records->sum('worked_minutes');
-
-            // Lấy lương theo giờ (có thể lấy từ bảng staffs sau này)
-            $hourlyRate = 25000;
-
-            $totalSalary = ($totalMinutes / 60) * $hourlyRate;
-
-            Salary::updateOrCreate(
-                [
-                    'staff_id' => $staffId,
-                    'month' => $month,
-                    'year' => $year
-                ],
-                [
-                    'total_hours' => round($totalMinutes / 60, 2),
-                    'total_salary' => round($totalSalary, 0)
-                ]
-            );
+        if (request('month')) {
+            $query->where('month', request('month'));
         }
 
-        return back()->with('success', 'Tính lương thành công');
+        if (request('year')) {
+            $query->where('year', request('year'));
+        }
+
+        $salaries = $query->orderByDesc('year')
+            ->orderByDesc('month')
+            ->get();
+
+        return view('admin.salaries.index', compact('salaries'));
+    }
+
+
+    public function calculateMonthly($staffUserId, $month, $year)
+    {
+        $month = (int) $month;
+        $year  = (int) $year;
+
+        $staff = Staff::where('user_id', $staffUserId)->firstOrFail();
+
+        $attendances = Attendance::where('staff_id', $staff->id)
+            ->whereMonth('work_date', $month)
+            ->whereYear('work_date', $year)
+            ->where('is_completed', 1)
+            ->get();
+
+        if ($attendances->isEmpty()) {
+            return back()->with('error', 'Không có dữ liệu chấm công tháng này!');
+        }
+
+        $totalMinutes = (int) $attendances->sum('worked_minutes');
+        $totalSalary  = (float) $attendances->sum('salary_amount');
+
+        $totalHours = $totalMinutes > 0
+            ? round($totalMinutes / 60, 2)
+            : 0;
+
+        Salary::updateOrCreate(
+            [
+                'staff_id' => $staff->id,
+                'month'    => $month,
+                'year'     => $year,
+            ],
+            [
+                'total_minutes' => $totalMinutes,
+                'total_hours'   => $totalHours,
+                'total_salary'  => $totalSalary,
+            ]
+        );
+
+        return back()->with('success', "Đã tính lương tháng $month/$year thành công!");
     }
 }

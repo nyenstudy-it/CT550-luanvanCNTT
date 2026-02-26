@@ -44,8 +44,6 @@ class CheckoutController extends Controller
         try {
 
             $totalAmount = 0;
-
-            // 1️⃣ Kiểm tra tồn kho lần cuối
             foreach ($cart as $item) {
 
                 $inventory = Inventory::where(
@@ -63,14 +61,12 @@ class CheckoutController extends Controller
                 $totalAmount += $item['price'] * $item['quantity'];
             }
 
-            // 2️⃣ Tạo Order
             $order = Order::create([
                 'customer_id' => Auth::id(),
                 'total_amount' => $totalAmount,
                 'status' => 'pending'
             ]);
 
-            // 3️⃣ Tạo Order Items + Trừ tồn kho
             foreach ($cart as $item) {
 
                 OrderItem::create([
@@ -86,7 +82,6 @@ class CheckoutController extends Controller
                 )->decrement('quantity', $item['quantity']);
             }
 
-            // 4️⃣ Tạo Payment (mặc định COD)
             Payment::create([
                 'order_id' => $order->id,
                 'method' => 'COD',
@@ -94,8 +89,6 @@ class CheckoutController extends Controller
             ]);
 
             DB::commit();
-
-            // 5️⃣ Clear cart
             session()->forget('cart');
 
             return redirect()->route('orders.detail', $order->id)
@@ -138,13 +131,10 @@ class CheckoutController extends Controller
         DB::beginTransaction();
 
         try {
-
-            // Cập nhật trạng thái
             $order->update([
                 'status' => 'cancelled'
             ]);
 
-            // Hoàn lại tồn kho
             foreach ($order->items as $item) {
                 Inventory::where(
                     'product_variant_id',
@@ -152,7 +142,6 @@ class CheckoutController extends Controller
                 )->increment('quantity', $item->quantity);
             }
 
-            // Lưu lịch sử huỷ
             OrderCancellation::create([
                 'order_id' => $order->id,
                 'cancelled_by' => 'customer',

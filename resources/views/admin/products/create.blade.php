@@ -13,7 +13,6 @@
                           enctype="multipart/form-data">
                         @csrf
 
-                        {{-- Tên sản phẩm --}}
                         <div class="row mb-3">
                             <label class="col-sm-2 col-form-label">Tên sản phẩm</label>
                             <div class="col-sm-10">
@@ -25,7 +24,6 @@
                             </div>
                         </div>
 
-                        {{-- Danh mục --}}
                         <div class="row mb-3">
                             <label class="col-sm-2 col-form-label">Danh mục</label>
                             <div class="col-sm-10">
@@ -41,7 +39,6 @@
                             </div>
                         </div>
 
-                        {{-- Nhà cung cấp --}}
                         <div class="row mb-3">
                             <label class="col-sm-2 col-form-label">Nhà cung cấp</label>
                             <div class="col-sm-10">
@@ -57,7 +54,6 @@
                             </div>
                         </div>
 
-                        {{-- Giá --}}
                         <div class="row mb-3">
                             <label class="col-sm-2 col-form-label">Giá (VNĐ)</label>
                             <div class="col-sm-10">
@@ -70,7 +66,6 @@
                             </div>
                         </div>
 
-                        {{-- Mô tả --}}
                         <div class="row mb-3">
                             <label class="col-sm-2 col-form-label">Mô tả</label>
                             <div class="col-sm-10">
@@ -80,7 +75,6 @@
                             </div>
                         </div>
 
-                        {{-- Hướng dẫn sử dụng --}}
                         <div class="row mb-3">
                             <label class="col-sm-2 col-form-label">Hướng dẫn sử dụng</label>
                             <div class="col-sm-10">
@@ -90,7 +84,6 @@
                             </div>
                         </div>
 
-                        {{-- Ngày SX + HSD --}}
                         <div class="row mb-3">
                             <label class="col-sm-2 col-form-label">Ngày SX</label>
                             <div class="col-sm-4">
@@ -109,7 +102,6 @@
                             </div>
                         </div>
 
-                        {{-- Bảo quản --}}
                         <div class="row mb-4">
                             <label class="col-sm-2 col-form-label">Bảo quản</label>
                             <div class="col-sm-10">
@@ -120,7 +112,6 @@
                             </div>
                         </div>
 
-                        {{-- OCOP --}}
                         <div class="row mb-3">
                             <label class="col-sm-2 col-form-label">OCOP ⭐</label>
                             <div class="col-sm-4">
@@ -141,7 +132,6 @@
                             </div>
                         </div>
 
-                        {{-- Hình ảnh --}}
                         <div class="row mb-3">
                             <label class="col-sm-2 col-form-label">
                                 Hình ảnh
@@ -160,7 +150,6 @@
                             </div>
                         </div>
 
-                        {{-- Trạng thái --}}
                         <div class="row mb-4">
                             <label class="col-sm-2 col-form-label">Trạng thái</label>
                             <div class="col-sm-10">
@@ -171,7 +160,6 @@
                             </div>
                         </div>
 
-                        {{-- Nút --}}
                         <button type="submit" class="btn btn-primary">
                             Thêm sản phẩm
                         </button>

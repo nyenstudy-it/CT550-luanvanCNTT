@@ -3,14 +3,11 @@
 @section('content')
     <div class="container-fluid pt-4 px-4">
         <div class="bg-light rounded p-4">
-
-            {{-- HEADER --}}
             <div class="text-center mb-4">
                 <h4 class="mb-1 text-uppercase fw-bold">Phiếu nhập kho</h4>
                 <div class="text-muted">Mã phiếu: #{{ $import->id }}</div>
             </div>
 
-            {{-- THÔNG TIN PHIẾU --}}
             <div class="row mb-3">
                 <div class="col-md-6">
                     <p class="mb-1">
@@ -35,7 +32,6 @@
 
             <hr>
 
-            {{-- BẢNG CHI TIẾT --}}
             <div class="table-responsive">
                 <table class="table table-bordered align-middle">
                     <thead class="table-light">
@@ -86,7 +82,6 @@
                         @endforeach
                     </tbody>
 
-                    {{-- TỔNG CỘNG --}}
                     <tfoot>
                         <tr>
                             <td colspan="5" class="text-end fw-bold">
@@ -100,7 +95,6 @@
                 </table>
             </div>
 
-            {{-- CHỮ KÝ --}}
             <div class="row mt-5 text-center">
                 <div class="col-md-4">
                     <p class="fw-bold mb-5">Người lập phiếu</p>
@@ -116,7 +110,6 @@
                 </div>
             </div>
 
-            {{-- ACTION --}}
             <div class="mt-4">
                 <a href="{{ route('admin.imports.list') }}" class="btn btn-secondary btn-sm">
                     Quay lại danh sách

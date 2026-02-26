@@ -14,7 +14,7 @@
                       enctype="multipart/form-data">
                     @csrf
 
-                    {{-- TÊN SẢN PHẨM --}}
+
                     <div class="row mb-3">
                         <label class="col-sm-2 col-form-label">
                             Tên sản phẩm <span class="text-danger">*</span>
@@ -26,7 +26,6 @@
                         </div>
                     </div>
 
-                    {{-- DANH MỤC --}}
                     <div class="row mb-3">
                         <label class="col-sm-2 col-form-label">
                             Danh mục <span class="text-danger">*</span>
@@ -44,7 +43,6 @@
                         </div>
                     </div>
 
-                    {{-- NHÀ CUNG CẤP --}}
                     <div class="row mb-3">
                         <label class="col-sm-2 col-form-label">
                             Nhà cung cấp <span class="text-danger">*</span>
@@ -62,7 +60,6 @@
                         </div>
                     </div>
 
-                    {{-- ẢNH ĐẠI DIỆN --}}
                     <div class="row mb-3">
                         <label class="col-sm-2 col-form-label">Ảnh đại diện</label>
                         <div class="col-sm-10">
@@ -88,7 +85,6 @@
                         
                     </div>
 
-                    {{-- MÔ TẢ --}}
                     <div class="row mb-3">
                         <label class="col-sm-2 col-form-label">Mô tả</label>
                         <div class="col-sm-10">
@@ -98,7 +94,6 @@
                         </div>
                     </div>
 
-                    {{-- HƯỚNG DẪN SỬ DỤNG --}}
                     <div class="row mb-3">
                         <label class="col-sm-2 col-form-label">Hướng dẫn sử dụng</label>
                         <div class="col-sm-10">
@@ -108,7 +103,6 @@
                         </div>
                     </div>
 
-                    {{-- BẢO QUẢN --}}
                     <div class="row mb-3">
                         <label class="col-sm-2 col-form-label">Bảo quản</label>
                         <div class="col-sm-10">
@@ -118,7 +112,6 @@
                         </div>
                     </div>
 
-                    {{-- OCOP --}}
                     <div class="row mb-3">
                         <label class="col-sm-2 col-form-label">OCOP ⭐</label>
                         <div class="col-sm-4">
@@ -136,7 +129,6 @@
                         </div>
                     </div>
 
-                    {{-- TRẠNG THÁI --}}
                     <div class="row mb-4">
                         <label class="col-sm-2 col-form-label">Trạng thái</label>
                         <div class="col-sm-10">
@@ -153,7 +145,6 @@
                         </div>
                     </div>
 
-                    {{-- NÚT --}}
                     <button type="submit" class="btn btn-primary">
                         Cập nhật
                     </button>

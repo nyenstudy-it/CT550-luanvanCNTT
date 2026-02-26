@@ -1,17 +1,21 @@
 <!-- Sidebar Start -->
 <div class="sidebar pe-4 pb-3">
     <nav class="navbar bg-light navbar-light">
+
+        {{-- LOGO --}}
         <a href="{{ route('admin.dashboard') }}" class="navbar-brand mx-4 mb-3">
             <h3 class="text-primary">DASHBOARD</h3>
         </a>
+
+        {{-- USER INFO --}}
         <div class="d-flex align-items-center ms-4 mb-4">
             <div class="position-relative">
                 <img src="{{ Auth::user()->avatar
     ? asset('storage/' . Auth::user()->avatar)
     : asset('img/user.jpg') }}" class="rounded-circle" style="width: 40px; height: 40px;" alt="Avatar">
 
-                <div
-                    class="bg-success rounded-circle border border-2 border-white position-absolute end-0 bottom-0 p-1">
+                <div class="bg-success rounded-circle border border-2 border-white 
+                            position-absolute end-0 bottom-0 p-1">
                 </div>
             </div>
             <div class="ms-3">
@@ -20,15 +24,20 @@
                     <span class="text-muted">{{ Auth::user()->role }}</span>
                 </a>
             </div>
-
         </div>
+
         <div class="navbar-nav w-100">
-            <a href="{{ route('admin.dashboard') }}" class="nav-item nav-link active">
+
+            {{-- DASHBOARD --}}
+            <a href="{{ route('admin.dashboard') }}"
+                class="nav-item nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
                 <i class="fa fa-tachometer-alt me-2"></i>Dashboard
             </a>
 
-            {{-- MENU ADMIN --}}
+            {{-- ================= ADMIN MENU ================= --}}
             @if(Auth::user()->role === 'admin')
+
+                {{-- NHÂN VIÊN --}}
                 <div class="nav-item dropdown">
                     <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
                         <i class="fa fa-users me-2"></i>Nhân viên
@@ -40,25 +49,39 @@
                         <a href="{{ route('admin.staff.create') }}" class="dropdown-item">
                             Thêm nhân viên
                         </a>
-                        <a href="{{ route('admin.staff.attendances') }}" class="dropdown-item">
+                        <a href="{{ route('admin.attendances.index') }}" class="dropdown-item">
                             Phân ca
                         </a>
                     </div>
                 </div>
-            @endif
 
-            {{-- MENU STAFF --}}
-            @if(Auth::user()->role === 'staff')
-                <a href="{{ route('staff.staff_attendances') }}" class="nav-item nav-link">
-                    <i class="fa fa-clock me-2"></i>
-                    Chấm công
+                {{-- BẢNG LƯƠNG --}}
+                <a href="{{ route('admin.salaries.index') }}"
+                    class="nav-item nav-link {{ request()->routeIs('admin.salaries.*') ? 'active' : '' }}">
+                    <i class="fa fa-money-bill-wave me-2"></i>Bảng lương
                 </a>
+
             @endif
 
-            {{-- Nhà phân phối --}}
+            {{-- ================= STAFF MENU ================= --}}
+            @if(Auth::user()->role === 'staff')
+
+                <a href="{{ route('staff.staff_attendances') }}"
+                    class="nav-item nav-link {{ request()->routeIs('staff.staff_attendances') ? 'active' : '' }}">
+                    <i class="fa fa-clock me-2"></i>Chấm công
+                </a>
+
+                {{-- <a href="{{ route('staff.salary') }}"
+                    class="nav-item nav-link {{ request()->routeIs('staff.salary') ? 'active' : '' }}">
+                    <i class="fa fa-money-bill-wave me-2"></i>Lương của tôi
+                </a> --}}
+
+            @endif
+
+            {{-- ================= NHÀ PHÂN PHỐI ================= --}}
             <div class="nav-item dropdown">
                 <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-                    <i class="fa fa-laptop me-2"></i>Nhà phân phối
+                    <i class="fa fa-truck me-2"></i>Nhà phân phối
                 </a>
                 <div class="dropdown-menu bg-transparent border-0">
                     <a href="{{ route('admin.suppliers.list') }}" class="dropdown-item">
@@ -70,10 +93,10 @@
                 </div>
             </div>
 
-            {{-- DANH MỤC (ADMIN + STAFF) --}}
+            {{-- ================= DANH MỤC ================= --}}
             <div class="nav-item dropdown">
                 <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-                    <i class="fa fa-laptop me-2"></i>Danh mục
+                    <i class="fa fa-list me-2"></i>Danh mục
                 </a>
                 <div class="dropdown-menu bg-transparent border-0">
                     <a href="{{ route('admin.categories.list') }}" class="dropdown-item">
@@ -84,10 +107,11 @@
                     </a>
                 </div>
             </div>
-            {{-- SẢN PHẨM (ADMIN + STAFF) --}}
+
+            {{-- ================= SẢN PHẨM ================= --}}
             <div class="nav-item dropdown">
                 <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-                    <i class="fa fa-laptop me-2"></i>Sản phẩm
+                    <i class="fa fa-box me-2"></i>Sản phẩm
                 </a>
                 <div class="dropdown-menu bg-transparent border-0">
                     <a href="{{ route('admin.products.list') }}" class="dropdown-item">
@@ -95,12 +119,11 @@
                     </a>
                     <a href="{{ route('admin.products.create') }}" class="dropdown-item">
                         Thêm sản phẩm
-                    </a>  
+                    </a>
                 </div>
             </div>
 
-            {{-- TỒN KHO --}}
-            {{-- KHO HÀNG (ADMIN + STAFF) --}}
+            {{-- ================= KHO HÀNG ================= --}}
             <div class="nav-item dropdown">
                 <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
                     <i class="fa fa-warehouse me-2"></i>Kho hàng
@@ -118,6 +141,7 @@
                 </div>
             </div>
 
+        </div>
     </nav>
 </div>
 <!-- Sidebar End -->

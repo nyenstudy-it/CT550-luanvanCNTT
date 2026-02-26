@@ -4,8 +4,6 @@
     <div class="container-fluid pt-4 px-4">
         <div class="bg-light rounded h-100 p-4">
             <h6 class="mb-4">Thêm nhân viên</h6>
-
-            {{-- Hiển thị lỗi --}}
             @if ($errors->any())
                 <div class="alert alert-danger">
                     <ul class="mb-0">
@@ -18,56 +16,42 @@
 
             <form method="POST" action="{{ route('admin.staff.store') }}" enctype="multipart/form-data">
                 @csrf
-
-                {{-- Tên --}}
                 <div class="row mb-3">
                     <label class="col-sm-2 col-form-label">Tên nhân viên</label>
                     <div class="col-sm-10">
                         <input type="text" name="name" value="{{ old('name') }}" class="form-control" required>
                     </div>
                 </div>
-
-                {{-- Email --}}
                 <div class="row mb-3">
                     <label class="col-sm-2 col-form-label">Email</label>
                     <div class="col-sm-10">
                         <input type="email" name="email" value="{{ old('email') }}" class="form-control" required>
                     </div>
                 </div>
-
-                {{-- Mật khẩu --}}
                 <div class="row mb-3">
                     <label class="col-sm-2 col-form-label">Mật khẩu</label>
                     <div class="col-sm-10">
                         <input type="password" name="password" class="form-control" required>
                     </div>
                 </div>
-
-                {{-- SĐT --}}
                 <div class="row mb-3">
                     <label class="col-sm-2 col-form-label">Số điện thoại</label>
                     <div class="col-sm-10">
                         <input type="text" name="phone" value="{{ old('phone') }}" class="form-control">
                     </div>
                 </div>
-
-                {{-- Ngày sinh --}}
                 <div class="row mb-3">
                     <label class="col-sm-2 col-form-label">Ngày sinh</label>
                     <div class="col-sm-10">
                         <input type="date" name="date_of_birth" value="{{ old('date_of_birth') }}" class="form-control">
                     </div>
                 </div>
-
-                {{-- Địa chỉ --}}
                 <div class="row mb-3">
                     <label class="col-sm-2 col-form-label">Địa chỉ</label>
                     <div class="col-sm-10">
                         <input type="text" name="address" value="{{ old('address') }}" class="form-control">
                     </div>
                 </div>
-
-                {{-- Chức vụ --}}
                 <div class="row mb-3">
                     <label class="col-sm-2 col-form-label">Chức vụ</label>
                     <div class="col-sm-10">
@@ -85,8 +69,6 @@
                         </select>
                     </div>
                 </div>
-
-                {{-- Trạng thái làm việc --}}
                 <div class="row mb-3">
                     <label class="col-sm-2 col-form-label">Trạng thái</label>
                     <div class="col-sm-10">
@@ -103,16 +85,12 @@
                         </select>
                     </div>
                 </div>
-
-                {{-- Ngày vào làm --}}
                 <div class="row mb-3">
                     <label class="col-sm-2 col-form-label">Ngày vào làm</label>
                     <div class="col-sm-10">
                         <input type="date" name="start_date" value="{{ old('start_date') }}" class="form-control">
                     </div>
                 </div>
-
-                {{-- Thử việc --}}
                 <div class="row mb-3">
                     <div class="col-sm-6">
                         <label class="form-label">Bắt đầu thử việc</label>
@@ -123,8 +101,6 @@
                         <input type="date" name="probation_end" value="{{ old('probation_end') }}" class="form-control">
                     </div>
                 </div>
-
-                {{-- Avatar --}}
                 <div class="row mb-3">
                     <label class="col-sm-2 col-form-label">Ảnh đại diện</label>
                     <div class="col-sm-10">
