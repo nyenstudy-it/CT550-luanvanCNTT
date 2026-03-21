@@ -8,9 +8,9 @@
                         <a href="./index.html"><img src="{{ asset('frontend/images/logo.png') }}" alt=""></a>
                     </div>
                     <ul>
-                        <li>Địa chỉ: ấp Mỹ Hưng Hòa, xã Mỹ Thọ, Tỉnh Đồng Tháp</li>
+                        <li>Địa chỉ: Đại học Cần Thơ, đường 3/2, Phường Ninh Kiều, Cần Thơ</li>
                         <li>Số điện thoại: +84 346 600 661</li>
-                        <li>Email: senhongocop@gmail.com</li>
+                        <li>Email: senhongocopp@gmail.com</li>
                     </ul>
                 </div>
             </div>

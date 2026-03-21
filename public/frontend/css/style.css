@@ -4334,3 +4334,10 @@ box-shadow:0 5px 20px rgba(0,0,0,0.08);
             color: #7fad39;
             text-decoration: none;
         }
+
+		.header__top__right__language img {
+    width: 20px;     
+    height: auto;    
+    margin-right: 5px; 
+    vertical-align: middle;
+}

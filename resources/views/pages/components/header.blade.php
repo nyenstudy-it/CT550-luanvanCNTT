@@ -6,8 +6,8 @@
                 <div class="col-lg-6 col-md-6">
                     <div class="header__top__left">
                         <ul>
-                            <li><i class="fa fa-envelope"></i>senhongocop@gmail.com</li>
-                            <li>Giao hàng tận nơi miễn phí với đơn hàng chỉ từ 99k</li>
+                            <li><i class="fa fa-envelope"></i>senhongocopp@gmail.com</li>
+                            <li>Giao hàng tận nơi miễn phí với đơn hàng chỉ từ 199k</li>
                         </ul>
                     </div>
                 </div>
@@ -20,7 +20,7 @@
                             <a href="#"><i class="fa fa-pinterest-p"></i></a>
                         </div>
                         <div class="header__top__right__language">
-                            <img src="{{ asset('frontend/images/language.png') }}" alt="">
+                            <img src="{{ asset('frontend/images/language.jpg') }}" alt="">
                             <div>Tiếng Việt</div>
                             <span class="arrow_carrot-down"></span>
                             <ul>
@@ -58,7 +58,7 @@
                                             <li>
                                                 <form action="{{ route('logout') }}" method="POST">
                                                     @csrf
-                                                    <button type="submit" style="border:none;background:none;padding:0;">
+                                                    <button type="submit">
                                                         Đăng xuất
                                                     </button>
                                                 </form>
@@ -102,7 +102,7 @@
                             <a href="{{ route('products.index') }}">Sản phẩm</a>
                         </li>
                         <li><a href="{{route('blogs.index')}}">Tin tức</a></li>
-                        <li><a href="./contact.html">Liên hệ</a></li>
+                        <li><a href="{{ route('contact') }}">Liên hệ</a></li>
                     </ul>
                 </nav>
             </div>
