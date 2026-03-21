@@ -63,6 +63,19 @@
 
             @endif
 
+            {{-- KHÁCH HÀNG --}}
+            <div class="nav-item dropdown">
+                <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fa fa-user me-2"></i>Khách hàng
+                </a>
+                <div class="dropdown-menu bg-transparent border-0">
+                    <a href="{{ route('admin.customers.list') }}" class="dropdown-item">
+                        Danh sách khách hàng
+                    </a>
+                </div>
+            </div>
+
+
             {{-- ================= STAFF MENU ================= --}}
             @if(Auth::user()->role === 'staff')
 
@@ -140,6 +153,52 @@
                     </a>
                 </div>
             </div>
+
+
+            {{-- ================= ĐƠN HÀNG ================= --}}
+            <div class="nav-item dropdown">
+                <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fa fa-shopping-cart me-2"></i>Đơn hàng
+                </a>
+                <div class="dropdown-menu bg-transparent border-0">
+            
+                    <a href="{{ route('admin.orders') }}" class="dropdown-item">
+                        Danh sách đơn hàng
+                    </a>
+            
+                </div>
+            </div>
+
+            {{-- MÃ GIẢM GIÁ --}}
+            <div class="nav-item dropdown">
+                <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fa fa-ticket-alt me-2"></i>Mã giảm giá
+                </a>
+                <div class="dropdown-menu bg-transparent border-0">
+                    <a href="{{ route('admin.discounts.index') }}" class="dropdown-item">
+                        Danh sách mã giảm giá
+                    </a>
+                    <a href="{{ route('admin.discounts.create') }}" class="dropdown-item">
+                        Tạo mã mới
+                    </a>
+                </div>
+            </div>
+
+            {{-- ================= BLOG ================= --}}
+            <div class="nav-item dropdown">
+                <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fa fa-blog me-2"></i>Blog
+                </a>
+                <div class="dropdown-menu bg-transparent border-0">
+                    <a href="{{ route('admin.blogs.index') }}" class="dropdown-item">
+                        Danh sách blog
+                    </a>
+                    <a href="{{ route('admin.blogs.create') }}" class="dropdown-item">
+                        Thêm blog
+                    </a>
+                </div>
+            </div>
+
 
         </div>
     </nav>

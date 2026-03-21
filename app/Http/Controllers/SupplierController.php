@@ -7,11 +7,29 @@ use App\Models\Supplier;
 
 class SupplierController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $suppliers = Supplier::all();
+        $query = Supplier::query();
+
+        if ($request->name) {
+            $query->where('name', 'like', '%' . $request->name . '%');
+        }
+
+        if ($request->phone) {
+            $query->where('phone', 'like', '%' . $request->phone . '%');
+        }
+
+        if ($request->address) {
+            $query->where('address', 'like', '%' . $request->address . '%');
+        }
+
+        $suppliers = $query
+            ->orderBy('id', 'asc')
+            ->paginate(10);
+
         return view('admin.suppliers.list', compact('suppliers'));
     }
+
 
     public function create()
     {

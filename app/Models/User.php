@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
 {
@@ -50,6 +51,24 @@ class User extends Authenticatable
     }
 
     public function customer(){
-        return $this->hasOne(Customer::class, 'user_id');
+        return $this->hasOne(Customer::class, 'user_id')->withDefault();
+    }
+
+    public function isCustomer()
+    {
+        return $this->role === 'customer';
+    }
+    public function isActive()
+    {
+        return $this->status === 'active';
+    }
+    public function orders()
+    {
+        return $this->hasMany(\App\Models\Order::class, 'customer_id', 'id');
+    }
+
+    public function wishlists()
+    {
+        return $this->hasMany(Wishlist::class);
     }
 }

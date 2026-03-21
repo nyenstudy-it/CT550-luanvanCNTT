@@ -98,7 +98,16 @@
                                     <button type="button" class="variant-btn btn btn-outline-secondary btn-sm"
                                         data-id="{{ $variant->id }}" data-price="{{ $variant->price }}"
                                         data-stock="{{ $variant->inventory?->quantity ?? 0 }}">
-                                        {{ $variant->volume ?? $variant->size ?? $variant->sku }}
+                                        @php
+                                            $label = $variant->color
+                                                ?? $variant->volume
+                                                ?? $variant->weight
+                                                ?? $variant->size
+                                                ?? $variant->sku;
+                                        @endphp
+
+                                        {{ $label }}
+
                                     </button>
                                 @endforeach
                             </div>

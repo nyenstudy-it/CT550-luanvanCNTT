@@ -24,11 +24,30 @@
                     <div class="col-sm-10">
                         <select name="staff_id" class="form-select" required>
                             <option value="">-- Chọn nhân viên --</option>
-                            @foreach($staffs as $staff)
-                                <option value="{{ $staff->id }}" {{ old('staff_id') == $staff->id ? 'selected' : '' }}>
-                                    {{ $staff->name }}
-                                </option>
-                            @endforeach
+                        @php
+                            $position = [
+                                'cashier' => 'Thu ngân',
+                                'warehouse' => 'Nhân viên kho',
+                                'order_staff' => 'Nhân viên đơn hàng',
+                            ];
+
+                            $status = [
+                                'probation' => 'Thử việc',
+                                'official' => 'Chính thức',
+                                'resigned' => 'Đã nghỉ',
+                            ];
+                        @endphp
+
+                        @foreach($staffs as $staff)
+                            <option value="{{ $staff->user_id }}" {{ old('staff_id') == $staff->user_id ? 'selected' : '' }}>
+
+                                {{ $staff->user->name }}
+                                ({{ $position[$staff->position] ?? $staff->position }})
+                                - {{ $status[$staff->employment_status] ?? $staff->employment_status }}
+
+                            </option>
+                        @endforeach
+
                         </select>
                     </div>
                 </div>

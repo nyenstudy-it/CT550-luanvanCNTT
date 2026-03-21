@@ -53,223 +53,205 @@
                     <tbody>
                         @forelse($attendances as $index => $attendance)
 
-                                    @php
-        $shiftText = match ($attendance->shift) {
-            'morning' => 'Ca sáng',
-            'afternoon' => 'Ca chiều',
-            default => 'Không xác định',
-        };
+                                                            @php
+                            $shiftText = match ($attendance->shift) {
+                                'morning' => 'Ca sáng',
+                                'afternoon' => 'Ca chiều',
+                                default => 'Không xác định',
+                            };
 
-        $badgeMap = [
-            'scheduled' => ['label' => 'Đã phân ca', 'class' => 'bg-info'],
-            'working' => ['label' => 'Đang làm', 'class' => 'bg-warning'],
-            'completed' => ['label' => 'Đã hoàn thành', 'class' => 'bg-success'],
-            'absent' => ['label' => 'Vắng mặt', 'class' => 'bg-danger'],
-        ];
+                            $badgeMap = [
+                                'scheduled' => ['label' => 'Đã phân ca', 'class' => 'bg-info'],
+                                'working' => ['label' => 'Đang làm', 'class' => 'bg-warning'],
+                                'completed' => ['label' => 'Đã hoàn thành', 'class' => 'bg-success'],
+                                'absent' => ['label' => 'Vắng mặt', 'class' => 'bg-danger'],
+                            ];
 
-        $statusKey = $attendance->computed_status;
-        $status = $badgeMap[$statusKey] ?? ['label' => '--', 'class' => 'bg-secondary'];
+                            $statusKey = $attendance->computed_status;
+                            $status = $badgeMap[$statusKey] ?? ['label' => '--', 'class' => 'bg-secondary'];
 
-        $workedHours = $attendance->worked_minutes
-            ? round($attendance->worked_minutes / 60, 2)
-            : null;
-                                    @endphp
+                            $workedHours = $attendance->worked_minutes
+                                ? round($attendance->worked_minutes / 60, 2)
+                                : null;
+                                                            @endphp
 
-                                    <tr>
-                                        <td class="text-center fw-bold">
-                                            {{ $attendances->firstItem() + $index }}
-                                        </td>
+                                                            <tr>
+                                                                <td class="text-center fw-bold">
+                                                                    {{ $attendances->firstItem() + $index }}
+                                                                </td>
 
-                                        <td>
-                                            {{ \Carbon\Carbon::parse($attendance->work_date)->format('d/m/Y') }}
-                                        </td>
+                                                                <td>
+                                                                    {{ \Carbon\Carbon::parse($attendance->work_date)->format('d/m/Y') }}
+                                                                </td>
 
-                                        <td>{{ $shiftText }}</td>
+                                                                <td>{{ $shiftText }}</td>
 
-                                        <td>
-                                            {{ $attendance->check_in
-            ? \Carbon\Carbon::parse($attendance->check_in)->format('H:i')
-            : '--' }}
-                                        </td>
+                                                                <td>
+                                                                    {{ $attendance->check_in
+                                ? \Carbon\Carbon::parse($attendance->check_in)->format('H:i')
+                                : '--' }}
+                                                                </td>
 
-                                        <td>
-                                            {{ $attendance->check_out
-            ? \Carbon\Carbon::parse($attendance->check_out)->format('H:i')
-            : '--' }}
-                                        </td>
+                                                                <td>
+                                                                    {{ $attendance->check_out
+                                ? \Carbon\Carbon::parse($attendance->check_out)->format('H:i')
+                                : '--' }}
+                                                                </td>
 
-                                        <td>
-                                            <span class="badge {{ $status['class'] }}">
-                                                {{ $status['label'] }}
-                                            </span>
+                                                                <td>
+                                                                    <span class="badge {{ $status['class'] }}">
+                                                                        {{ $status['label'] }}
+                                                                    </span>
 
-                                            @if($attendance->is_late)
-                                                <span class="badge bg-danger mt-1">Đi trễ</span>
-                                            @endif
+                                                                    @if($attendance->is_late)
+                                                                        <span class="badge bg-danger mt-1">Đi trễ</span>
+                                                                    @endif
 
-                                            @if($attendance->is_early_leave)
-                                                <span class="badge bg-warning mt-1">Về sớm</span>
-                                            @endif
-                                        </td>
+                                                                    @if($attendance->is_early_leave)
+                                                                        <span class="badge bg-warning mt-1">Về sớm</span>
+                                                                    @endif
+                                                                </td>
 
-                                        <td>
-                                            @if(!$attendance->check_in)
-                                                <form method="POST" action="{{ route('staff.attendances.check_in', $attendance->id) }}">
-                                                    @csrf
-                                                    <button type="button" class="btn btn-success btn-sm"
-                                                        onclick="handleCheckin(
-                                                                                                                                                    '{{ $attendance->id }}',
-                                                                                                                                                    '{{ $attendance->work_date }}',
-                                                                                                                                                    '{{ $attendance->expected_check_in }}'
-                                                                                                                                                )">
-                                                        Check in
-                                                    </button>
+                                                                <td>
+                                                                    @if(!$attendance->check_in)
+                                                                        <form method="POST" action="{{ route('staff.attendances.check_in', $attendance->id) }}">
+                                                                            @csrf
+                                                                            <button type="button" class="btn btn-success btn-sm"
+                                                                                onclick="handleCheckin(
+                                                                                                                                                                            '{{ $attendance->id }}',
+                                                                                                                                                                            '{{ $attendance->work_date }}',
+                                                                                                                                                                            '{{ $attendance->expected_check_in }}'
+                                                                                                                                                                        )">
+                                                                                Check in
+                                                                            </button>
 
-                                                </form>
+                                                                        </form>
 
-                                            @elseif(!$attendance->check_out)
-                                                <form method="POST" action="{{ route('staff.attendances.check_out', $attendance->id) }}">
-                                                    @csrf
-                                                    <button type="button" class="btn btn-danger btn-sm" onclick="handleCheckout(
-                                                                                            '{{ $attendance->id }}',
-                                                                                            '{{ $attendance->work_date }}',
-                                                                                            '{{ $attendance->expected_check_out }}'
-                                                                                        )">
-                                                        Check out
-                                                    </button>
+                                                                    @elseif(!$attendance->check_out)
+                                                                        <form method="POST" action="{{ route('staff.attendances.check_out', $attendance->id) }}">
+                                                                            @csrf
+                                                                            <button type="button" class="btn btn-danger btn-sm" onclick="handleCheckout(
+                                                                                                                    '{{ $attendance->id }}',
+                                                                                                                    '{{ $attendance->work_date }}',
+                                                                                                                    '{{ $attendance->expected_check_out }}'
+                                                                                                                )">
+                                                                                Check out
+                                                                            </button>
 
-                                                </form>
-                                            @else
-                                                <span class="text-muted">Hoàn thành</span>
-                                            @endif
-                                        </td>
-                                        {{-- Chi tiết --}}
-                                        <td class="text-center">
-                                            @if($attendance->check_out)
-                                                <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal"
-                                                    data-bs-target="#detailModal{{ $attendance->id }}">
-                                                    Xem
-                                                </button>
-                                            @else
-                                                <span class="text-muted">--</span>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                    @if($attendance->check_out)
-                                            <div class="modal fade" id="detailModal{{ $attendance->id }}" tabindex="-1">
-                                                <div class="modal-dialog">
-                                                    <div class="modal-content">
+                                                                        </form>
+                                                                    @else
+                                                                        <span class="text-muted">Hoàn thành</span>
+                                                                    @endif
+                                                                </td>
+                                                                {{-- Chi tiết --}}
+                                                                <td class="text-center">
+                                                                    @if($attendance->check_out)
+                                                                        <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                                                            data-bs-target="#detailModal{{ $attendance->id }}">
+                                                                            Xem
+                                                                        </button>
+                                                                    @else
+                                                                        <span class="text-muted">--</span>
+                                                                    @endif
+                                                                </td>
+                                                            </tr>
+                                                            @if($attendance->check_out)
+                                                                                                <div class="modal fade" id="detailModal{{ $attendance->id }}" tabindex="-1">
+                                                                                                    <div class="modal-dialog">
+                                                                                                        <div class="modal-content">
 
-                                                        <div class="modal-header">
-                                                            <h5 class="modal-title">Chi tiết ca làm</h5>
-                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                        </div>
+                                                                                                            <div class="modal-header">
+                                                                                                                <h5 class="modal-title">Chi tiết ca làm</h5>
+                                                                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                                                                            </div>
 
-                                                        <div class="modal-body">
+                                                                                                            <div class="modal-body">
 
-                                                            <p>
-                                                                <strong>Ngày:</strong>
-                                                                {{ \Carbon\Carbon::parse($attendance->work_date)->format('d/m/Y') }}
-                                                            </p>
+                                                                                                                <p>
+                                                                                                                    <strong>Ngày:</strong>
+                                                                                                                    {{ \Carbon\Carbon::parse($attendance->work_date)->format('d/m/Y') }}
+                                                                                                                </p>
 
-                                                            <p><strong>Ca:</strong> {{ $shiftText }}</p>
+                                                                                                                <p><strong>Ca:</strong> {{ $shiftText }}</p>
 
-                                                            <hr>
+                                                                                                                <hr>
 
-                                                            <p>
-                                                                <strong>Giờ vào:</strong>
-                                                                {{ $attendance->check_in
-                ? \Carbon\Carbon::parse($attendance->check_in)->format('H:i')
-                : '--' }}
-                                                            </p>
+                                                                                                                <p>
+                                                                                                                    <strong>Giờ vào:</strong>
+                                                                                                                    {{ $attendance->check_in
+                                                                ? \Carbon\Carbon::parse($attendance->check_in)->format('H:i')
+                                                                : '--' }}
+                                                                                                                </p>
 
-                                                            <p>
-                                                                <strong>Giờ ra:</strong>
-                                                                {{ $attendance->check_out
-                ? \Carbon\Carbon::parse($attendance->check_out)->format('H:i')
-                : '--' }}
-                                                            </p>
+                                                                                                                <p>
+                                                                                                                    <strong>Giờ ra:</strong>
+                                                                                                                    {{ $attendance->check_out
+                                                                ? \Carbon\Carbon::parse($attendance->check_out)->format('H:i')
+                                                                : '--' }}
+                                                                                                                </p>
 
-                                                            <p>
-                                                                <strong>Tổng giờ làm:</strong>
-                                                                {{ $attendance->worked_minutes !== null
-                ? round($attendance->worked_minutes / 60, 2) . ' giờ'
-                : 'Chưa tính' }}
-                                                            </p>
+                                                                                                                <p>
+                                                                                                                    <strong>Tổng giờ làm:</strong>
+                                                                                                                    {{ $attendance->worked_minutes !== null
+                                                                ? round($attendance->worked_minutes / 60, 2) . ' giờ'
+                                                                : 'Chưa tính' }}
+                                                                                                                </p>
 
-                                                            <p>
-                                                                <strong>Lương ca:</strong>
-                                                                {{ $attendance->salary_amount !== null
-                ? number_format($attendance->salary_amount) . 'đ'
-                : 'Chưa tính' }}
-                                                            </p>
+                                                                                                                <p>
+                                                                                                                    <strong>Lương ca:</strong>
+                                                                                                                    @if($attendance->worked_minutes)
+                                                                                                                        {{ number_format($attendance->worked_minutes * $hourlyRate / 60, 0, '.', ',') . 'đ' }}
+                                                                                                                    @else
+                                                                                                                        Chưa tính
+                                                                                                                    @endif
+                                                                                                                </p>
+                                                                                                                <hr>
 
-                                                            <hr>
+                                                                                                                @if($attendance->is_late)
+                                                                                                                    <p class="text-danger">
+                                                                                                                        <strong>Đi trễ:</strong> Có
+                                                                                                                    </p>
 
-                                                            @if($attendance->is_late)
-                                                                <p class="text-danger">
-                                                                    <strong>Đi trễ:</strong> Có
-                                                                </p>
+                                                                                                                @endif
 
-                                                                @if($attendance->late_reason)
-                                                                    <p>
-                                                                        <strong>Lý do đi trễ:</strong>
-                                                                        {{ $attendance->late_reason }}
-                                                                    </p>
-                                                                @endif
+                                                                                                                @if($attendance->is_early_leave)
+                                                                                                                    <p class="text-warning">
+                                                                                                                        <strong>Về sớm:</strong> Có
+                                                                                                                    </p>
 
-                                                                @if($attendance->late_status)
-                                                                    <p>
-                                                                        <strong>Trạng thái duyệt:</strong>
-                                                                        @if($attendance->late_status === 'pending')
-                                                                            <span class="badge bg-warning">Chờ duyệt</span>
-                                                                        @elseif($attendance->late_status === 'approved')
-                                                                            <span class="badge bg-success">Đã duyệt</span>
-                                                                        @elseif($attendance->late_status === 'rejected')
-                                                                            <span class="badge bg-danger">Từ chối</span>
-                                                                        @endif
-                                                                    </p>
-                                                                @endif
+                                                                                                                    @if($attendance->early_leave_reason)
+                                                                                                                        <p>
+                                                                                                                            <strong>Lý do về sớm:</strong>
+                                                                                                                            {{ $attendance->early_leave_reason }}
+                                                                                                                        </p>
+                                                                                                                    @endif
+
+                                                                                                                    @if($attendance->early_leave_status)
+                                                                                                                        <p>
+                                                                                                                            <strong>Trạng thái duyệt:</strong>
+                                                                                                                            @if($attendance->early_leave_status === 'pending')
+                                                                                                                                <span class="badge bg-warning">Chờ duyệt</span>
+                                                                                                                            @elseif($attendance->early_leave_status === 'approved')
+                                                                                                                                <span class="badge bg-success">Đã duyệt</span>
+                                                                                                                            @elseif($attendance->early_leave_status === 'rejected')
+                                                                                                                                <span class="badge bg-danger">Từ chối</span>
+                                                                                                                            @endif
+                                                                                                                        </p>
+                                                                                                                    @endif
+                                                                                                                @endif
+
+                                                                                                            </div>
+
+                                                                                                            <div class="modal-footer">
+                                                                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                                                                                    Đóng
+                                                                                                                </button>
+                                                                                                            </div>
+
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </div>
                                                             @endif
-
-                                                            @if($attendance->is_early_leave)
-                                                                <p class="text-warning">
-                                                                    <strong>Về sớm:</strong> Có
-                                                                </p>
-
-                                                                @if($attendance->early_leave_reason)
-                                                                    <p>
-                                                                        <strong>Lý do về sớm:</strong>
-                                                                        {{ $attendance->early_leave_reason }}
-                                                                    </p>
-                                                                @endif
-
-                                                                @if($attendance->early_leave_status)
-                                                                    <p>
-                                                                        <strong>Trạng thái duyệt:</strong>
-                                                                        @if($attendance->early_leave_status === 'pending')
-                                                                            <span class="badge bg-warning">Chờ duyệt</span>
-                                                                        @elseif($attendance->early_leave_status === 'approved')
-                                                                            <span class="badge bg-success">Đã duyệt</span>
-                                                                        @elseif($attendance->early_leave_status === 'rejected')
-                                                                            <span class="badge bg-danger">Từ chối</span>
-                                                                        @endif
-                                                                    </p>
-                                                                @endif
-                                                            @endif
-
-                                                        </div>
-
-                                                        <div class="modal-footer">
-                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                                                Đóng
-                                                            </button>
-                                                        </div>
-
-                                                    </div>
-                                                </div>
-                                            </div>
-                                    @endif
                         @empty
                             <tr>
                                 <td colspan="8" class="text-center text-muted">
@@ -357,7 +339,6 @@
                             <h6 class="fw-bold">Chính sách tính lương</h6>
                             <ul class="mb-3">
                                 <li>Lương tính theo phút làm thực tế của ca.</li>
-                                <li>Trễ ≤ 15 phút: vẫn tính đủ giờ.</li>
                                 <li>Trễ > 15 phút: tính theo thời gian thực tế làm việc.</li>
                                 <li>Checkout trễ: chỉ tính lương đến hết giờ của ca.</li>
                                 <li>Đi trễ hoặc về sớm bắt buộc nhập lý do để xét duyệt.</li>
@@ -390,67 +371,52 @@
             );
         }
 
-        function handleCheckin(attendanceId, workDate, expectedIn) {
+    function handleCheckin(attendanceId, workDate, expectedIn) {
 
             const now = new Date();
             const expectedDate = buildExpectedDate(workDate, expectedIn);
 
             const lateMinutes = Math.floor((now - expectedDate) / 60000);
 
-            if (lateMinutes > 15) {
-
-                const form = document.getElementById('reasonForm');
-                form.action = `/staff/attendances/${attendanceId}/check-in`;
-
-                document.getElementById('reasonType').value = 'late';
-                document.getElementById('modeType').value = 'checkin';
-
-                document.getElementById('reasonModalTitle').innerText = 'Đi trễ';
-
-                const alertBox = document.getElementById('reasonAlert');
-                alertBox.classList.remove('d-none');
-                alertBox.innerHTML =
-                    `Bạn đã trễ <strong>${lateMinutes} phút</strong>. Vui lòng nhập lý do.`;
-
-                new bootstrap.Modal(
-                    document.getElementById('reasonModal')
-                ).show();
-
-            } else {
-                submitDirect(attendanceId, 'check-in');
-            }
+            submitDirect(attendanceId, 'check-in');
         }
 
         function handleCheckout(attendanceId, workDate, expectedOut) {
 
-            const now = new Date();
-            const expectedDate = buildExpectedDate(workDate, expectedOut);
-
-            const earlyMinutes = Math.floor((expectedDate - now) / 60000);
-
-            if (earlyMinutes > 0) {
-
-                const form = document.getElementById('reasonForm');
-                form.action = `/staff/attendances/${attendanceId}/check-out`;
-
-                document.getElementById('reasonType').value = 'early';
-                document.getElementById('modeType').value = 'checkout';
-
-                document.getElementById('reasonModalTitle').innerText = 'Về sớm';
-
-                const alertBox = document.getElementById('reasonAlert');
-                alertBox.classList.remove('d-none');
-                alertBox.innerHTML =
-                    `Bạn đang về sớm <strong>${earlyMinutes} phút</strong>. Vui lòng nhập lý do.`;
-
-                new bootstrap.Modal(
-                    document.getElementById('reasonModal')
-                ).show();
-
-            } else {
-                submitDirect(attendanceId, 'check-out');
-            }
+        if (!expectedOut) {
+            submitDirect(attendanceId, 'check-out');
+            return;
         }
+
+        const now = new Date();
+        const expectedDate = buildExpectedDate(workDate, expectedOut);
+
+        const earlyMinutes = Math.floor((expectedDate - now) / 60000);
+
+        if (earlyMinutes > 0) {
+
+            const form = document.getElementById('reasonForm');
+            form.action = `/staff/attendances/${attendanceId}/check-out`;
+
+            document.getElementById('reasonType').value = 'early';
+            document.getElementById('modeType').value = 'checkout';
+
+            document.getElementById('reasonModalTitle').innerText = 'Về sớm';
+
+            const alertBox = document.getElementById('reasonAlert');
+            alertBox.classList.remove('d-none');
+            alertBox.innerHTML =
+                `Bạn đang về sớm <strong>${earlyMinutes} phút</strong>. Vui lòng nhập lý do.`;
+
+            const modal = new bootstrap.Modal(
+                document.getElementById('reasonModal')
+            );
+            modal.show();
+
+        } else {
+            submitDirect(attendanceId, 'check-out');
+        }
+    }
 
         // ===== SUBMIT KHÔNG CẦN LÝ DO =====
         function submitDirect(attendanceId, type) {

@@ -4,6 +4,60 @@
             <div class="container-fluid pt-4 px-4">
                 <div class="bg-light rounded p-4">
 
+                    <form method="GET" action="{{ route('admin.products.list') }}" class="row g-3 mb-3">
+                        <div class="col-md-2">
+                            <label class="form-label">Danh mục</label>
+                            <select name="category_id" class="form-select">
+                                <option value="">-- Tất cả --</option>
+                                @foreach($categories as $category)
+                                    <option value="{{ $category->id }}" {{ request('category_id') == $category->id ? 'selected' : '' }}>
+                                        {{ $category->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label">Nhà cung cấp</label>
+                            <select name="supplier_id" class="form-select">
+                                <option value="">-- Tất cả --</option>
+                                @foreach($suppliers as $supplier)
+                                    <option value="{{ $supplier->id }}" {{ request('supplier_id') == $supplier->id ? 'selected' : '' }}>
+                                        {{ $supplier->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label">Trạng thái</label>
+                            <select name="status" class="form-select">
+                                <option value="">-- Tất cả --</option>
+                                <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>
+                                    Đang bán
+                                </option>
+                                <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>
+                                    Ngừng bán
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-1">
+                            <label class="form-label">Giá từ</label>
+                            <input type="number" name="min_price" value="{{ request('min_price') }}" class="form-control">
+                        </div>
+
+                        <div class="col-md-1">
+                            <label class="form-label">Đến</label>
+                            <input type="number" name="max_price" value="{{ request('max_price') }}" class="form-control">
+                        </div>
+
+                        <div class="col-md-1 d-flex align-items-end gap-2">
+                            <button type="submit" class="btn btn-primary w-100">Lọc</button>
+                        </div>
+
+                    </form>
+
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="mb-0">Danh sách sản phẩm</h6>
                         <a href="{{ route('admin.products.create') }}" class="btn btn-primary btn-sm">
@@ -51,8 +105,8 @@
                                                                 <td>
                                                                     @if ($product->variants->count())
                                                                         @php
-                                    $minPrice = $product->variants->min('price');
-                                    $maxPrice = $product->variants->max('price');
+        $minPrice = $product->variants->min('price');
+        $maxPrice = $product->variants->max('price');
                                                                         @endphp
 
                                                                         @if ($minPrice == $maxPrice)
@@ -125,6 +179,8 @@
                             </tbody>
 
                         </table>
+                        {{ $products->appends(request()->query())->links() }}
+
                     </div>
                 </div>
             </div>

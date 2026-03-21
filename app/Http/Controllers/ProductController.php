@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ProductImage;
@@ -12,21 +13,63 @@ use App\Models\CategoryProduct;
 
 class ProductController extends Controller
 {
-    public function list()
+    public function list(Request $request)
     {
-        $products = Product::with([
+        $query = Product::with([
             'supplier',
             'category',
             'variants.images' => function ($q) {
                 $q->where('is_primary', 1);
             }
-        ])
-            ->withCount('variants')
-            ->get();
+        ])->withCount('variants');
 
-        return view('admin.products.list', compact('products'));
+        if ($request->filled('name')) {
+            $query->where('name', 'like', '%' . $request->name . '%');
+        }
+
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        if ($request->filled('supplier_id')) {
+            $query->where('supplier_id', $request->supplier_id);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('min_price') || $request->filled('max_price')) {
+
+            $min = $request->min_price;
+            $max = $request->max_price;
+
+            $query->whereHas('variants', function ($q) use ($min, $max) {
+
+                if (!is_null($min)) {
+                    $q->where('price', '>=', $min);
+                }
+
+                if (!is_null($max)) {
+                    $q->where('price', '<=', $max);
+                }
+            });
+        }
+
+        $products = $query
+            ->orderByDesc('id')
+            ->paginate(10)
+            ->appends($request->query());
+
+        $categories = CategoryProduct::orderBy('name')->get();
+        $suppliers  = Supplier::orderBy('name')->get();
+
+        return view('admin.products.list', compact(
+            'products',
+            'categories',
+            'suppliers'
+        ));
     }
-
 
     public function create()
     {
@@ -169,5 +212,114 @@ class ProductController extends Controller
         ])->findOrFail($id);
 
         return view('admin.products.popup', compact('product'));
+    }
+
+    public function search(Request $request)
+    {
+        $query = $request->get('query', '');
+
+        if ($query == '') {
+            return response()->json([]);
+        }
+
+        // Tìm sản phẩm theo tên, chỉ lấy sản phẩm active
+        $products = Product::where('status', 'active')
+            ->where('name', 'LIKE', "%{$query}%")
+            ->with(['variants' => function ($q) {
+                $q->with(['images' => function ($q2) {
+                    $q2->where('is_primary', 1);
+                }]);
+            }])
+            ->take(10)
+            ->get();
+
+        // Trả về dữ liệu JSON gồm id, name, image, giá variant đầu tiên
+        $result = $products->map(function ($product) {
+            $variant = $product->variants->first();
+            $image = optional($variant->images->first())->image_path ?? $product->image;
+
+            return [
+                'id' => $product->id,
+                'name' => $product->name,
+                'price' => optional($variant)->price ?? 0,
+                'image' => $image ? asset('storage/' . $image) : null,
+            ];
+        });
+
+        return response()->json($result);
+    }
+
+    public function index(Request $request)
+    {
+        $userId = Auth::id();
+
+        $query = Product::query()
+            ->with('variants')
+            ->where('status', 'active')
+            ->withCount([
+                'wishlists as is_favorited' => function ($q) use ($userId) {
+                    $q->where('user_id', $userId);
+                }
+            ]);
+
+        if ($request->filled('keyword')) {
+            $query->where('name', 'like', '%' . $request->keyword . '%');
+        }
+
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+        if ($request->filled('supplier_id')) {
+            $query->where('supplier_id', $request->supplier_id);
+        }
+
+        if ($request->filled('min_price') || $request->filled('max_price')) {
+            $min = $request->min_price;
+            $max = $request->max_price;
+
+            $query->whereHas('variants', function ($q) use ($min, $max) {
+                if (!is_null($min)) $q->where('price', '>=', $min);
+                if (!is_null($max)) $q->where('price', '<=', $max);
+            });
+        }
+
+        if ($request->filled('price_range')) {
+            [$min, $max] = explode('-', $request->price_range);
+
+            $query->whereHas('variants', function ($q) use ($min, $max) {
+                $q->whereBetween('price', [$min, $max]);
+            });
+        }
+
+        if ($request->filled('sort')) {
+
+            if (in_array($request->sort, ['price_asc', 'price_desc'])) {
+
+                $query->join('product_variants', 'products.id', '=', 'product_variants.product_id')
+                    ->select('products.*', \DB::raw('MIN(product_variants.price) as min_price'))
+                    ->groupBy('products.id');
+
+                if ($request->sort == 'price_asc') {
+                    $query->orderBy('min_price', 'asc');
+                } else {
+                    $query->orderBy('min_price', 'desc');
+                }
+            } elseif ($request->sort == 'newest') {
+                $query->orderBy('products.created_at', 'desc');
+            }
+        } else {
+            $query->orderByDesc('products.id');
+        }
+
+        $products = $query->paginate(12)->withQueryString();
+
+        $categories = CategoryProduct::all();
+        $suppliers  = Supplier::all();
+
+        return view('pages.all-products', compact(
+            'products',
+            'categories',
+            'suppliers'
+        ));
     }
 }

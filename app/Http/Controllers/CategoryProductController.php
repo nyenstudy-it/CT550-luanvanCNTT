@@ -9,7 +9,9 @@ class CategoryProductController extends Controller
 {
     public function list()
     {
-        $categories = CategoryProduct::latest()->get();
+        $categories = CategoryProduct::query()
+        ->orderBy('id', 'asc')
+        ->get();
         return view('admin.categories.list', compact('categories'));
     }
 

@@ -61,8 +61,10 @@ class Attendance extends Model
     {
         $now = Carbon::now('Asia/Ho_Chi_Minh');
 
-        $shiftStart = Carbon::parse($this->work_date . ' ' . $this->expected_check_in);
-        $shiftEnd   = Carbon::parse($this->work_date . ' ' . $this->expected_check_out);
+        $shiftEnd = Carbon::parse(
+            $this->work_date . ' ' . $this->expected_check_out,
+            'Asia/Ho_Chi_Minh'
+        );
 
         if ($this->check_in && $this->check_out) {
             return 'completed';
@@ -78,27 +80,36 @@ class Attendance extends Model
 
         return 'scheduled';
     }
-
     public function getIsEarlyLeaveAttribute()
     {
         if (!$this->check_out) {
             return false;
         }
 
-        return $this->check_out < $this->expected_check_out;
+        $expectedEnd = Carbon::parse(
+            $this->work_date . ' ' . $this->expected_check_out,
+            'Asia/Ho_Chi_Minh'
+        );
+
+        $checkOut = Carbon::parse($this->check_out, 'Asia/Ho_Chi_Minh');
+
+        return $checkOut->lt($expectedEnd);
     }
     public function getLateMinutesAttribute()
     {
         if (!$this->check_in) return 0;
 
-        $shiftStart = Carbon::parse($this->work_date . ' ' . $this->expected_check_in);
-        $checkIn = Carbon::parse($this->check_in);
+        $shiftStart = Carbon::parse(
+            $this->work_date . ' ' . $this->expected_check_in,
+            'Asia/Ho_Chi_Minh'
+        );
+
+        $checkIn = Carbon::parse($this->check_in, 'Asia/Ho_Chi_Minh');
 
         if ($checkIn->lte($shiftStart)) return 0;
 
         return $shiftStart->diffInMinutes($checkIn);
     }
-
     public function getWorkedHoursAttribute()
     {
         return $this->worked_minutes

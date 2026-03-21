@@ -2,7 +2,48 @@
 
 @section('content')
     <div class="container-fluid pt-4 px-4">
+
         <div class="bg-light rounded p-4">
+
+            <form method="GET" class="row g-3 mb-3">
+
+                <div class="col-md-3">
+                    <label>Nhà phân phối</label>
+                    <select name="supplier_id" class="form-select">
+                        <option value="">-- Tất cả --</option>
+                        @foreach ($suppliers as $supplier)
+                            <option value="{{ $supplier->id }}" {{ request('supplier_id') == $supplier->id ? 'selected' : '' }}>
+                                {{ $supplier->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label>Từ ngày</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ request('date_from') }}">
+                </div>
+
+                <div class="col-md-2">
+                    <label>Đến ngày</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
+                </div>
+
+                <div class="col-md-2">
+                    <label>Tổng tiền từ</label>
+                    <input type="number" name="min_total" class="form-control" value="{{ request('min_total') }}">
+                </div>
+
+                <div class="col-md-2">
+                    <label>Đến</label>
+                    <input type="number" name="max_total" class="form-control" value="{{ request('max_total') }}">
+                </div>
+
+                <div class="col-md-1 d-flex align-items-end">
+                    <button class="btn btn-primary w-100">Lọc</button>
+                </div>
+
+            </form>
 
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 class="mb-0">Danh sách phiếu nhập kho</h6>
@@ -27,7 +68,7 @@
                     <tbody>
                         @foreach ($imports as $index => $import)
                             <tr>
-                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $imports->firstItem() + $index }}</td>
                                 <td>{{ $import->supplier->name ?? '—' }}</td>
                                 <td>{{ $import->import_date }}</td>
                                 <td>{{ number_format($import->total_amount) }} đ</td>
@@ -49,6 +90,10 @@
                         @endif
                     </tbody>
                 </table>
+                <div class="mt-3">
+                    {{ $imports->links() }}
+                </div>
+
             </div>
 
         </div>

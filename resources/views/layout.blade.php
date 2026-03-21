@@ -103,8 +103,61 @@
     <script src="{{ asset('frontend/js/owl.carousel.min.js') }}"></script>
     <script src="{{ asset('frontend/js/main.js') }}"></script>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- JS show/hide categories -->
+    <script>
+        $(document).ready(function () {
+            var isHome = {{ !empty($showCategories) && $showCategories ? 'true' : 'false' }};
+
+            if (!isHome) {
+                // Hover vào nút xổ danh mục
+                $('.hero__categories__all').hover(function () {
+                    $(this).siblings('.hero__categories__menu').stop(true, true).slideDown(200);
+                }, function () {
+                    $(this).siblings('.hero__categories__menu').stop(true, true).slideUp(200);
+                });
+
+                // Hover vào menu, giữ menu mở
+                $('.hero__categories__menu').hover(function () {
+                    $(this).stop(true, true).show();
+                }, function () {
+                    $(this).stop(true, true).slideUp(200);
+                });
+            }
+        });
+    </script>
+
+
 
     @yield('scripts')
+
+@if(session('order_success'))
+
+    <script>
+
+        document.addEventListener("DOMContentLoaded", function () {
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Đặt hàng thành công!',
+                html: `
+                Cảm ơn bạn đã mua hàng tại <b>SEN HỒNG OCOP</b><br>
+                Mã đơn hàng: <b>#{{ session('order_success') }}</b>
+            `,
+                confirmButtonText: 'Xem đơn hàng',
+                confirmButtonColor: '#28a745'
+            }).then(() => {
+
+                window.location.href = "{{ route('orders.detail', session('order_success')) }}";
+
+            });
+
+        });
+
+    </script>
+
+@endif
 
 </body>
 

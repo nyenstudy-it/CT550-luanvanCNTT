@@ -1,232 +1,327 @@
 @extends('layout')
 
 @section('hero')
-    @include('pages.components.hero', ['showBanner' => false, 'heroNormal' => true])
+@include('pages.components.hero', ['showBanner' => false, 'heroNormal' => true])
 @endsection
 
 @section('content')
 
-<section class="checkout spad">
-    <div class="container">
+                <section class="checkout spad">
+                <div class="container">
 
-        {{-- Thông báo --}}
-        @if(session('error'))
-            <div class="alert alert-danger">{{ session('error') }}</div>
-        @endif
+                @if(session('error'))
+                <div class="alert alert-danger">{{ session('error') }}</div>
+                @endif
 
-        @if ($errors->any())
-            <div class="alert alert-danger">
+                @if(session('success'))
+                <div class="alert alert-success">{{ session('success') }}</div>
+                @endif
+
+                @if ($errors->any())
+                <div class="alert alert-danger">
                 <ul class="mb-0">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
+                @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+                @endforeach
                 </ul>
-            </div>
-        @endif
+                </div>
+                @endif
 
-        <form action="{{ route('checkout.store') }}" method="POST">
-        @csrf
 
-        <div class="row">
+                <form action="{{ route('checkout.store') }}" method="POST">
+                @csrf
 
-            {{-- LEFT SIDE --}}
-            <div class="col-lg-8">
+                <div class="row">
 
-                {{-- THÔNG TIN GIAO HÀNG --}}
+                {{-- ================= LEFT SIDE ================= --}}
+
+                <div class="col-lg-8">
+
+                {{-- ===== THÔNG TIN GIAO HÀNG ===== --}}
+
                 <div class="checkout-box mb-4">
-                    <h4 class="mb-4">Thông tin giao hàng</h4>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label>Họ tên người nhận *</label>
-                            <input type="text"
-                                   name="receiver_name"
-                                   class="form-control"
-                                   value="{{ old('receiver_name', auth()->user()->name ?? '') }}"
-                                   required>
-                        </div>
+                <h4 class="mb-4">Thông tin giao hàng</h4>
 
-                        <div class="col-md-6 mb-3">
-                            <label>Số điện thoại *</label>
-                            <input type="text"
-                                   name="receiver_phone"
-                                   class="form-control"
-                                   value="{{ old('receiver_phone') }}"
-                                   required>
-                        </div>
-                    </div>
+                <div class="row">
 
-                    <div class="mb-3">
-                        <label>Địa chỉ giao hàng *</label>
-                        <textarea name="shipping_address"
-                                  class="form-control"
-                                  rows="3"
-                                  required>{{ old('shipping_address') }}</textarea>
-                    </div>
+                <div class="col-md-6 mb-3">
+                <label>Họ tên người nhận *</label>
 
-                    <div class="mb-3">
-                        <label>Ghi chú (không bắt buộc)</label>
-                        <textarea name="note"
-                                  class="form-control"
-                                  rows="2">{{ old('note') }}</textarea>
-                    </div>
+                <input
+                type="text"
+                name="receiver_name"
+                class="form-control"
+                value="{{ old('receiver_name', auth()->user()->name ?? '') }}"
+                required>
+
                 </div>
 
-                {{-- DANH SÁCH SẢN PHẨM --}}
-                <div class="checkout-box">
-                    <h4 class="mb-4">Đơn hàng của bạn</h4>
 
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Sản phẩm</th>
-                                <th class="text-center">SL</th>
-                                <th class="text-end">Thành tiền</th>
-                            </tr>
-                        </thead>
+                <div class="col-md-6 mb-3">
 
-                        <tbody>
-                            @php 
-                                $total = 0;
-                                $totalQty = 0;
-                            @endphp
+                <label>Số điện thoại *</label>
 
-                            @foreach($cart as $item)
-                                @php
-                                    $price = $item['price'];
-                                    $quantity = $item['quantity'];
-                                    $itemTotal = $price * $quantity;
-                                    $total += $itemTotal;
-                                    $totalQty += $quantity;
-                                @endphp
+                <input
+                type="text"
+                name="receiver_phone"
+                class="form-control"
+                value="{{ old('receiver_phone', auth()->user()?->customer?->phone ?? '') }}"
+                required>
 
-                                <tr>
-                                    <td>
-                                        <strong>{{ $item['name'] }}</strong><br>
-                                        <small class="text-muted">
-                                            {{ $item['variant'] ?? 'Phiên bản mặc định' }}
-                                        </small>
-                                    </td>
-                                    <td class="text-center">{{ $quantity }}</td>
-                                    <td class="text-end">
-                                        <strong>{{ number_format($itemTotal) }} đ</strong>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
                 </div>
 
-            </div>
+                </div>
 
-            {{-- RIGHT SIDE --}}
-            <div class="col-lg-4">
+
+                <div class="mb-3">
+
+                <label>Địa chỉ giao hàng *</label>
+
+                <textarea name="shipping_address" class="form-control" rows="3"
+                    required>{{ old('shipping_address', optional(auth()->user()->customer)->full_address) }}</textarea>
+
+                <small class="text-muted">
+                Địa chỉ mặc định được lấy từ hồ sơ khách hàng. Bạn có thể chỉnh sửa nếu muốn.
+                </small>
+
+                <br>
+
+                <a href="{{ route('customer.profile', ['redirect' => 'checkout']) }}" class="text-success">
+                    Cập nhật địa chỉ trong hồ sơ
+                </a>
+
+                </div>
+
+
+                <div class="mb-3">
+
+                <label>Ghi chú (không bắt buộc)</label>
+
+                <textarea
+                name="note"
+                class="form-control"
+                rows="2">{{ old('note') }}</textarea>
+
+                </div>
+
+                </div>
+
+
+                {{-- ===== DANH SÁCH SẢN PHẨM ===== --}}
 
                 <div class="checkout-box">
 
-                    <h4 class="mb-4">Thanh toán</h4>
+                <h4 class="mb-4">Đơn hàng của bạn</h4>
 
-                    <ul class="checkout-summary">
-                        <li>Tổng sản phẩm
-                            <span>{{ $totalQty }}</span>
-                        </li>
-                        <li>Tạm tính
-                            <span>{{ number_format($total) }} đ</span>
-                        </li>
-                        <li class="total">
-                            Tổng thanh toán
-                            <span>{{ number_format($total) }} đ</span>
-                        </li>
-                    </ul>
+                <table class="table">
 
-                    <div class="mb-3">
-                        <label class="fw-bold">Phương thức thanh toán</label>
+                <thead>
+                <tr>
+                <th>Sản phẩm</th>
+                <th class="text-center">SL</th>
+                <th class="text-end">Thành tiền</th>
+                </tr>
+                </thead>
 
-                        <div class="form-check mt-2">
-                            <input class="form-check-input"
-                                   type="radio"
-                                   name="payment_method"
-                                   value="COD"
-                                   checked>
-                            <label class="form-check-label">
-                                Thanh toán khi nhận hàng (COD)
-                            </label>
-                        </div>
+                <tbody>
 
-                        <div class="form-check">
-                            <input class="form-check-input"
-                                   type="radio"
-                                   name="payment_method"
-                                   value="VNPAY">
-                            <label class="form-check-label">
-                                Thanh toán qua VNPAY
-                            </label>
-                        </div>
-                    </div>
+                @php
+    $totalQty = 0;
+                @endphp
 
-                    <button type="submit" class="checkout-btn">
-                        XÁC NHẬN ĐẶT HÀNG
-                    </button>
+                @foreach($cart as $item)
+
+                @php
+        $price = $item['price'];
+        $quantity = $item['quantity'];
+        $itemTotal = $price * $quantity;
+
+        $totalQty += $quantity;
+                @endphp
+
+                <tr>
+
+                <td>
+                <strong>{{ $item['name'] }}</strong>
+
+                <br>
+
+                <small class="text-muted">
+                {{ $item['variant'] ?? 'Phiên bản mặc định' }}
+                </small>
+
+                </td>
+
+
+                <td class="text-center">
+                {{ $quantity }}
+                </td>
+
+
+                <td class="text-end">
+                <strong>{{ number_format($itemTotal) }} đ</strong>
+                </td>
+
+                </tr>
+
+                @endforeach
+
+                </tbody>
+                </table>
 
                 </div>
 
-            </div>
+                </div>
 
-        </div>
-        </form>
 
-    </div>
-</section>
+                {{-- ================= RIGHT SIDE ================= --}}
 
-{{-- ================= STYLE ================= --}}
-<style>
+                <div class="col-lg-4">
 
-.checkout-box {
-    background: #fff;
-    padding: 25px;
-    border-radius: 10px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-    margin-bottom: 20px;
-}
+                <div class="checkout-box">
 
-.checkout-summary {
-    list-style: none;
-    padding: 0;
-    margin-bottom: 20px;
-}
+                <h4 class="mb-4">Thanh toán</h4>
 
-.checkout-summary li {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
-}
+        @php
+            $discountValue = session('cart_discount', 0);
+            $discountType = session('cart_discount_type', 'fixed');
+            $discountCode = session('cart_discount_code');
 
-.checkout-summary li.total {
-    font-size: 18px;
-    font-weight: 600;
-    color: #7fad39;
-}
+            $totalDiscount = $discountType == 'percent'
+                ? $total * $discountValue / 100
+                : $discountValue;
 
-.checkout-btn {
-    width: 100%;
-    padding: 12px;
-    border: none;
-    background: #7fad39;
-    color: #fff;
-    font-weight: 600;
-    border-radius: 6px;
-    transition: 0.2s;
-}
+            $finalTotal = $total + $shippingFee - $totalDiscount;
+        @endphp
 
-.checkout-btn:hover {
-    background: #6a9e2e;
-}
+        <ul class="checkout-summary">
+            <li>
+                Tổng sản phẩm
+                <span>{{ $totalQty }}</span>
+            </li>
 
-.form-control:focus {
-    border-color: #7fad39;
-    box-shadow: 0 0 0 0.2rem rgba(127,173,57,0.25);
-}
+            <li>
+                Tạm tính
+                <span>{{ number_format($total) }} đ</span>
+            </li>
 
-</style>
+            <li>
+                Phí vận chuyển
+                <span>{{ number_format($shippingFee) }} đ</span>
+            </li>
+
+            {{-- ✅ HIỂN THỊ MÃ GIẢM GIÁ --}}
+            @if($discountCode)
+                <li>
+                    Mã giảm giá
+                    <span style="color:#28a745; font-weight:500;">
+                        {{ $discountCode }}
+                    </span>
+                </li>
+
+                <li>
+                    Giảm giá
+                    <span style="color:#1abc9c;">
+                        -{{ number_format($totalDiscount) }} đ
+                    </span>
+                </li>
+            @endif
+
+            <li class="total">
+                Tổng thanh toán
+                <span style="color:#ee4d2d; font-weight:bold;">
+                    {{ number_format($finalTotal) }} đ
+                </span>
+            </li>
+        </ul>
+
+
+                {{-- ===== PHƯƠNG THỨC THANH TOÁN ===== --}}
+
+                <div class="mb-3">
+
+                <label class="fw-bold">Phương thức thanh toán</label>
+
+
+                <div class="form-check mt-2">
+
+                <input
+                class="form-check-input"
+                type="radio"
+                name="payment_method"
+                value="COD"
+                {{ old('payment_method', 'COD') == 'COD' ? 'checked' : '' }}>
+
+                <label class="form-check-label">
+                💵 Thanh toán khi nhận hàng (COD)
+                </label>
+
+                </div>
+
+
+                <div class="form-check">
+
+                <input
+                class="form-check-input"
+                type="radio"
+                name="payment_method"
+                value="VNPAY"
+                {{ old('payment_method') == 'VNPAY' ? 'checked' : '' }}>
+
+                <label class="form-check-label">
+                🏦 Thanh toán qua VNPAY
+                </label>
+
+                </div>
+
+
+                <div class="form-check">
+
+                <input
+                class="form-check-input"
+                type="radio"
+                name="payment_method"
+                value="MOMO"
+                {{ old('payment_method') == 'MOMO' ? 'checked' : '' }}>
+
+                <label class="form-check-label">
+                📱 Thanh toán ví MoMo
+                </label>
+
+                </div>
+
+
+                <div class="form-check">
+
+                <input
+                class="form-check-input"
+                type="radio"
+                name="payment_method"
+                value="BANK_TRANSFER"
+                {{ old('payment_method') == 'BANK_TRANSFER' ? 'checked' : '' }}>
+
+                <label class="form-check-label">
+                🏧 Chuyển khoản ngân hàng
+                </label>
+
+                </div>
+                </div>
+
+
+                <button type="submit" class="checkout-btn">
+                XÁC NHẬN ĐẶT HÀNG
+                </button>
+
+                </div>
+
+                </div>
+
+                </div>
+
+                </form>
+
+                </div>
+                </section>
 
 @endsection

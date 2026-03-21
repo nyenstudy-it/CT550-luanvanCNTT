@@ -11,7 +11,7 @@
 
                 <div class="mb-3">
                     <label class="form-label">Nhà phân phối</label>
-                    <select name="supplier_id" class="form-select" required>
+                    <select name="supplier_id" id="supplierSelect" class="form-select" required>
                         <option value="">-- Chọn nhà phân phối --</option>
                         @foreach ($suppliers as $supplier)
                             <option value="{{ $supplier->id }}">
@@ -20,6 +20,7 @@
                         @endforeach
                     </select>
                 </div>
+
                 <div class="mb-3">
                     <label class="form-label">Ngày nhập</label>
                     <input type="date" name="import_date" class="form-control" required>
@@ -33,6 +34,7 @@
                     <thead>
                         <tr>
                             <th>Sản phẩm</th>
+                            <th>Biến thể</th>
                             <th>Số lượng</th>
                             <th>Giá nhập</th>
                             <th width="80"></th>
@@ -41,14 +43,13 @@
                     <tbody>
                         <tr>
                             <td>
-                                <select name="items[0][product_variant_id]" class="form-select" required>
+                                <select name="items[0][product_id]" class="form-select product-select" required>
+                                    <option value="">-- Chọn sản phẩm --</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select name="items[0][product_variant_id]" class="form-select variant-select" required>
                                     <option value="">-- Chọn biến thể --</option>
-                                    @foreach ($variants as $variant)
-                                        <option value="{{ $variant->id }}">
-                                            {{ $variant->product->name }}
-                                            ({{ $variant->sku }})
-                                        </option>
-                                    @endforeach
                                 </select>
                             </td>
                             <td>
@@ -81,20 +82,81 @@
 
     <script>
         let index = 1;
+        let currentProducts = [];
+
+        const supplierSelect = document.getElementById('supplierSelect');
+
+        supplierSelect.addEventListener('change', function () {
+
+            const supplierId = this.value;
+
+            document.querySelectorAll('.product-select').forEach(select => {
+                select.innerHTML = '<option value="">-- Chọn sản phẩm --</option>';
+            });
+
+            document.querySelectorAll('.variant-select').forEach(select => {
+                select.innerHTML = '<option value="">-- Chọn biến thể --</option>';
+            });
+
+            currentProducts = [];
+
+            if (!supplierId) return;
+
+            fetch(`/admin/imports/get-products/${supplierId}`)
+                .then(res => res.json())
+                .then(products => {
+                    currentProducts = products;
+
+                    document.querySelectorAll('.product-select').forEach(select => {
+                        products.forEach(product => {
+                            select.innerHTML += `<option value="${product.id}">${product.name}</option>`;
+                        });
+                    });
+                });
+        });
+
+
+        document.addEventListener('change', function (e) {
+
+            if (e.target.classList.contains('product-select')) {
+
+                const productId = e.target.value;
+                const row = e.target.closest('tr');
+                const variantSelect = row.querySelector('.variant-select');
+
+                variantSelect.innerHTML = '<option value="">-- Chọn biến thể --</option>';
+
+                if (!productId) return;
+
+                fetch(`/admin/imports/get-variants/${productId}`)
+                    .then(res => res.json())
+                    .then(variants => {
+                        variants.forEach(variant => {
+                            variantSelect.innerHTML += `
+                            <option value="${variant.id}">
+                                ${variant.sku}
+                            </option>
+                        `;
+                        });
+                    });
+            }
+        });
+
 
         document.getElementById('addRow').addEventListener('click', function () {
+
             const table = document.querySelector('#itemsTable tbody');
             const row = table.insertRow();
 
             row.innerHTML = `
             <td>
-                <select name="items[${index}][product_variant_id]" class="form-select" required>
+                <select name="items[${index}][product_id]" class="form-select product-select" required>
+                    <option value="">-- Chọn sản phẩm --</option>
+                </select>
+            </td>
+            <td>
+                <select name="items[${index}][product_variant_id]" class="form-select variant-select" required>
                     <option value="">-- Chọn biến thể --</option>
-                    @foreach ($variants as $variant)
-                        <option value="{{ $variant->id }}">
-                            {{ $variant->product->name }} ({{ $variant->sku }})
-                        </option>
-                    @endforeach
                 </select>
             </td>
             <td>
@@ -108,8 +170,17 @@
             </td>
         `;
 
+            // nếu đã chọn nhà phân phối thì load lại sản phẩm cho dòng mới
+            if (currentProducts.length > 0) {
+                const newSelect = row.querySelector('.product-select');
+                currentProducts.forEach(product => {
+                    newSelect.innerHTML += `<option value="${product.id}">${product.name}</option>`;
+                });
+            }
+
             index++;
         });
+
 
         document.addEventListener('click', function (e) {
             if (e.target.classList.contains('remove-row')) {
@@ -117,4 +188,5 @@
             }
         });
     </script>
+
 @endsection

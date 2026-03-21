@@ -6,6 +6,9 @@ use Illuminate\Http\Request;
 use App\Models\ProductVariant;
 use App\Models\Inventory;
 use App\Models\ProductImage;
+use App\Models\Discount;
+use App\Models\DiscountUsage;
+
 
 class CartController extends Controller
 {
@@ -18,8 +21,26 @@ class CartController extends Controller
             $total += $item['price'] * $item['quantity'];
         }
 
-        return view('pages.cart', compact('cart', 'total'));
+        $shippingFee = 20000;
+        if ($total >= 300000) {
+            $shippingFee = 0;
+        }
+
+        $totalPayment = $total + $shippingFee;
+
+        $discounts = Discount::where(function ($q) {
+            $q->whereNull('start_at')
+                ->orWhere('start_at', '<=', now());
+        })
+            ->where(function ($q) {
+                $q->whereNull('end_at')
+                    ->orWhere('end_at', '>=', now());
+            })
+            ->get();
+
+        return view('pages.cart', compact('cart', 'total', 'shippingFee', 'totalPayment', 'discounts'));
     }
+
 
     public function add(Request $request)
     {
@@ -39,7 +60,7 @@ class CartController extends Controller
         }
 
         $cart = session()->get('cart', []);
-        $qtyRequest = (int) $request->quantity;
+        $qtyRequest = $request->quantity ? (int)$request->quantity : 1;
 
         $currentQty = isset($cart[$variant->id])
             ? $cart[$variant->id]['quantity']
@@ -157,5 +178,56 @@ class CartController extends Controller
         session()->put('cart', $cart);
 
         return back()->with('success', 'Đã xoá sản phẩm');
+    }
+
+    public function applyDiscount(Request $request)
+    {
+        $code = trim($request->input('code'));
+
+        if ($code === '' || $code === null) {
+
+            session()->forget([
+                'cart_discount',
+                'cart_discount_type',
+                'cart_discount_code',
+                'cart_discount_id'
+            ]);
+
+            return redirect()->route('cart.list')
+                ->with('discount_success', 'Đã bỏ áp dụng mã giảm giá');
+        }
+
+        $discount = Discount::where('code', $code)->first();
+
+        if (!$discount) {
+            return redirect()->route('cart.list')
+                ->with('discount_error', 'Mã không tồn tại!');
+        }
+
+        if (!$discount->isActive()) {
+            return redirect()->route('cart.list')
+                ->with('discount_error', 'Mã không hợp lệ!');
+        }
+
+        if (auth()->check()) {
+            $used = DiscountUsage::where('discount_id', $discount->id)
+                ->where('user_id', auth()->id())
+                ->exists();
+
+            if ($used) {
+                return redirect()->route('cart.list')
+                    ->with('discount_error', 'Bạn đã dùng mã này rồi!');
+            }
+        }
+
+        session([
+            'cart_discount' => $discount->value,
+            'cart_discount_type' => $discount->type,
+            'cart_discount_code' => $discount->code,
+            'cart_discount_id' => $discount->id,
+        ]);
+
+        return redirect()->route('cart.list')
+            ->with('discount_success', 'Áp dụng mã thành công!');
     }
 }

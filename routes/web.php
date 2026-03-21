@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\CategoryProductController;
 use App\Http\Controllers\ProductController;
@@ -9,9 +11,17 @@ use App\Http\Controllers\ProductImageController;
 use App\Http\Controllers\ProductVariantController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\DiscountController;
+use App\Http\Controllers\WishlistController;
+use App\Http\Controllers\BlogController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\StaffController;
+use App\Http\Controllers\AdminOrderController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\SalaryController;
 use Illuminate\Support\Facades\Route;
@@ -22,26 +32,93 @@ Route::get('/', [HomeController::class, 'index'])->name('pages.home');
 Route::get('/trangchu', [HomeController::class, 'index'])->name('pages.trangchu');
 Route::get('/categories/{id}', [HomeController::class, 'showCategory'])->name('categories.show');
 Route::get('/products/{id}', [ProductController::class, 'show'])->name('products.show');
+Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
 Route::get('/cart', [CartController::class, 'list'])->name('cart.list');
 Route::post('/cart/update', [CartController::class, 'update'])->name('cart.update');
 Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
+Route::post('/cart/discount', [CartController::class, 'applyDiscount'])->name('cart.apply_discount');
+Route::get('/my-discounts', [DiscountController::class, 'customerIndex'])->name('discounts');
+Route::get('/register', [CustomerAuthController::class, 'showRegister'])->name('register');
+Route::post('/register', [CustomerAuthController::class, 'register']);
+Route::get('/login', [CustomerAuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [CustomerAuthController::class, 'login']);
+Route::post('/logout', [CustomerAuthController::class, 'logout'])->name('logout');
+Route::get('/search-products', [ProductController::class, 'search'])->name('products.search');
+Route::post('/wishlist/{product}', [WishlistController::class, 'toggle'])->name('wishlist.toggle');
+Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist.index');
+Route::get('/blogs', [BlogController::class, 'index'])->name('blogs.index');
+Route::get('/blogs/{slug}', [BlogController::class, 'show'])->name('blogs.show');
 
 
-Route::middleware('auth')->group(function () {
-    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
-    Route::post('/checkout/store', [CheckoutController::class, 'store'])->name('checkout.store');
-    Route::get('/my-orders', [CheckoutController::class, 'myOrders'])
-        ->name('orders.my');
 
-    Route::get('/my-orders/{id}', [CheckoutController::class, 'orderDetail'])
-        ->name('orders.detail');
+// quên mk
+Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])
+    ->name('password.request');
 
-    Route::post('/my-orders/{id}/cancel', [CheckoutController::class, 'cancel'])
-        ->name('orders.cancel');
+Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLink'])
+    ->name('password.email');
+
+Route::get('/reset-password/{token}', [ForgotPasswordController::class, 'showResetForm'])
+    ->name('password.reset');
+
+Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword'])
+    ->name('password.update');
+
+    
+Route::middleware(['auth', 'role:customer'])->group(function () {
+
+    Route::get('/profile', [CustomerAuthController::class, 'profile'])->name('customer.profile');
+    Route::post('/profile/update', [CustomerAuthController::class, 'profileUpdate'])->name('customer.profile.update');  
+
+    Route::get('/checkout', [CheckoutController::class, 'index'])
+        ->name('checkout');
+
+    Route::post('/checkout/store', [CheckoutController::class, 'store'])
+        ->name('checkout.store');
+
+    Route::get('/my-orders', [OrderController::class, 'myOrders'])->name('orders.my');
+
+    Route::get('/order/{id}', [OrderController::class, 'orderDetail'])->name('orders.detail');
+
+    Route::post('/order/{id}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+
+    Route::get('/order-success/{id}', [OrderController::class, 'success'])->name('orders.success');
+
+    Route::post('/order/{id}/received', [OrderController::class, 'confirmReceived'])->name('orders.received');
+
+    Route::get('/bank-transfer/{id}', [PaymentController::class, 'bankTransfer'])->name('bank.transfer');
+
+    Route::get('/payment/status/{order}', [PaymentController::class, 'status'])
+        ->name('payment.status');
+
+    Route::get('/payment/momo/{orderId}', [PaymentController::class, 'momo'])
+        ->name('momo.payment');
+
+    Route::post('/payment/momo-process/{orderId}', [PaymentController::class, 'momoProcess'])
+        ->name('momo.process');
+
+    Route::get('/payment/momo-return', [PaymentController::class, 'momoReturn'])
+        ->name('momo.return');
+    Route::get('/momo/pay/{orderId}', [PaymentController::class, 'momo'])
+        ->name('momo.pay');
+
+    Route::get('/payment/vnpay/{orderId}', [PaymentController::class, 'vnpay'])
+        ->name('vnpay.payment');
+
+    Route::get('/payment/vnpay-return', [PaymentController::class, 'vnpayReturn'])
+        ->name('vnpay.return');
+
+    Route::get('/vnpay/pay/{orderId}', [PaymentController::class, 'vnpay'])
+        ->name('vnpay.pay');
+
+    Route::post('/order/{id}/refund-request', [OrderController::class, 'requestRefund'])
+        ->middleware('auth');
+
+    Route::post('/order/{id}/refund', [OrderController::class, 'requestRefund'])
+        ->name('orders.refund');
+    
 });
-
-
 
 //Đăng ký ADMIN/STAFF
 Route::middleware(['auth', 'role:admin'])
@@ -122,7 +199,10 @@ Route::middleware(['auth', 'role:admin,staff'])
     ->prefix('admin')
     ->group(function () {
 
-        Route::get('/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
+    Route::get('dashboard', [DashboardController::class, 'index'])
+        ->name('admin.dashboard');
+
+        // Route::get('/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
 
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.show');
         Route::post('/profile/update', [AdminController::class, 'profileUpdate'])->name('profile.update');
@@ -153,8 +233,6 @@ Route::middleware(['auth', 'role:admin,staff'])
             [ProductController::class, 'showPopup']
         )->name('admin.products.popup');
 
-
-
         // Product Variants
         Route::get('/products/{productId}/variants', [ProductVariantController::class, 'index'])
             ->name('admin.products.variants.index');
@@ -175,29 +253,81 @@ Route::middleware(['auth', 'role:admin,staff'])
         Route::post('/imports/store', [ImportController::class, 'store'])->name('admin.imports.store');
         Route::get('/imports/{id}', [ImportController::class, 'show'])->name('admin.imports.show');
         Route::get('/imports/{id}/print', [ImportController::class, 'print'])->name('admin.imports.print');
+        Route::get('/imports/get-products/{supplierId}', [ImportController::class, 'getProductsBySupplier']);
+        Route::get('/imports/get-variants/{productId}', [ImportController::class, 'getVariantsByProduct']);
+
+    // INVENTORY
+    Route::get('/inventories', [InventoryController::class, 'list'])->name('admin.inventories.list');
 
 
-        // INVENTORY
-        Route::get('/inventories', [InventoryController::class, 'list'])->name('admin.inventories.list');
-    });
+    // Khách hàng
+    Route::get('/customers', [CustomerController::class, 'list'])
+        ->name('admin.customers.list');
+    Route::get('/customers/{id}', [CustomerController::class, 'show'])
+        ->name('admin.customers.show');
+    Route::post('/customers/{id}/lock', [CustomerController::class, 'lock'])
+        ->name('admin.customers.lock');
+    Route::post('/customers/{id}/unlock', [CustomerController::class, 'unlock'])
+        ->name('admin.customers.unlock');
+    Route::get('/customers/search', [CustomerController::class, 'search'])
+        ->name('admin.customers.search');
+    Route::delete('/customers/{id}', [CustomerController::class, 'destroy'])
+        ->name('admin.customers.destroy');
+
+    Route::get('/orders', [AdminOrderController::class, 'index'])
+        ->name('admin.orders');
+
+    Route::get('/orders/{id}', [AdminOrderController::class, 'show'])
+        ->name('admin.orders.detail');
+
+    Route::post('/orders/update-status/{id}', [AdminOrderController::class, 'updateStatus'])
+        ->name('admin.orders.updateStatus');
+
+    Route::post('/orders/cancel/{id}', [AdminOrderController::class, 'cancel'])
+        ->name('admin.orders.cancel');
+
+    Route::post('/orders/{id}/approve-refund', [AdminOrderController::class, 'approveRefund'])
+        ->name('admin.orders.approveRefund');
+
+    Route::post('/orders/{id}/reject-refund', [AdminOrderController::class, 'rejectRefund'])
+        ->name('admin.orders.rejectRefund');
+
+    Route::get('/discounts', [DiscountController::class, 'index'])
+        ->name('admin.discounts.index');
+
+    Route::get('/discounts/create', [DiscountController::class, 'create'])
+        ->name('admin.discounts.create');
+    Route::post('/discounts', [DiscountController::class, 'store'])
+        ->name('admin.discounts.store');
+
+    Route::get('/discounts/{discount}/edit', [DiscountController::class, 'edit'])
+        ->name('admin.discounts.edit');
+    Route::post('/discounts/{discount}', [DiscountController::class, 'update'])
+        ->name('admin.discounts.update');
+
+    Route::delete('/discounts/{discount}', [DiscountController::class, 'destroy'])
+        ->name('admin.discounts.destroy');
+
+    Route::get('blogs', [BlogController::class, 'adminIndex'])->name('admin.blogs.index');
+    Route::get('blogs/create', [BlogController::class, 'create'])->name('admin.blogs.create');
+    Route::post('blogs', [BlogController::class, 'store'])->name('admin.blogs.store');
+    Route::get('blogs/{blog}/edit', [BlogController::class, 'edit'])->name('admin.blogs.edit');
+    Route::post('blogs/{blog}', [BlogController::class, 'update'])->name('admin.blogs.update');
+    Route::delete('blogs/{blog}', [BlogController::class, 'destroy'])->name('admin.blogs.destroy');
+});
 
 // STAFF ATTENDANCE
 Route::middleware(['auth', 'role:staff'])
     ->prefix('staff')
     ->group(function () {
-
         Route::get('/attendances', [AttendanceController::class, 'staffIndex'])
             ->name('staff.staff_attendances');
-
         Route::post('/attendances/{attendance}/check-in', [AttendanceController::class, 'checkIn'])
             ->name('staff.attendances.check_in');
-
         Route::post('/attendances/{attendance}/check-out', [AttendanceController::class, 'checkOut'])
             ->name('staff.attendances.check_out');
-
         Route::post('/attendances/{attendance}/late-reason',[AttendanceController::class, 'submitLateReason'])
             ->name('staff.attendances.submitLateReason');
-
         Route::post('/attendances/{attendance}/early-reason',[AttendanceController::class, 'submitEarlyReason'])
             ->name('staff.attendances.submitEarlyReason');
     });

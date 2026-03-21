@@ -49,4 +49,14 @@ class Product extends Model
     {
         return $this->hasMany(ProductVariant::class);
     }
+
+    public function wishlists()
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
+    public function product_images()
+    {
+        return $this->images(); 
+    }
 }

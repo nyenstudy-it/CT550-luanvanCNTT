@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\Staff;
+use App\Models\Order;
 
 class AdminController extends Controller
 {
@@ -16,10 +17,10 @@ class AdminController extends Controller
         return view('admin.login');
     }
 
-    public function index()
-    {
-        return view('admin.dashboard');
-    }
+    // public function index()
+    // {
+    //     return view('admin.dashboard');
+    // }
 
     public function authenticate(Request $request)
     {
@@ -58,11 +59,39 @@ class AdminController extends Controller
     }
 
     // ADMIN ONLY
-    public function staffManagement()
+    public function staffManagement(Request $request)
     {
-        $staffs = Staff::with('user')
-            ->orderBy('user_id', 'asc')
-            ->paginate(10);
+        $query = Staff::with('user');
+
+        if ($request->keyword) {
+            $query->whereHas('user', function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->keyword . '%');
+            });
+        }
+
+        if ($request->position) {
+            $query->where('position', $request->position);
+        }
+        if ($request->employment_status) {
+            $query->where('employment_status', $request->employment_status);
+        }
+        if ($request->account_status) {
+            $query->whereHas('user', function ($q) use ($request) {
+                $q->where('status', $request->account_status);
+            });
+        }
+
+        if ($request->date_from) {
+            $query->whereDate('start_date', '>=', $request->date_from);
+        }
+
+        if ($request->date_to) {
+            $query->whereDate('start_date', '<=', $request->date_to);
+        }
+
+        $staffs = $query->orderBy('created_at', 'asc')
+            ->paginate(10)
+            ->withQueryString();
 
         return view('admin.staff.list', compact('staffs'));
     }

@@ -5,20 +5,43 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Attendance;
 use App\Models\User;
+use App\Models\Staff;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 class AttendanceController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         abort_unless(Auth::user()->role === 'admin', 403);
 
-        $attendances = Attendance::with('staff.user')
+        $query = Attendance::with('staff.user');
+        if ($request->from_date) {
+            $query->whereDate('work_date', '>=', $request->from_date);
+        }
+
+        if ($request->to_date) {
+            $query->whereDate('work_date', '<=', $request->to_date);
+        }
+
+        if ($request->shift) {
+            $query->where('shift', $request->shift);
+        }
+        if ($request->staff_id) {
+            $query->where('staff_id', $request->staff_id);
+        }
+
+        $attendances = $query
             ->orderBy('work_date', 'asc')
             ->orderByRaw("FIELD(shift, 'morning', 'afternoon')")
             ->get();
+
+        if ($request->status) {
+            $attendances = $attendances->filter(function ($item) use ($request) {
+                return $item->computed_status === $request->status;
+            });
+        }
 
         $calendarEvents = $attendances->map(function ($a) {
 
@@ -46,9 +69,12 @@ class AttendanceController extends Controller
             ];
         });
 
+        $staffs = Staff::with('user')->get(); 
+
         return view('admin.attendances.index', compact(
             'attendances',
-            'calendarEvents'
+            'calendarEvents',
+            'staffs'
         ));
     }
 
@@ -75,20 +101,25 @@ class AttendanceController extends Controller
     {
         abort_unless(Auth::user()->role === 'admin', 403);
 
-        $staffs = User::where('role', 'staff')->get();
+        // Lấy đúng Staff + user
+        $staffs = Staff::whereHas('user')
+            ->with('user')
+            ->get();
 
-        $calendarEvents = Attendance::with('user')->get()
+        // Lấy attendance đúng quan hệ
+        $calendarEvents = Attendance::whereHas('staff.user')
+            ->with('staff.user')
+            ->get()
             ->map(function ($a) {
                 return [
-                    'title' => $a->user->name . ' - ' .
+                    'title' => $a->staff->user->name . ' - ' .
                         ($a->shift === 'morning' ? 'Ca sáng' : 'Ca chiều'),
                     'start' => $a->work_date . 'T' . $a->expected_check_in,
                     'end'   => $a->work_date . 'T' . $a->expected_check_out,
                 ];
             });
 
-        return view('admin.attendances.create
-        ', compact(
+        return view('admin.attendances.create', compact(
             'staffs',
             'calendarEvents'
         ));
@@ -132,8 +163,9 @@ class AttendanceController extends Controller
     {
         abort_unless(Auth::user()->role === 'admin', 403);
 
-        $attendance = Attendance::with('user')->findOrFail($id);
-        $staffs = User::where('role', 'staff')->get();
+        $attendance = Attendance::with('staff.user')->findOrFail($id);
+
+        $staffs = Staff::with('user')->get();
 
         $calendarEvents = Attendance::with('user')->get()
             ->map(function ($a) {
@@ -198,7 +230,7 @@ class AttendanceController extends Controller
         $user = Auth::user();
         $now  = Carbon::now('Asia/Ho_Chi_Minh');
 
-        if ($attendance->staff_id !== $user->id) {
+        if ($attendance->staff_id !== $user->staff->id) {
             abort(403);
         }
 
@@ -210,12 +242,12 @@ class AttendanceController extends Controller
             return back()->with('error', 'Bạn đã check-in');
         }
 
-        $start = Carbon::parse(
+        $expectedStart = Carbon::parse(
             $attendance->work_date . ' ' . $attendance->expected_check_in,
             'Asia/Ho_Chi_Minh'
         );
 
-        $lateMinutes = $start->diffInMinutes($now, false);
+        $lateMinutes = $expectedStart->diffInMinutes($now, false);
 
         if ($lateMinutes < 0) {
             return back()->with('error', 'Chưa tới giờ làm');
@@ -227,32 +259,12 @@ class AttendanceController extends Controller
 
         $isLate = $lateMinutes > 15;
 
-        $reasonType = $request->input('reason_type');
-        $reason     = $request->input('reason');
-
-        if ($isLate) {
-
-            if (!$reason || $reasonType !== 'late') {
-                return back()
-                    ->with('require_reason', true)
-                    ->with('attendance_id', $attendance->id)
-                    ->with('reason_type', 'late');
-            }
-
-            $attendance->update([
-                'check_in'     => $now,
-                'is_late'      => 1,
-                'late_reason'  => $reason,
-                'late_status'  => 'pending',
-            ]);
-        } else {
-
-            $attendance->update([
-                'check_in'    => $now,
-                'is_late'     => $lateMinutes > 0 ? 1 : 0,
-                'late_status' => null,
-            ]);
-        }
+        $attendance->update([
+            'check_in' => $now,
+            'is_late'  => $isLate ? 1 : 0,
+            'late_status' => $isLate ? 'rejected' : null,
+            'late_reason' => null
+        ]);
 
         return back()->with('success', 'Check-in thành công');
     }
@@ -262,7 +274,7 @@ class AttendanceController extends Controller
         $user  = Auth::user();
         $staff = $user->staff;
 
-        if (!$staff || $attendance->staff_id !== $staff->user_id) {
+        if (!$staff || $attendance->staff_id !== $staff->id) {
             abort(403);
         }
 
@@ -275,17 +287,43 @@ class AttendanceController extends Controller
         }
 
         $now = Carbon::now('Asia/Ho_Chi_Minh');
-        $attendance->check_out = $now;
 
-        $checkIn  = Carbon::parse($attendance->check_in);
-        $checkOut = Carbon::parse($attendance->check_out);
+        $checkIn = Carbon::parse($attendance->check_in, 'Asia/Ho_Chi_Minh');
 
-        $expectedStart = Carbon::parse($attendance->work_date . ' ' . $attendance->expected_check_in);
-        $expectedEnd   = Carbon::parse($attendance->work_date . ' ' . $attendance->expected_check_out);
+        $expectedStart = Carbon::parse(
+            $attendance->work_date . ' ' . $attendance->expected_check_in,
+            'Asia/Ho_Chi_Minh'
+        );
+
+        $expectedEnd = Carbon::parse(
+            $attendance->work_date . ' ' . $attendance->expected_check_out,
+            'Asia/Ho_Chi_Minh'
+        );
+
+        /*
+    |--------------------------------------------------------------------------
+    | AUTO CHECKOUT SAU 2 GIỜ TỪ CHECK-IN
+    |--------------------------------------------------------------------------
+    */
+
+        $twoHoursAfterCheckIn = $checkIn->copy()->addHours(2);
+
+        if ($now->gte($twoHoursAfterCheckIn)) {
+            // Hệ thống tự đóng ca tại giờ kết thúc ca
+            $checkOut = $expectedEnd;
+        } else {
+            $checkOut = $now;
+        }
 
         if ($checkOut->lte($checkIn)) {
             return back()->with('error', 'Thời gian không hợp lệ.');
         }
+
+        /*
+    |--------------------------------------------------------------------------
+    | KIỂM TRA VỀ SỚM
+    |--------------------------------------------------------------------------
+    */
 
         if ($checkOut->lt($expectedEnd)) {
 
@@ -304,30 +342,37 @@ class AttendanceController extends Controller
             $attendance->is_early_leave = 0;
         }
 
-        $fullShiftMinutes = $expectedStart->diffInMinutes($expectedEnd);
-        $workedMinutes    = $fullShiftMinutes;
+        /*
+    |--------------------------------------------------------------------------
+    | TÍNH PHÚT LÀM THỰC TẾ
+    |--------------------------------------------------------------------------
+    */
 
+        $actualEnd = $checkOut->gt($expectedEnd) ? $expectedEnd : $checkOut;
+
+        $workedMinutes = $checkIn->diffInMinutes($actualEnd);
+
+        // Trừ phút đi trễ (>15p đã đánh dấu từ check-in)
         if ($attendance->is_late) {
-
             $lateMinutes = $expectedStart->diffInMinutes($checkIn);
-
-            if ($attendance->late_status !== 'approved') {
-                $workedMinutes -= $lateMinutes;
-            }
+            $workedMinutes -= $lateMinutes;
         }
 
-        if ($attendance->is_early_leave) {
-
-            $earlyMinutes = $checkOut->diffInMinutes($expectedEnd);
-
-            if ($attendance->early_leave_status !== 'approved') {
-                $workedMinutes -= $earlyMinutes;
-            }
+        // Trừ phút về sớm nếu chưa được duyệt
+        if ($attendance->is_early_leave && $attendance->early_leave_status !== 'approved') {
+            $earlyMinutes = $actualEnd->diffInMinutes($expectedEnd);
+            $workedMinutes -= $earlyMinutes;
         }
 
         if ($workedMinutes < 0) {
             $workedMinutes = 0;
         }
+
+        /*
+    |--------------------------------------------------------------------------
+    | TÍNH LƯƠNG
+    |--------------------------------------------------------------------------
+    */
 
         $hourlyRate = $staff->employment_status === 'official'
             ? $staff->official_hourly_wage
@@ -335,6 +380,7 @@ class AttendanceController extends Controller
 
         $salary = ($workedMinutes / 60) * $hourlyRate;
 
+        $attendance->check_out      = $checkOut;
         $attendance->worked_minutes = $workedMinutes;
         $attendance->salary_amount  = round($salary);
         $attendance->is_completed   = 1;
@@ -375,7 +421,11 @@ class AttendanceController extends Controller
             ? $staff->official_hourly_wage
             : $staff->probation_hourly_wage;
 
-        $expectedMinutes = 180;
+        $expectedStart = Carbon::parse($attendance->work_date . ' ' . $attendance->expected_check_in);
+        $expectedEnd   = Carbon::parse($attendance->work_date . ' ' . $attendance->expected_check_out);
+
+        $expectedMinutes = $expectedStart->diffInMinutes($expectedEnd);
+
 
         $attendance->worked_minutes = $expectedMinutes;
         $attendance->salary_amount  = round(($expectedMinutes / 60) * $hourlyRate);
@@ -416,7 +466,11 @@ class AttendanceController extends Controller
             ? $staff->official_hourly_wage
             : $staff->probation_hourly_wage;
 
-        $expectedMinutes = 180;
+        $expectedStart = Carbon::parse($attendance->work_date . ' ' . $attendance->expected_check_in);
+        $expectedEnd   = Carbon::parse($attendance->work_date . ' ' . $attendance->expected_check_out);
+
+        $expectedMinutes = $expectedStart->diffInMinutes($expectedEnd);
+
 
         if (($attendance->worked_minutes ?? 0) < $expectedMinutes) {
 
@@ -448,7 +502,7 @@ class AttendanceController extends Controller
     {
         $staff = Auth::user()->staff;
 
-        if (!$staff || $attendance->staff_id !== $staff->id) {
+        if (!$staff || $attendance->staff_id !== $staff->user_id) {
             abort(403);
         }
 
@@ -476,7 +530,7 @@ class AttendanceController extends Controller
     {
         $staff = Auth::user()->staff;
 
-        if (!$staff || $attendance->staff_id !== $staff->id) {
+        if (!$staff || $attendance->staff_id !== $staff->user_id) {
             abort(403);
         }
 

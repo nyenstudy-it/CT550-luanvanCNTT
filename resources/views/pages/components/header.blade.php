@@ -29,8 +29,59 @@
                             </ul>
                         </div>
                         <div class="header__top__right__auth">
-                            <a href="#"><i class="fa fa-user"></i> Đăng nhập</a>
+                        
+                            @auth
+                                @if(auth()->user()->role === 'customer')
+                                    <div class="dropdown">
+                                        <a href="#">
+                                            <i class="fa fa-user"></i>
+                                            {{ auth()->user()->name }}
+                                        </a>
+                                        <ul class="header__menu__dropdown">
+                                            <li>
+                                                <a href="{{ route('customer.profile') }}">
+                                                    Hồ sơ cá nhân
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="{{ route('orders.my') }}">
+                                                    Đơn hàng của tôi
+                                                </a>
+                                            </li>
+
+                                            <li>
+                                                <a href="{{ route('discounts') }}">
+                                                    Mã giảm giá của tôi
+                                                </a>
+                                            </li>
+
+                                            <li>
+                                                <form action="{{ route('logout') }}" method="POST">
+                                                    @csrf
+                                                    <button type="submit" style="border:none;background:none;padding:0;">
+                                                        Đăng xuất
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                @endif
+                            @else
+                                <div class="dropdown">
+                                    <a href="{{ route('login') }}">
+                                        <i class="fa fa-user"></i> Đăng nhập
+                                    </a>
+                                    <ul class="header__menu__dropdown">
+                                        <li>
+                                            <a href="{{ route('register') }}">
+                                                Đăng ký
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            @endauth
                         </div>
+
                     </div>
                 </div>
             </div>
@@ -47,16 +98,10 @@
                 <nav class="header__menu">
                     <ul>
                         <li class="active"><a href="{{ route('pages.trangchu') }}">Trang chủ</a></li>
-                        <li><a href="./shop-grid.html">Sản phẩm</a></li>
-                        <li><a href="#">Pages</a>
-                            <ul class="header__menu__dropdown">
-                                <li><a href="./shop-details.html">Chi tiết sản phẩm</a></li>
-                                <li><a href="{{ route('cart.list') }}">Giỏ hàng</a></li>
-                                <li><a href="./checkout.html">Thanh toán</a></li>
-                                <li><a href="./blog-details.html">Tin tức</a></li>
-                            </ul>
+                        <li>
+                            <a href="{{ route('products.index') }}">Sản phẩm</a>
                         </li>
-                        <li><a href="./blog.html">Tin tức</a></li>
+                        <li><a href="{{route('blogs.index')}}">Tin tức</a></li>
                         <li><a href="./contact.html">Liên hệ</a></li>
                     </ul>
                 </nav>
@@ -64,7 +109,15 @@
             <div class="col-lg-2">
                 <div class="header__cart">
                     <ul>
-                        <li><a href="#"><i class="fa fa-heart"></i> <span>1</span></a></li>
+                        <li>
+                            <a href="{{ route('wishlist.index') }}">
+                                <i class="fa fa-heart"></i>
+                                <span>
+                                    {{ auth()->check() ? auth()->user()->wishlists()->count() : 0 }}
+                                </span>
+                            </a>
+                        </li>
+
                         <li><a href="{{ route('cart.list') }}"><i class="fa fa-shopping-bag"></i> <span>{{ session('cart') ? count(session('cart')) : 0 }}</span></a></li>
                     </ul>
                     {{-- <div class="header__cart__price">item: <span>$150.00</span></div> --}}
