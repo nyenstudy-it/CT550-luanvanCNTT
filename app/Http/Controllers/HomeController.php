@@ -84,6 +84,23 @@ class HomeController extends Controller
             ->take(6)
             ->get();
 
+        $bestSellerTopRatedProducts = Product::where('status', 'active')
+            ->with('variants')
+            ->withAvg('approvedReviews as avg_rating', 'rating')
+            ->addSelect([
+                'total_sold' => DB::table('order_items')
+                    ->join('product_variants', 'product_variants.id', '=', 'order_items.product_variant_id')
+                    ->join('orders', 'orders.id', '=', 'order_items.order_id')
+                    ->join('payments', 'payments.order_id', '=', 'orders.id')
+                    ->where('payments.status', 'paid')
+                    ->whereColumn('product_variants.product_id', 'products.id')
+                    ->selectRaw('COALESCE(SUM(order_items.quantity), 0)'),
+            ])
+            ->orderByDesc('total_sold')
+            ->orderByDesc('avg_rating')
+            ->take(6)
+            ->get();
+
         $savedDiscountCodes = collect(session('cart_saved_discount_codes', []))
             ->filter()
             ->unique()
@@ -94,6 +111,7 @@ class HomeController extends Controller
         $latestProducts = $this->productPricingService->enrichProducts($latestProducts);
         $bestSellingProducts = $this->productPricingService->enrichProducts($bestSellingProducts);
         $topRatedProducts = $this->productPricingService->enrichProducts($topRatedProducts);
+        $bestSellerTopRatedProducts = $this->productPricingService->enrichProducts($bestSellerTopRatedProducts);
 
         return view('pages.home', [
             'categories' => $categories,
@@ -104,6 +122,7 @@ class HomeController extends Controller
             'blogs' => $blogs,
             'bestSellingProducts' => $bestSellingProducts,
             'topRatedProducts' => $topRatedProducts,
+            'bestSellerTopRatedProducts' => $bestSellerTopRatedProducts,
             'savedDiscountCodes' => $savedDiscountCodes,
         ]);
     }

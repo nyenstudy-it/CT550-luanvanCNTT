@@ -11,10 +11,20 @@
             $canPosition = fn(string ...$positions) => $isAdmin || ($isStaff && $position && in_array($position, $positions, true));
 
             $canAttendance = $isStaff;
+            $canReports = $canPosition('cashier');
             $canWarehouse = $canPosition('warehouse');
             $canOrders = $canPosition('cashier', 'order_staff');
             $canContent = $canPosition('order_staff');
             $canBlogs = $canPosition('cashier');
+            $homeRoute = $canReports
+                ? route('admin.dashboard')
+                : ($canWarehouse
+                    ? route('admin.inventories.list')
+                    : ($canOrders
+                        ? route('admin.orders')
+                        : ($canContent
+                            ? route('admin.reviews')
+                            : route('profile.show'))));
             $positionLabel = match ($position) {
                 'cashier' => 'Thu ngân',
                 'warehouse' => 'Nhân viên kho',
@@ -24,7 +34,7 @@
         @endphp
 
         {{-- LOGO --}}
-        <a href="{{ route('admin.dashboard') }}" class="navbar-brand mx-4 mb-3">
+        <a href="{{ $homeRoute }}" class="navbar-brand mx-4 mb-3">
             <h3 class="text-primary">DASHBOARD</h3>
         </a>
 
@@ -50,8 +60,15 @@
             {{-- DASHBOARD --}}
             <a href="{{ route('admin.dashboard') }}"
                 class="nav-item nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-                <i class="fa fa-tachometer-alt me-2"></i>Dashboard
+                <i class="fa fa-tachometer-alt me-2"></i>Thống kê
             </a>
+
+            @if($canReports)
+                <a href="{{ route('admin.revenue.stats') }}"
+                    class="nav-item nav-link {{ request()->routeIs('admin.revenue.stats') ? 'active' : '' }}">
+                    <i class="fa fa-chart-line me-2"></i>Doanh thu
+                </a>
+            @endif
 
             {{-- ADMIN ONLY: Nhân viên, Bảng lương --}}
             @if($isAdmin)
@@ -145,6 +162,7 @@
                         <a href="{{ route('admin.orders') }}" class="dropdown-item">Danh sách đơn hàng</a>
                     </div>
                 </div>
+
             @endif
 
             {{-- ADMIN + ORDER_STAFF: Mã giảm giá, Đánh giá --}}

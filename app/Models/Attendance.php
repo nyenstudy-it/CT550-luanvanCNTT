@@ -21,6 +21,18 @@ class Attendance extends Model
         'check_out',
         'shift',
         'is_late',
+        'check_in_ip',
+        'check_in_latitude',
+        'check_in_longitude',
+        'check_in_network_type',
+        'check_in_distance_meters',
+        'check_in_verification_method',
+        'check_out_ip',
+        'check_out_latitude',
+        'check_out_longitude',
+        'check_out_network_type',
+        'check_out_distance_meters',
+        'check_out_verification_method',
     ];
 
     protected $appends = [

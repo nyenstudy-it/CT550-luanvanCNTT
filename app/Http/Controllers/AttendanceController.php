@@ -9,6 +9,7 @@ use App\Models\Staff;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\IpUtils;
 
 class AttendanceController extends Controller
 {
@@ -232,6 +233,12 @@ class AttendanceController extends Controller
         $user = Auth::user();
         $now  = Carbon::now('Asia/Ho_Chi_Minh');
 
+        $validated = $request->validate([
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'network_type' => 'nullable|string|max:50',
+        ]);
+
         if ($attendance->staff_id !== $user->id) {
             abort(403);
         }
@@ -242,6 +249,16 @@ class AttendanceController extends Controller
 
         if ($attendance->check_in) {
             return back()->with('error', 'Bạn đã check-in');
+        }
+
+        $accessResult = $this->evaluateAttendanceAccess(
+            $request->ip(),
+            $validated['latitude'] ?? null,
+            $validated['longitude'] ?? null
+        );
+
+        if (!$accessResult['allowed']) {
+            return back()->with('error', $accessResult['message']);
         }
 
         $expectedStart = Carbon::parse(
@@ -265,7 +282,13 @@ class AttendanceController extends Controller
             'check_in' => $now,
             'is_late'  => $isLate ? 1 : 0,
             'late_status' => $isLate ? 'rejected' : null,
-            'late_reason' => null
+            'late_reason' => null,
+            'check_in_ip' => $request->ip(),
+            'check_in_latitude' => $validated['latitude'] ?? null,
+            'check_in_longitude' => $validated['longitude'] ?? null,
+            'check_in_network_type' => $validated['network_type'] ?? null,
+            'check_in_distance_meters' => $accessResult['distance_meters'],
+            'check_in_verification_method' => $accessResult['method'],
         ]);
 
         return back()->with('success', 'Check-in thành công');
@@ -275,6 +298,12 @@ class AttendanceController extends Controller
     {
         $user  = Auth::user();
         $staff = $user->staff;
+
+        $validated = $request->validate([
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'network_type' => 'nullable|string|max:50',
+        ]);
 
         if (!$staff || $attendance->staff_id !== $staff->user_id) {
             abort(403);
@@ -286,6 +315,16 @@ class AttendanceController extends Controller
 
         if ($attendance->check_out) {
             return back()->with('error', 'Đã check-out rồi.');
+        }
+
+        $accessResult = $this->evaluateAttendanceAccess(
+            $request->ip(),
+            $validated['latitude'] ?? null,
+            $validated['longitude'] ?? null
+        );
+
+        if (!$accessResult['allowed']) {
+            return back()->with('error', $accessResult['message']);
         }
 
         $now = Carbon::now('Asia/Ho_Chi_Minh');
@@ -386,6 +425,12 @@ class AttendanceController extends Controller
         $attendance->worked_minutes = $workedMinutes;
         $attendance->salary_amount  = round($salary);
         $attendance->is_completed   = 1;
+        $attendance->check_out_ip = $request->ip();
+        $attendance->check_out_latitude = $validated['latitude'] ?? null;
+        $attendance->check_out_longitude = $validated['longitude'] ?? null;
+        $attendance->check_out_network_type = $validated['network_type'] ?? null;
+        $attendance->check_out_distance_meters = $accessResult['distance_meters'];
+        $attendance->check_out_verification_method = $accessResult['method'];
 
         $attendance->save();
 
@@ -554,5 +599,98 @@ class AttendanceController extends Controller
         ]);
 
         return back()->with('success', 'Đã gửi lý do về sớm.');
+    }
+
+    private function evaluateAttendanceAccess(string $ip, ?float $latitude, ?float $longitude): array
+    {
+        $allowedNetworks = config('attendance.allowed_networks', []);
+        $officeLat = config('attendance.origin_latitude');
+        $officeLng = config('attendance.origin_longitude');
+        $maxDistanceMeters = (float) config('attendance.max_distance_meters', 50);
+
+        $allowByNetwork = $this->isAllowedNetwork($ip, $allowedNetworks);
+        $allowByRadius = false;
+        $distanceMeters = null;
+
+        if (
+            is_numeric($officeLat)
+            && is_numeric($officeLng)
+            && $latitude !== null
+            && $longitude !== null
+        ) {
+            $distanceMeters = $this->calculateDistanceMeters(
+                (float) $officeLat,
+                (float) $officeLng,
+                $latitude,
+                $longitude
+            );
+
+            $allowByRadius = $distanceMeters <= $maxDistanceMeters;
+        }
+
+        if ($allowByNetwork && $allowByRadius) {
+            $method = 'both';
+        } elseif ($allowByNetwork) {
+            $method = 'wifi';
+        } elseif ($allowByRadius) {
+            $method = 'radius';
+        } else {
+            $method = 'none';
+        }
+
+        if ($method === 'none') {
+            $message = 'Chấm công bị từ chối: cần cùng mạng Wi-Fi hợp lệ hoặc trong bán kính 50m từ điểm gốc.';
+
+            if ($distanceMeters !== null) {
+                $message .= ' Khoảng cách hiện tại: ' . round($distanceMeters, 2) . 'm.';
+            }
+
+            return [
+                'allowed' => false,
+                'method' => $method,
+                'distance_meters' => $distanceMeters,
+                'message' => $message,
+            ];
+        }
+
+        return [
+            'allowed' => true,
+            'method' => $method,
+            'distance_meters' => $distanceMeters,
+            'message' => null,
+        ];
+    }
+
+    private function isAllowedNetwork(string $ip, array $allowedNetworks): bool
+    {
+        if (empty($allowedNetworks)) {
+            return false;
+        }
+
+        return IpUtils::checkIp($ip, $allowedNetworks);
+    }
+
+    private function calculateDistanceMeters(
+        float $originLat,
+        float $originLng,
+        float $targetLat,
+        float $targetLng
+    ): float {
+        $earthRadius = 6371000;
+
+        $latFrom = deg2rad($originLat);
+        $lngFrom = deg2rad($originLng);
+        $latTo = deg2rad($targetLat);
+        $lngTo = deg2rad($targetLng);
+
+        $latDelta = $latTo - $latFrom;
+        $lngDelta = $lngTo - $lngFrom;
+
+        $angle = 2 * asin(sqrt(
+            pow(sin($latDelta / 2), 2)
+                + cos($latFrom) * cos($latTo) * pow(sin($lngDelta / 2), 2)
+        ));
+
+        return $earthRadius * $angle;
     }
 }

@@ -118,10 +118,10 @@
                                                 @csrf
                                                 <button type="button" class="btn btn-success btn-sm"
                                                     onclick="handleCheckin(
-                                                                                                                                                                                                '{{ $attendance->id }}',
-                                                                                                                                                                                                '{{ $attendance->work_date }}',
-                                                                                                                                                                                                '{{ $attendance->expected_check_in }}'
-                                                                                                                                                                                            )">
+                                                                                                                                                                                                                    '{{ $attendance->id }}',
+                                                                                                                                                                                                                    '{{ $attendance->work_date }}',
+                                                                                                                                                                                                                    '{{ $attendance->expected_check_in }}'
+                                                                                                                                                                                                                )">
                                                     Check in
                                                 </button>
 
@@ -130,11 +130,12 @@
                                         @elseif(!$attendance->check_out)
                                             <form method="POST" action="{{ route('staff.attendances.check_out', $attendance->id) }}">
                                                 @csrf
-                                                <button type="button" class="btn btn-danger btn-sm" onclick="handleCheckout(
-                                                                                                                                        '{{ $attendance->id }}',
-                                                                                                                                        '{{ $attendance->work_date }}',
-                                                                                                                                        '{{ $attendance->expected_check_out }}'
-                                                                                                                                    )">
+                                                <button type="button" class="btn btn-danger btn-sm"
+                                                    onclick="handleCheckout(
+                                                                                                                                                            '{{ $attendance->id }}',
+                                                                                                                                                            '{{ $attendance->work_date }}',
+                                                                                                                                                            '{{ $attendance->expected_check_out }}'
+                                                                                                                                                        )">
                                                     Check out
                                                 </button>
 
@@ -286,6 +287,9 @@
 
                                 <input type="hidden" name="mode_type" id="modeType">
                                 <input type="hidden" name="reason_type" id="reasonType">
+                                <input type="hidden" name="latitude" id="reasonLatitude">
+                                <input type="hidden" name="longitude" id="reasonLongitude">
+                                <input type="hidden" name="network_type" id="reasonNetworkType">
 
                                 <div class="mb-3">
                                     <label>Lý do *</label>
@@ -342,6 +346,7 @@
                             <li>Trễ > 15 phút: tính theo thời gian thực tế làm việc.</li>
                             <li>Checkout trễ: chỉ tính lương đến hết giờ của ca.</li>
                             <li>Đi trễ hoặc về sớm bắt buộc nhập lý do để xét duyệt.</li>
+                            <li>Check-in/check-out hợp lệ khi cùng mạng hợp lệ hoặc trong bán kính 50m từ vị trí gốc.</li>
                             <li>Mức lương theo giờ được áp dụng cố định theo quy định công ty.</li>
                         </ul>
                     </div>
@@ -371,20 +376,77 @@
             );
         }
 
-        function handleCheckin(attendanceId, workDate, expectedIn) {
+        function getNetworkType() {
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+
+            if (!connection) {
+                return null;
+            }
+
+            return connection.effectiveType || connection.type || null;
+        }
+
+        function getCurrentPositionAsync() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) {
+                    resolve(null);
+                    return;
+                }
+
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        resolve({
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                        });
+                    },
+                    () => resolve(null),
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0,
+                    }
+                );
+            });
+        }
+
+        async function collectAttendanceContext() {
+            const position = await getCurrentPositionAsync();
+
+            return {
+                latitude: position ? position.latitude : null,
+                longitude: position ? position.longitude : null,
+                networkType: getNetworkType(),
+            };
+        }
+
+        function appendHiddenInput(form, name, value) {
+            if (value === null || value === undefined || value === '') {
+                return;
+            }
+
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+
+            form.appendChild(input);
+        }
+
+        async function handleCheckin(attendanceId, workDate, expectedIn) {
 
             const now = new Date();
             const expectedDate = buildExpectedDate(workDate, expectedIn);
 
             const lateMinutes = Math.floor((now - expectedDate) / 60000);
 
-            submitDirect(attendanceId, 'check-in');
+            await submitDirect(attendanceId, 'check-in');
         }
 
-        function handleCheckout(attendanceId, workDate, expectedOut) {
+        async function handleCheckout(attendanceId, workDate, expectedOut) {
 
             if (!expectedOut) {
-                submitDirect(attendanceId, 'check-out');
+                await submitDirect(attendanceId, 'check-out');
                 return;
             }
 
@@ -414,12 +476,14 @@
                 modal.show();
 
             } else {
-                submitDirect(attendanceId, 'check-out');
+                await submitDirect(attendanceId, 'check-out');
             }
         }
 
         // ===== SUBMIT KHÔNG CẦN LÝ DO =====
-        function submitDirect(attendanceId, type) {
+        async function submitDirect(attendanceId, type) {
+
+            const context = await collectAttendanceContext();
 
             const form = document.createElement('form');
             form.method = 'POST';
@@ -431,9 +495,31 @@
             csrf.value = '{{ csrf_token() }}';
 
             form.appendChild(csrf);
+
+            appendHiddenInput(form, 'latitude', context.latitude);
+            appendHiddenInput(form, 'longitude', context.longitude);
+            appendHiddenInput(form, 'network_type', context.networkType);
+
             document.body.appendChild(form);
             form.submit();
         }
+
+        document.getElementById('reasonForm').addEventListener('submit', async function (event) {
+            if (this.dataset.submitting === '1') {
+                return;
+            }
+
+            event.preventDefault();
+
+            const context = await collectAttendanceContext();
+
+            document.getElementById('reasonLatitude').value = context.latitude ?? '';
+            document.getElementById('reasonLongitude').value = context.longitude ?? '';
+            document.getElementById('reasonNetworkType').value = context.networkType ?? '';
+
+            this.dataset.submitting = '1';
+            this.submit();
+        });
 
     </script>
 

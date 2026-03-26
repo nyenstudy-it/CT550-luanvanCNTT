@@ -1,6 +1,25 @@
 <!-- Navbar Start -->
+@php
+    $authUser = Auth::user();
+    $isAdmin = $authUser->role === 'admin';
+    $isStaff = $authUser->role === 'staff';
+    $position = $isStaff ? ($authUser->staff?->position ?? null) : null;
+    $canReports = $isAdmin || ($isStaff && $position === 'cashier');
+    $canWarehouse = $isAdmin || ($isStaff && $position === 'warehouse');
+    $canOrders = $isAdmin || ($isStaff && in_array($position, ['cashier', 'order_staff'], true));
+    $canContent = $isAdmin || ($isStaff && $position === 'order_staff');
+    $homeRoute = $canReports
+        ? route('admin.dashboard')
+        : ($canWarehouse
+            ? route('admin.inventories.list')
+            : ($canOrders
+                ? route('admin.orders')
+                : ($canContent
+                    ? route('admin.reviews')
+                    : route('profile.show'))));
+@endphp
 <nav class="navbar navbar-expand bg-light navbar-light sticky-top px-4 py-0">
-    <a href="{{ route('admin.dashboard') }}" class="navbar-brand d-flex d-lg-none me-4">
+    <a href="{{ $homeRoute }}" class="navbar-brand d-flex d-lg-none me-4">
         <h2 class="text-primary mb-0"><i class="fa fa-hashtag"></i></h2>
     </a>
     <a href="#" class="sidebar-toggler flex-shrink-0">
@@ -77,7 +96,7 @@
                 <span class="d-none d-lg-inline-flex">{{ Auth::user()->name }}</span>
             </a>
             <div class="dropdown-menu dropdown-menu-end bg-light border-0 rounded-0 rounded-bottom m-0">
-                <a href="#" class="dropdown-item">Thông tin cá nhân</a>
+                <a href="{{ route('profile.show') }}" class="dropdown-item">Thông tin cá nhân</a>
                 <a href="#" class="dropdown-item">Cài đặt</a>
                 <a href="{{ route('admin.logout') }}" class="dropdown-item">Đăng xuất</a>
             </div>

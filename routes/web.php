@@ -224,6 +224,18 @@ Route::middleware(['auth', 'role:admin,staff'])
         Route::get('/notifications/read/{id}', [NotificationController::class, 'read'])->name('admin.notifications.read');
     });
 
+// ADMIN + THU NGÂN (cashier) Doanh thu
+Route::middleware(['auth', 'can.position:cashier'])
+    ->prefix('admin')
+    ->group(function () {
+        Route::get('/revenue-statistics', [DashboardController::class, 'revenueStatistics'])
+            ->name('admin.revenue.stats');
+        Route::get('/revenue-statistics/export-excel', [DashboardController::class, 'exportRevenueExcel'])
+            ->name('admin.revenue.export.excel');
+        Route::get('/revenue-statistics/export-pdf', [DashboardController::class, 'exportRevenuePdf'])
+            ->name('admin.revenue.export.pdf');
+    });
+
 //ADMIN + NHÂN VIÊN KHO (warehouse) Nhà phân phối, Danh mục, Sản phẩm, Kho hàng
 Route::middleware(['auth', 'can.position:warehouse'])
     ->prefix('admin')

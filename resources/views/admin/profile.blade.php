@@ -200,9 +200,18 @@
                         </div>
                     </div>
 
+                    @php
+                        $isAdmin = $user->role === 'admin';
+                        $isStaff = $user->role === 'staff';
+                        $position = $isStaff ? ($user->staff?->position ?? null) : null;
+                        $cancelRoute = ($isAdmin || ($isStaff && $position === 'cashier'))
+                            ? route('admin.dashboard')
+                            : route('profile.show');
+                    @endphp
+
                     {{-- Submit --}}
                     <div class="d-flex justify-content-end gap-2">
-                        <a href="{{ route('admin.dashboard') }}" class="btn btn-light px-4">
+                        <a href="{{ $cancelRoute }}" class="btn btn-light px-4">
                             <i class="fa fa-times me-1"></i>Hủy
                         </a>
                         <button type="submit" class="btn btn-primary px-4">

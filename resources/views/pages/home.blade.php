@@ -474,6 +474,39 @@
                 </section>
                 <!-- Latest Product Section End -->
 
+                <section class="featured spad pt-0">
+                    <div class="container">
+                        <div class="section-title">
+                            <h2>Bán chạy và đánh giá cao</h2>
+                        </div>
+                        <div class="row">
+                            @forelse($bestSellerTopRatedProducts as $item)
+                                @php $variant = $item->variants->first(); @endphp
+                                <div class="col-lg-4 col-md-6 col-sm-6 mb-3">
+                                    <div class="latest-product__item border rounded p-2 h-100">
+                                        <a href="{{ route('products.show', $item->id) }}" class="latest-product__item__pic">
+                                            <img src="{{ $item->image ? asset('storage/' . $item->image) : asset('images/no-image.png') }}"
+                                                width="75" height="75" class="rounded" style="object-fit:cover" alt="{{ $item->name }}">
+                                        </a>
+                                        <div class="latest-product__item__text">
+                                            <h6><a href="{{ route('products.show', $item->id) }}">{{ $item->name }}</a></h6>
+                                            @if($item->display_has_discount)
+                                                <span class="text-danger">{{ number_format($item->display_final_price) }} đ</span>
+                                            @else
+                                                <span>{{ number_format($variant?->price ?? 0) }} đ</span>
+                                            @endif
+                                            <small class="d-block text-muted">Đã bán: {{ number_format($item->total_sold ?? 0) }}</small>
+                                            <small class="d-block text-warning">Đánh giá: {{ number_format($item->avg_rating ?? 0, 1) }}/5</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="col-12 text-muted text-center">Chưa có dữ liệu sản phẩm nổi bật</div>
+                            @endforelse
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Blog Section Begin -->
                 <section class="from-blog spad">
                     <div class="container">
