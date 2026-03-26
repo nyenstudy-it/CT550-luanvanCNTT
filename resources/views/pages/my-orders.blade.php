@@ -1,182 +1,418 @@
 @extends('layout')
 
-@section('hero')
-    @include('pages.components.hero', ['showBanner' => false, 'heroNormal' => true])
-@endsection
-
 @section('content')
+    @php
+        $currentStatus = request('status');
+        $reviewFilter = $reviewFilter ?? request('review');
+        $reviewedProductLookup = array_flip($reviewedProductIds ?? []);
+        $tabs = [
+            ['label' => 'Tất cả', 'params' => [], 'active' => $currentStatus === null && $reviewFilter !== 'unreviewed'],
+            ['label' => 'Chưa đánh giá', 'params' => ['review' => 'unreviewed'], 'active' => $reviewFilter === 'unreviewed'],
+            ['label' => 'Chờ xử lý', 'params' => ['status' => 'pending'], 'active' => $currentStatus === 'pending' && $reviewFilter !== 'unreviewed'],
+            ['label' => 'Đã xác nhận', 'params' => ['status' => 'confirmed'], 'active' => $currentStatus === 'confirmed' && $reviewFilter !== 'unreviewed'],
+            ['label' => 'Đang giao', 'params' => ['status' => 'shipping'], 'active' => $currentStatus === 'shipping' && $reviewFilter !== 'unreviewed'],
+            ['label' => 'Hoàn thành', 'params' => ['status' => 'completed'], 'active' => $currentStatus === 'completed' && $reviewFilter !== 'unreviewed'],
+            ['label' => 'Đã huỷ', 'params' => ['status' => 'cancelled'], 'active' => $currentStatus === 'cancelled' && $reviewFilter !== 'unreviewed'],
+            ['label' => 'Chờ hoàn tiền', 'params' => ['status' => 'refund_requested'], 'active' => $currentStatus === 'refund_requested' && $reviewFilter !== 'unreviewed'],
+            ['label' => 'Đã hoàn tiền', 'params' => ['status' => 'refunded'], 'active' => $currentStatus === 'refunded' && $reviewFilter !== 'unreviewed'],
+        ];
+        $statusConfig = [
+            'pending' => ['label' => 'Chờ xử lý', 'icon' => 'fa-clock', 'color' => '#f59e0b', 'bg' => '#fffbeb'],
+            'confirmed' => ['label' => 'Đã xác nhận', 'icon' => 'fa-check-circle', 'color' => '#0ea5e9', 'bg' => '#f0f9ff'],
+            'shipping' => ['label' => 'Đang giao', 'icon' => 'fa-shipping-fast', 'color' => '#6366f1', 'bg' => '#eef2ff'],
+            'completed' => ['label' => 'Hoàn thành', 'icon' => 'fa-check-double', 'color' => '#22c55e', 'bg' => '#f0fdf4'],
+            'cancelled' => ['label' => 'Đã huỷ', 'icon' => 'fa-times-circle', 'color' => '#ef4444', 'bg' => '#fef2f2'],
+            'refund_requested' => ['label' => 'Chờ hoàn tiền', 'icon' => 'fa-undo-alt', 'color' => '#f97316', 'bg' => '#fff7ed'],
+            'refunded' => ['label' => 'Đã hoàn tiền', 'icon' => 'fa-wallet', 'color' => '#7fad39', 'bg' => '#f0fdf4'],
+        ];
+    @endphp
 
     <section class="breadcrumb-section set-bg" data-setbg="{{ asset('frontend/images/breadcrumb.jpg') }}">
         <div class="container">
-
             <div class="row">
                 <div class="col-lg-12 text-center">
                     <div class="breadcrumb__text">
-
                         <h2>Đơn hàng của tôi</h2>
-
                         <div class="breadcrumb__option">
                             <a href="{{ route('pages.home') }}">Trang chủ</a>
                             <a href="{{ route('orders.my') }}">Đơn hàng của tôi</a>
                         </div>
-
                     </div>
-
                 </div>
             </div>
         </div>
     </section>
 
-        <section class="checkout spad">
-            <div class="container">
+    <section class="py-5" style="background:#f5f5f5; min-height:60vh;">
+        <div class="container" style="max-width:900px;">
 
-                <div class="checkout-box">
+            {{-- Filter tabs --}}
+            <div class="order-tabs mb-4">
+                @foreach($tabs as $tab)
+                    <a href="{{ route('orders.my', $tab['params']) }}" class="order-tab {{ $tab['active'] ? 'active' : '' }}">
+                        {{ $tab['label'] }}
+                    </a>
+                @endforeach
+            </div>
 
-                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            {{-- Empty state --}}
+            @if($orders->count() == 0)
+                <div class="text-center py-5">
+                    <i class="fa fa-shopping-bag fa-3x mb-3" style="color:#d1d5db;"></i>
+                    <p class="text-muted mb-3">Bạn chưa có đơn hàng nào.</p>
+                    <a href="{{ route('pages.home') }}" class="btn btn-success px-4">
+                        <i class="fa fa-store me-1"></i> Mua sắm ngay
+                    </a>
+                </div>
+            @else
 
-                        <h4 class="m-0">Đơn hàng của tôi</h4>
+                {{-- Order cards --}}
+                @foreach($orders as $order)
+                    @php
+                        $cfg = $statusConfig[$order->status] ?? ['label' => $order->status, 'icon' => 'fa-circle', 'color' => '#6b7280', 'bg' => '#f9fafb'];
+                        $firstItems = $order->items->take(3);
+                        $extraCount = $order->items->count() - 3;
+                        $productIdsInOrder = $order->items->pluck('variant.product_id')->filter()->unique();
+                        $firstUnreviewedItem = null;
+                        $isFullyReviewedCompleted = false;
 
-                        <div class="d-flex flex-wrap gap-2">
+                        if ($order->status === 'completed') {
+                            $firstUnreviewedItem = $order->items->first(function ($item) use ($reviewedProductLookup) {
+                                $productId = $item->variant?->product_id;
+                                return $productId && !isset($reviewedProductLookup[$productId]);
+                            });
 
-                            <a href="{{ route('orders.my') }}"
-                                class="btn btn-sm {{ request()->status == null ? 'btn-success' : 'btn-outline-success' }}">
-                                Tất cả
-                            </a>
+                            $isFullyReviewedCompleted = $productIdsInOrder->isNotEmpty() && !$firstUnreviewedItem;
+                        }
+                    @endphp
 
-                            <a href="{{ route('orders.my', ['status' => 'pending']) }}"
-                                class="btn btn-sm {{ request()->status == 'pending' ? 'btn-success' : 'btn-outline-success' }}">
-                                Chờ xử lý
-                            </a>
+                    <div class="order-card mb-3">
 
-                            <a href="{{ route('orders.my', ['status' => 'confirmed']) }}"
-                                class="btn btn-sm {{ request()->status == 'confirmed' ? 'btn-success' : 'btn-outline-success' }}">
-                                Đã xác nhận
-                            </a>
+                        {{-- Card header --}}
+                        <div class="order-card-header">
+                            <span class="order-id">
+                                <i class="fa fa-receipt me-1"></i> Đơn #{{ $order->id }}
+                            </span>
+                            <span class="order-date text-muted small">
+                                {{ $order->created_at->format('d/m/Y H:i') }}
+                            </span>
+                            <span class="order-status ms-auto" style="color:{{ $cfg['color'] }}; background:{{ $cfg['bg'] }};">
+                                <i class="fa {{ $cfg['icon'] }} me-1"></i> {{ $cfg['label'] }}
+                            </span>
+                            @if($isFullyReviewedCompleted)
+                                <span class="order-review-badge">
+                                    <i class="fa fa-star me-1"></i> Đã đánh giá
+                                </span>
+                            @endif
+                        </div>
 
-                            <a href="{{ route('orders.my', ['status' => 'shipping']) }}"
-                                class="btn btn-sm {{ request()->status == 'shipping' ? 'btn-success' : 'btn-outline-success' }}">
-                                Đang giao
-                            </a>
+                        {{-- Product rows --}}
+                        <div class="order-items">
+                            @foreach($firstItems as $item)
+                                @php
+                                    $product = $item->variant?->product;
+                                    $imgModel = $item->variant?->images?->first() ?? $product?->images?->first();
+                                    $imgSrc = $imgModel ? asset('storage/' . $imgModel->image_path) : asset('img/no-image.png');
+                                    $productName = $product?->name ?? 'Sản phẩm';
+                                    $variantInfo = collect([
+                                        $item->variant?->size ?? null,
+                                        $item->variant?->volume ?? null,
+                                        $item->variant?->weight ?? null,
+                                        $item->variant?->color ?? null,
+                                    ])->filter()->first();
+                                @endphp
+                                <div class="order-item-row">
+                                    <img src="{{ $imgSrc }}" class="order-item-img" alt="{{ $productName }}">
+                                    <div class="order-item-info flex-grow-1">
+                                        <div class="order-item-name">{{ $productName }}</div>
+                                        @if($variantInfo)
+                                            <div class="order-item-variant text-muted small">Phân loại: {{ $variantInfo }}</div>
+                                        @endif
+                                        <div class="order-item-qty text-muted small">x{{ $item->quantity }}</div>
+                                    </div>
+                                    <div class="order-item-price">
+                                        {{ number_format($item->price) }}&thinsp;đ
+                                    </div>
+                                </div>
+                            @endforeach
 
-                            <a href="{{ route('orders.my', ['status' => 'completed']) }}"
-                                class="btn btn-sm {{ request()->status == 'completed' ? 'btn-success' : 'btn-outline-success' }}">
-                                Hoàn thành
-                            </a>
+                            @if($extraCount > 0)
+                                <div class="ps-3 pb-2 text-muted small">
+                                    <i class="fa fa-ellipsis-h me-1"></i> và {{ $extraCount }} sản phẩm khác…
+                                </div>
+                            @endif
+                        </div>
 
-                            <a href="{{ route('orders.my', ['status' => 'cancelled']) }}"
-                                class="btn btn-sm {{ request()->status == 'cancelled' ? 'btn-danger' : 'btn-outline-danger' }}">
-                                Đã huỷ
-                            </a>
-
-                            <a href="{{ route('orders.my', ['status' => 'refund_requested']) }}"
-                                class="btn btn-sm {{ request()->status == 'refund_requested' ? 'btn-warning' : 'btn-outline-warning' }}">
-                                Chờ hoàn tiền
-                            </a>
-
-                            <a href="{{ route('orders.my', ['status' => 'refunded']) }}"
-                                class="btn btn-sm {{ request()->status == 'refunded' ? 'btn-success' : 'btn-outline-success' }}">
-                                Đã hoàn tiền
-                            </a>
-
-
+                        {{-- Card footer --}}
+                        <div class="order-card-footer">
+                            <div class="order-total">
+                                <span class="text-muted small">Tổng tiền:</span>
+                                <span class="order-total-amount">{{ number_format($order->total_amount) }}&thinsp;đ</span>
+                            </div>
+                            <div class="order-actions">
+                                @if($firstUnreviewedItem)
+                                    <a href="{{ route('reviews.form', ['product' => $firstUnreviewedItem->variant->product_id, 'order' => $order->id]) }}"
+                                        class="btn-order-action btn-action-solid">
+                                        <i class="fa fa-star me-1"></i> Đánh giá sản phẩm
+                                    </a>
+                                @endif
+                                <a href="{{ route('orders.detail', $order->id) }}" class="btn-order-action btn-action-outline">
+                                    <i class="fa fa-eye me-1"></i> Xem chi tiết
+                                </a>
+                            </div>
                         </div>
 
                     </div>
+                @endforeach
 
-                    @if($orders->count() == 0)
+                {{-- Pagination --}}
+                @if($orders->hasPages())
+                    <div class="d-flex justify-content-center mt-4">
+                        {{ $orders->links('vendor.pagination.custom') }}
+                    </div>
+                @endif
 
-                        <div class="text-center p-4">
-                            <p>Bạn chưa có đơn hàng nào.</p>
+            @endif
+        </div>
+    </section>
 
-                            <a href="{{ route('pages.home') }}" class="btn btn-success">
-                                Mua sắm ngay
-                            </a>
-                        </div>
+    <style>
+        /* ── Filter tabs ── */
+        .order-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            background: #fff;
+            border-radius: 10px;
+            padding: 12px 14px;
+            box-shadow: 0 1px 6px rgba(0, 0, 0, .07);
+        }
 
-                    @else
+        .order-tab {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #555;
+            text-decoration: none;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+            transition: all .18s;
+        }
 
-                        <table class="table">
+        .order-tab:hover {
+            border-color: #7fad39;
+            color: #7fad39;
+        }
 
-                            <thead>
-                                <tr>
-                                    <th>Mã đơn</th>
-                                    <th>Ngày đặt</th>
-                                    <th>Tổng tiền</th>
-                                    <th>Trạng thái</th>
-                                    <th class="text-end">Chi tiết</th>
-                                </tr>
-                            </thead>
+        .order-tab.active {
+            background: #7fad39;
+            color: #fff;
+            border-color: #7fad39;
+        }
 
-                            <tbody>
+        /* ── Order card ── */
+        .order-card {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 1px 6px rgba(0, 0, 0, .07);
+            overflow: hidden;
+        }
 
-                                @foreach($orders as $order)
+        .order-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-bottom: 1px solid #f3f4f6;
+            flex-wrap: wrap;
+        }
 
-                                    <tr>
+        .order-id {
+            font-weight: 600;
+            font-size: 13px;
+            color: #374151;
+        }
 
-                                        <td>#{{ $order->id }}</td>
+        .order-status {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
 
-                                        <td>{{ $order->created_at->format('d/m/Y') }}</td>
+        .order-review-badge {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 20px;
+            color: #047857;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+        }
 
-                                        <td>{{ number_format($order->total_amount) }} đ</td>
+        /* ── Items ── */
+        .order-items {
+            padding: 4px 0;
+        }
 
-                                        <td>
+        .order-item-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            border-bottom: 1px solid #f9fafb;
+        }
 
-                                            @if($order->status == 'pending')
-                                                <span class="badge bg-warning text-dark">Chờ xử lý</span>
+        .order-item-row:last-of-type {
+            border-bottom: none;
+        }
 
-                                            @elseif($order->status == 'confirmed')
-                                                <span class="badge bg-info text-dark">Đã xác nhận</span>
+        .order-item-img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #f3f4f6;
+            flex-shrink: 0;
+        }
 
-                                            @elseif($order->status == 'shipping')
-                                                <span class="badge bg-primary">Đang giao</span>
+        .order-item-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #111;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
 
-                                            @elseif($order->status == 'completed')
-                                                <span class="badge bg-success">Hoàn thành</span>
+        .order-item-price {
+            font-size: 14px;
+            font-weight: 600;
+            color: #ef4444;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
 
-                                            @elseif($order->status == 'cancelled')
-                                                <span class="badge bg-danger">Đã huỷ</span>
+        /* ── Footer ── */
+        .order-card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-top: 1px solid #f3f4f6;
+            background: #fafafa;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
 
-                                            @elseif($order->status == 'refund_requested')
-                                                <span class="badge bg-warning text-dark">Chờ hoàn tiền</span>
+        .order-total {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
 
-                                            @elseif($order->status == 'refunded')
-                                                <span class="badge bg-success">Đã hoàn tiền</span>
+        .order-total-amount {
+            font-size: 18px;
+            font-weight: 700;
+            color: #ef4444;
+        }
 
-                                            @endif
+        .order-actions {
+            display: flex;
+            gap: 8px;
+        }
 
-                                        </td>
+        .btn-order-action {
+            padding: 7px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all .18s;
+            display: inline-flex;
+            align-items: center;
+        }
 
+        .btn-action-outline {
+            border: 1px solid #7fad39;
+            color: #7fad39;
+            background: #fff;
+        }
 
-                                        <td class="text-end">
+        .btn-action-outline:hover {
+            background: #7fad39;
+            color: #fff;
+        }
 
-                                            <a href="{{ route('orders.detail', $order->id) }}" class="btn btn-sm btn-outline-success">
-                                                Xem
-                                            </a>
+        .btn-action-solid {
+            border: 1px solid #ef4444;
+            color: #fff;
+            background: #ef4444;
+        }
 
-                                        </td>
+        .btn-action-solid:hover {
+            background: #dc2626;
+            border-color: #dc2626;
+            color: #fff;
+        }
 
-                                    </tr>
-
-                                @endforeach
-
-                            </tbody>
-
-                        </table>
-
-                    @endif
-
-                </div>
-
-            </div>
-        </section>
-
-        <style>
-            .checkout-box {
-                background: #fff;
-                padding: 25px;
-                border-radius: 10px;
-                box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+        @media (max-width: 576px) {
+            .order-item-img {
+                width: 48px;
+                height: 48px;
             }
-        </style>
+
+            .order-total-amount {
+                font-size: 15px;
+            }
+        }
+
+        /* ── Pagination ── */
+        .order-pagination {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .page-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 36px;
+            height: 36px;
+            padding: 0 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+            color: #374151;
+            transition: all .18s;
+        }
+
+        .page-btn:hover:not(.disabled):not(.active) {
+            border-color: #7fad39;
+            color: #7fad39;
+        }
+
+        .page-btn.active {
+            background: #7fad39;
+            border-color: #7fad39;
+            color: #fff;
+        }
+
+        .page-btn.disabled {
+            opacity: .45;
+            cursor: default;
+            pointer-events: none;
+        }
+    </style>
 
 @endsection

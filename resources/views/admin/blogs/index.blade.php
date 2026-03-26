@@ -4,10 +4,54 @@
     <div class="container-fluid pt-4 px-4">
         <div class="bg-light rounded p-4">
 
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="mb-0">Danh sách blog</h6>
-                <a href="{{ route('admin.blogs.create') }}" class="btn btn-primary btn-sm">+ Thêm blog</a>
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div>
+                    <h5 class="mb-1">Danh sách blog</h5>
+                    <small class="text-muted">Quản lý bài viết, nội dung và tiến độ xuất bản.</small>
+                </div>
+                <a href="{{ route('admin.blogs.create') }}" class="btn btn-sm btn-success">+ Thêm blog</a>
             </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-4">
+                    <div class="border rounded bg-white p-3 h-100">
+                        <small class="text-muted d-block mb-1">Tổng blog</small>
+                        <h4 class="mb-0">{{ $summary['total'] ?? 0 }}</h4>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-4">
+                    <div class="border rounded bg-white p-3 h-100">
+                        <small class="text-muted d-block mb-1">Tạo trong tháng</small>
+                        <h4 class="mb-0 text-primary">{{ $summary['this_month'] ?? 0 }}</h4>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-4">
+                    <div class="border rounded bg-white p-3 h-100">
+                        <small class="text-muted d-block mb-1">Có ảnh đại diện</small>
+                        <h4 class="mb-0 text-success">{{ $summary['with_image'] ?? 0 }}</h4>
+                    </div>
+                </div>
+            </div>
+
+            <form method="GET" action="{{ route('admin.blogs.index') }}" class="row g-3 mb-4 border rounded bg-white p-3">
+                <div class="col-md-5">
+                    <label class="form-label">Từ khóa</label>
+                    <input type="text" name="keyword" class="form-control" value="{{ request('keyword') }}"
+                        placeholder="Tiêu đề, slug, tóm tắt...">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Từ ngày</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ request('date_from') }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Đến ngày</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary">Lọc</button>
+                    <a href="{{ route('admin.blogs.index') }}" class="btn btn-secondary">Đặt lại</a>
+                </div>
+            </form>
 
             <div class="table-responsive">
                 <table class="table table-bordered table-hover align-middle">
@@ -25,7 +69,7 @@
                     <tbody>
                         @forelse ($blogs as $index => $blog)
                             <tr>
-                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $blogs->firstItem() + $index }}</td>
                                 <td>
                                     @if ($blog->image)
                                         <img src="{{ asset('storage/' . $blog->image) }}" width="60" height="60" class="rounded"
@@ -63,7 +107,8 @@
                                     <div class="modal-content">
                                         <div class="modal-header">
                                             <h5 class="modal-title" id="blogModalLabel{{ $blog->id }}">Chi tiết Blog:
-                                                {{ $blog->title }}</h5>
+                                                {{ $blog->title }}
+                                            </h5>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"
                                                 aria-label="Close"></button>
                                         </div>
@@ -91,28 +136,28 @@
                                                 <p>{!! nl2br(e($blog->content)) !!}</p>
                                             </div>
 
-                                        @if($blog->blocks->count())
-                                            <div class="mb-3">
-                                                <strong>Blocks:</strong>
-                                                @foreach($blog->blocks as $block)
-                                                    <div class="mb-2 border p-2 rounded">
-                                                        <span class="badge bg-info mb-1">{{ ucfirst($block->type) }}</span>
+                                            @if($blog->blocks->count())
+                                                <div class="mb-3">
+                                                    <strong>Blocks:</strong>
+                                                    @foreach($blog->blocks as $block)
+                                                        <div class="mb-2 border p-2 rounded">
+                                                            <span class="badge bg-info mb-1">{{ ucfirst($block->type) }}</span>
 
-                                                        {{-- Nếu có content --}}
-                                                        @if($block->content)
-                                                            <p>{!! nl2br(e($block->content)) !!}</p>
-                                                        @endif
+                                                            {{-- Nếu có content --}}
+                                                            @if($block->content)
+                                                                <p>{!! nl2br(e($block->content)) !!}</p>
+                                                            @endif
 
-                                                        {{-- Nếu có ảnh --}}
-                                                        @if($block->image)
-                                                            <div class="mb-2">
-                                                                <img src="{{ asset('storage/' . $block->image) }}" class="img-fluid">
-                                                            </div>
-                                                        @endif
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        @endif
+                                                            {{-- Nếu có ảnh --}}
+                                                            @if($block->image)
+                                                                <div class="mb-2">
+                                                                    <img src="{{ asset('storage/' . $block->image) }}" class="img-fluid">
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @endif
 
                                         </div>
                                         <div class="modal-footer">
@@ -130,7 +175,9 @@
                     </tbody>
                 </table>
 
-                {{ $blogs->links() }}
+                <div class="mt-3">
+                    {{ $blogs->appends(request()->query())->links() }}
+                </div>
             </div>
         </div>
     </div>

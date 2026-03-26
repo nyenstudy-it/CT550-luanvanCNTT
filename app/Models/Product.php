@@ -24,7 +24,7 @@ class Product extends Model
         'status'
     ];
 
-     public function images()
+    public function images()
     {
         return $this->hasMany(ProductImage::class);
     }
@@ -57,6 +57,32 @@ class Product extends Model
 
     public function product_images()
     {
-        return $this->images(); 
+        return $this->images();
+    }
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    /**
+     * Only approved reviews (for public display / average calculation)
+     */
+    public function approvedReviews()
+    {
+        return $this->hasMany(Review::class)->where('status', 'approved');
+    }
+
+    /**
+     * Average rating from approved reviews (rounded to 1 decimal)
+     */
+    public function getAvgRatingAttribute()
+    {
+        $avg = $this->approvedReviews()->avg('rating');
+        return $avg ? round($avg, 1) : 0.0;
+    }
+
+    public function variant()
+    {
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
 }

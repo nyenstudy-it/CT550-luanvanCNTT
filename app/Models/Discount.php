@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 class Discount extends Model
 {
@@ -66,5 +67,40 @@ class Discount extends Model
     public function usages()
     {
         return $this->hasMany(DiscountUsage::class);
+    }
+
+    public function products()
+    {
+        return $this->belongsToMany(Product::class, 'discount_product', 'discount_id', 'product_id');
+    }
+
+    public function isProductScoped(): bool
+    {
+        if ($this->relationLoaded('products')) {
+            return $this->products->isNotEmpty();
+        }
+
+        return $this->products()->exists();
+    }
+
+    public function getEligibleSubtotal(Collection $cartItems): float
+    {
+        if (!$this->isProductScoped()) {
+            return (float) $cartItems->sum(function ($item) {
+                return (float) ($item['price'] ?? 0) * (int) ($item['quantity'] ?? 0);
+            });
+        }
+
+        $productIds = $this->relationLoaded('products')
+            ? $this->products->pluck('id')
+            : $this->products()->pluck('products.id');
+
+        return (float) $cartItems
+            ->filter(function ($item) use ($productIds) {
+                return isset($item['product_id']) && $productIds->contains((int) $item['product_id']);
+            })
+            ->sum(function ($item) {
+                return (float) ($item['price'] ?? 0) * (int) ($item['quantity'] ?? 0);
+            });
     }
 }

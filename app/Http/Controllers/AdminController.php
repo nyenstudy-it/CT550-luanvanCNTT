@@ -93,7 +93,16 @@ class AdminController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return view('admin.staff.list', compact('staffs'));
+        $stats = [
+            'total' => Staff::count(),
+            'active' => Staff::whereHas('user', fn($q) => $q->where('status', 'active'))->count(),
+            'locked' => Staff::whereHas('user', fn($q) => $q->where('status', 'locked'))->count(),
+            'new_this_month' => Staff::whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count(),
+        ];
+
+        return view('admin.staff.list', compact('staffs', 'stats'));
     }
 
     // ADMIN + STAFF
@@ -106,6 +115,7 @@ class AdminController extends Controller
 
     public function profileUpdate(Request $request)
     {
+        /** @var User $user */
         $user = Auth::user();
 
         $request->validate([
@@ -149,8 +159,17 @@ class AdminController extends Controller
                 'name'   => 'required|string|max:255',
                 'email'  => 'required|email|unique:users,email',
                 'password' => 'required|min:8',
+                'phone' => 'nullable|string|max:20',
+                'date_of_birth' => 'nullable|date',
+                'address' => 'nullable|string',
                 'position' => 'required|in:cashier,warehouse,order_staff',
+                'start_date' => 'nullable|date',
+                'probation_start' => 'nullable|date',
+                'probation_end' => 'nullable|date',
                 'employment_status' => 'required|in:probation,official,resigned',
+                'probation_hourly_wage' => 'nullable|numeric',
+                'official_hourly_wage' => 'nullable|numeric',
+                'avatar' => 'nullable|image|max:2048',
             ]);
 
             $avatarPath = null;
@@ -178,8 +197,8 @@ class AdminController extends Controller
                 'probation_start'   => $request->probation_start,
                 'probation_end'     => $request->probation_end,
                 'employment_status' => $request->employment_status,
-                'probation_hourly_wage' => 20000,
-                'official_hourly_wage'  => 30000,
+                'probation_hourly_wage' => $request->probation_hourly_wage ?? 20000,
+                'official_hourly_wage'  => $request->official_hourly_wage ?? 30000,
                 'created_at'        => now(),
             ]);
 
@@ -209,8 +228,19 @@ class AdminController extends Controller
         try {
             $request->validate([
                 'name'   => 'required|string|max:255',
+                'email'  => 'required|email|unique:users,email,' . $id,
+                'password' => 'nullable|min:8',
+                'phone' => 'nullable|string|max:20',
+                'date_of_birth' => 'nullable|date',
+                'address' => 'nullable|string',
                 'position' => 'required|in:cashier,warehouse,order_staff',
+                'start_date' => 'nullable|date',
+                'probation_start' => 'nullable|date',
+                'probation_end' => 'nullable|date',
                 'employment_status' => 'required|in:probation,official,resigned',
+                'probation_hourly_wage' => 'nullable|numeric',
+                'official_hourly_wage' => 'nullable|numeric',
+                'avatar' => 'nullable|image|max:2048',
             ]);
 
             $user  = User::findOrFail($id);
@@ -221,6 +251,7 @@ class AdminController extends Controller
             }
 
             $user->name = $request->name;
+            $user->email = $request->email;
             $user->role = 'staff';
 
             if ($request->filled('password')) {
@@ -237,6 +268,8 @@ class AdminController extends Controller
                 'probation_start'   => $request->probation_start,
                 'probation_end'     => $request->probation_end,
                 'employment_status' => $request->employment_status,
+                'probation_hourly_wage' => $request->probation_hourly_wage ?? $staff->probation_hourly_wage,
+                'official_hourly_wage' => $request->official_hourly_wage ?? $staff->official_hourly_wage,
             ]);
 
             DB::commit();

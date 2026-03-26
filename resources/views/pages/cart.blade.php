@@ -7,6 +7,34 @@
 
 @section('content')
 
+    <style>
+        .voucher-panel {
+            border: 1px solid #e5efe0;
+            border-radius: 12px;
+            background: #fff;
+            padding: 12px;
+        }
+
+        .voucher-tag {
+            border: 1px solid #d9e7d1;
+            border-radius: 999px;
+            background: #f7fcf5;
+            color: #245b33;
+            padding: 7px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .voucher-applied-note {
+            color: #2d7a3f;
+            font-size: 14px;
+            font-weight: 600;
+        }
+    </style>
+
                 <section class="shoping-cart spad">
                     <div class="container">
 
@@ -24,6 +52,20 @@
                                 <button type="button" class="close" data-dismiss="alert">
                                     <span>&times;</span>
                                 </button>
+                            </div>
+                        @endif
+
+                        @if(session('discount_success'))
+                            <div class="alert alert-success alert-dismissible fade show auto-dismiss" role="alert">
+                                {{ session('discount_success') }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        @endif
+
+                        @if(session('discount_error'))
+                            <div class="alert alert-warning alert-dismissible fade show auto-dismiss" role="alert">
+                                {{ session('discount_error') }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                             </div>
                         @endif
 
@@ -155,17 +197,19 @@
                                     <form action="{{ route('cart.apply_discount') }}" method="POST" class="d-flex gap-2">
                                         @csrf
 
-                                        <select name="code" class="form-select">
+                                        <select id="discount-code" name="code" class="form-select">
                                             <option value="">-- Không sử dụng mã --</option>
 
-                                            @foreach($discounts as $d)
+                                            @forelse($savedDiscounts as $d)
                                                                                 <option value="{{ $d->code }}" {{ session('cart_discount_code') == $d->code ? 'selected' : '' }}>
                                                                                     {{ $d->code }} -
                                                                                     {{ $d->type == 'percent'
                                                 ? $d->value . '%'
                                                 : number_format($d->value) . ' đ' }}
                                                                                 </option>
-                                            @endforeach
+                                            @empty
+                                                <option value="" disabled>Chưa có mã nào được lưu</option>
+                                            @endforelse
                                         </select>
 
                                         <button type="submit" class="btn btn-success">
@@ -173,10 +217,40 @@
                                         </button>
                                     </form>
 
+                                    <div class="voucher-panel mt-3">
+                                        <div class="fw-bold mb-2" style="font-size:14px; color:#245b33;">Mã đang có (bấm Lưu để dùng)</div>
+
+                                        @if($suggestedDiscounts->isEmpty())
+                                            <div class="text-muted" style="font-size:13px;">Bạn đã lưu hết các mã hiện có.</div>
+                                        @else
+                                            <div class="d-flex flex-wrap gap-2">
+                                                @foreach($suggestedDiscounts as $sg)
+                                                    <form action="{{ route('cart.save_discount') }}" method="POST" class="d-flex align-items-center gap-2 mb-0">
+                                                        @csrf
+                                                        <input type="hidden" name="code" value="{{ $sg->code }}">
+                                                        <span class="voucher-tag">
+                                                            {{ $sg->code }}
+                                                            ({{ $sg->type == 'percent' ? $sg->value . '%' : number_format($sg->value) . ' đ' }})
+                                                            @if($sg->products->isNotEmpty())
+                                                                - áp dụng cho {{ $sg->products->count() }} sản phẩm
+                                                            @else
+                                                                - toàn shop
+                                                            @endif
+                                                        </span>
+                                                        <button type="submit" class="btn btn-sm btn-outline-success">Lưu</button>
+                                                    </form>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </div>
+
                                     {{-- trạng thái --}}
                                     @if(!empty(session('cart_discount_code')))
-                                        <div class="mt-2 text-success">
+                                        <div class="voucher-applied-note mt-2">
                                             ✔ Đang áp dụng: <strong>{{ session('cart_discount_code') }}</strong>
+                                            @if($appliedDiscount && $appliedDiscount->products->isNotEmpty())
+                                                <span class="text-muted">(mã theo sản phẩm)</span>
+                                            @endif
                                         </div>
                                     @else
                                         <div class="mt-2 text-muted">
@@ -188,23 +262,6 @@
 
                                 {{-- ================= TÍNH TIỀN ================= --}}
                                 @php
-    $discountAmount = 0;
-
-    if (!empty(session('cart_discount_code'))) {
-
-        $value = session('cart_discount');
-        $type = session('cart_discount_type');
-
-        if ($type == 'percent') {
-            $discountAmount = $total * $value / 100;
-        } else {
-            $discountAmount = $value;
-        }
-
-        // 🔥 chống giảm quá tiền
-        $discountAmount = min($discountAmount, $total);
-    }
-
     $finalTotal = $total + $shippingFee - $discountAmount;
                                 @endphp
 
@@ -236,10 +293,17 @@
 
                                 {{-- ================= BUTTON ================= --}}
                                 @if(!empty($cart) && count($cart) > 0)
-                                    <a href="{{ route('checkout') }}" class="primary-btn mt-3"
-                                        style="background:#7fad39; display:block; text-align:center; border-radius:8px;">
-                                        TIẾN HÀNH THANH TOÁN
-                                    </a>
+                                    @auth
+                                        <a href="{{ route('checkout') }}" class="primary-btn mt-3"
+                                            style="background:#7fad39; display:block; text-align:center; border-radius:8px;">
+                                            TIẾN HÀNH THANH TOÁN
+                                        </a>
+                                    @else
+                                        <button type="button" id="btn-checkout-login" class="primary-btn mt-3"
+                                            style="background:#7fad39; display:block; text-align:center; border-radius:8px; width:100%; border:none;">
+                                            TIẾN HÀNH THANH TOÁN
+                                        </button>
+                                    @endauth
                                 @else
                                     <button class="primary-btn mt-3" disabled style="background:#ccc; width:100%; border-radius:8px;">
                                         Giỏ hàng trống
@@ -291,6 +355,25 @@
 
                 // ================= DISCOUNT =================
                 const discountSelect = document.getElementById("discount-code");
+
+                // ================= LOGIN REQUIRED CHECKOUT =================
+                const checkoutBtn = document.getElementById("btn-checkout-login");
+                if (checkoutBtn) {
+                    checkoutBtn.addEventListener("click", function () {
+                        Swal.fire({
+                            title: "Bạn chưa đăng nhập",
+                            text: "Vui lòng đăng nhập để tiến hành thanh toán.",
+                            icon: "warning",
+                            showCancelButton: true,
+                            confirmButtonText: "Đăng nhập",
+                            cancelButtonText: "Ở lại giỏ hàng"
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                window.location.href = "{{ route('login') }}";
+                            }
+                        });
+                    });
+                }
 
                 // ================= AUTO DISMISS ALERT =================
                 setTimeout(function () {

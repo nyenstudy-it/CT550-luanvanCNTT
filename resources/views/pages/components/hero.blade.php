@@ -47,18 +47,18 @@
                         </div>
                     </div>
                 </div>
-
                 {{-- BANNER: CHỈ HIỆN KHI ĐƯỢC PHÉP --}}
                 @if (!empty($showBanner))
-                    <div class="hero__item set-bg" data-setbg="{{ asset('frontend/images/hero/banner.jpg') }}">
+                    <div class="hero__item set-bg" data-setbg="{{ asset('frontend/images/hero/banner.png') }}">
                         <div class="hero__text">
-                            <span>FRUIT FRESH</span>
-                            <h2>Vegetable <br />100% Organic</h2>
-                            <p>Free Pickup and Delivery Available</p>
-                            <a href="#" class="primary-btn">SHOP NOW</a>
+                            <span>SEN HỒNG OCOP</span>
+                            <h2>Sản phẩm OCOP <br />Đồng Tháp</h2>
+                            <p>Đặc sản địa phương – Chất lượng – An toàn</p>
+                            <a href="{{ route('products.index') }}" class="primary-btn">Xem sản phẩm</a>
                         </div>
                     </div>
                 @endif
+
             </div>
         </div>
     </div>
@@ -164,7 +164,12 @@
                             <img src="${p.image ?? '/images/no-image.png'}" alt="${p.name}">
                             <div class="info">
                                 <div class="name">${p.name}</div>
-                                <div class="price">${Number(p.price).toLocaleString()}₫</div>
+                                <div class="price">
+                                    ${p.has_discount
+                                    ? `<span style="color:#d32f2f;font-weight:600;">${Number(p.final_price).toLocaleString()}₫</span> <small style="color:#777;"><del>${Number(p.price).toLocaleString()}₫</del></small>`
+                                    : `${Number(p.price).toLocaleString()}₫`
+                                }
+                                </div>
                             </div>
                         </a>
                     `).join('');

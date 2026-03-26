@@ -4,15 +4,21 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ProductImage;
 use App\Models\Supplier;
 use App\Models\CategoryProduct;
+use App\Models\Order;
+use App\Models\Review;
+use App\Services\ProductPricingService;
 
 class ProductController extends Controller
 {
+    public function __construct(private ProductPricingService $productPricingService) {}
+
     public function list(Request $request)
     {
         $query = Product::with([
@@ -123,7 +129,7 @@ class ProductController extends Controller
             ProductImage::create([
                 'product_variant_id' => $variant->id,
                 'image_path' => $path,
-                'is_primary' => $index === 1, 
+                'is_primary' => $index === 1,
             ]);
         }
 
@@ -155,7 +161,7 @@ class ProductController extends Controller
             'ocop_star'   => 'nullable|integer|min:0|max:5',
             'ocop_year'   => 'nullable|integer|min:1900|max:' . date('Y'),
             'status'      => 'required|in:active,inactive',
-            'image'       => 'nullable|image|max:2048', 
+            'image'       => 'nullable|image|max:2048',
         ]);
 
         if ($request->hasFile('image')) {
@@ -195,9 +201,74 @@ class ProductController extends Controller
             'variants.primaryImage',
             'category',
             'supplier',
-        ])->findOrFail($id);
+            // eager-load approved reviews + reviewer user and replies/likes counts
+            'approvedReviews' => function ($q) {
+                $q->where('status', 'approved')
+                    ->with(['customer.user', 'replies' => function ($qr) {
+                        $qr->where('status', 'approved')->with('user');
+                    }])
+                    ->withCount(['likes', 'replies']);
+            }
+        ])
+            ->withCount(['approvedReviews as approved_reviews_count'])
+            ->withAvg('approvedReviews as approved_reviews_avg', 'rating')
+            ->findOrFail($id);
 
-        return view('pages.product_detail', compact('product'));
+        $firstVariantPrice = (float) ($product->variants->first()?->price ?? 0);
+        $productPricing = $this->productPricingService->pricingForProduct($product, $firstVariantPrice);
+
+        $variantPricing = $product->variants->mapWithKeys(function ($variant) use ($product) {
+            $pricing = $this->productPricingService->pricingForProduct($product, (float) $variant->price);
+
+            return [
+                $variant->id => $pricing,
+            ];
+        });
+
+        // Lưu lịch sử sản phẩm đã xem vào session (mới nhất đứng đầu).
+        $historyKey = 'recently_viewed_products';
+        $historyIds = collect(session($historyKey, []))
+            ->map(fn($value) => (int) $value)
+            ->filter(fn($value) => $value > 0)
+            ->reject(fn($value) => $value === (int) $product->id);
+
+        $updatedHistory = collect([(int) $product->id])
+            ->merge($historyIds)
+            ->unique()
+            ->take(20)
+            ->values();
+
+        session([$historyKey => $updatedHistory->all()]);
+
+        $recentViewedIds = $updatedHistory
+            ->reject(fn($value) => $value === (int) $product->id)
+            ->take(5)
+            ->values();
+
+        $recentViewedProducts = collect();
+        if ($recentViewedIds->isNotEmpty()) {
+            $ids = $recentViewedIds->implode(',');
+            $recentViewedProducts = Product::query()
+                ->where('status', 'active')
+                ->whereIn('id', $recentViewedIds)
+                ->with([
+                    'variants.images' => function ($query) {
+                        $query->where('is_primary', 1);
+                    },
+                    'variants.inventory'
+                ])
+                ->orderByRaw("FIELD(id, {$ids})")
+                ->get();
+
+            $recentViewedProducts = $this->productPricingService->enrichProducts($recentViewedProducts);
+        }
+
+        return view('pages.product_detail', compact(
+            'product',
+            'productPricing',
+            'variantPricing',
+            'recentViewedProducts'
+        ));
     }
 
 
@@ -206,7 +277,7 @@ class ProductController extends Controller
         $product = Product::with([
             'category',
             'supplier',
-            
+
             'variants.images',
             'variants.inventory'
         ])->findOrFail($id);
@@ -233,6 +304,8 @@ class ProductController extends Controller
             ->take(10)
             ->get();
 
+        $products = $this->productPricingService->enrichProducts($products);
+
         // Trả về dữ liệu JSON gồm id, name, image, giá variant đầu tiên
         $result = $products->map(function ($product) {
             $variant = $product->variants->first();
@@ -242,6 +315,8 @@ class ProductController extends Controller
                 'id' => $product->id,
                 'name' => $product->name,
                 'price' => optional($variant)->price ?? 0,
+                'final_price' => (float) ($product->display_final_price ?? (optional($variant)->price ?? 0)),
+                'has_discount' => (bool) ($product->display_has_discount ?? false),
                 'image' => $image ? asset('storage/' . $image) : null,
             ];
         });
@@ -256,6 +331,8 @@ class ProductController extends Controller
         $query = Product::query()
             ->with('variants')
             ->where('status', 'active')
+            ->withAvg('approvedReviews as avg_rating', 'rating')
+            ->withCount('approvedReviews as review_count')
             ->withCount([
                 'wishlists as is_favorited' => function ($q) use ($userId) {
                     $q->where('user_id', $userId);
@@ -296,7 +373,7 @@ class ProductController extends Controller
             if (in_array($request->sort, ['price_asc', 'price_desc'])) {
 
                 $query->join('product_variants', 'products.id', '=', 'product_variants.product_id')
-                    ->select('products.*', \DB::raw('MIN(product_variants.price) as min_price'))
+                    ->select('products.*', DB::raw('MIN(product_variants.price) as min_price'))
                     ->groupBy('products.id');
 
                 if ($request->sort == 'price_asc') {
@@ -312,6 +389,7 @@ class ProductController extends Controller
         }
 
         $products = $query->paginate(12)->withQueryString();
+        $products->setCollection($this->productPricingService->enrichProducts($products->getCollection()));
 
         $categories = CategoryProduct::all();
         $suppliers  = Supplier::all();

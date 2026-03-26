@@ -12,6 +12,8 @@ use App\Models\Payment;
 use App\Models\ImportItem;
 use App\Models\Discount;
 use App\Models\DiscountUsage;
+use App\Models\ProductVariant;
+use Illuminate\Support\Collection;
 
 class CheckoutController extends Controller
 {
@@ -34,27 +36,26 @@ class CheckoutController extends Controller
         $discountAmount = 0;
 
         if (!empty(session('cart_discount_code'))) {
+            $discount = Discount::with('products:id,name')
+                ->where('code', session('cart_discount_code'))
+                ->first();
 
-            $discountValue = session('cart_discount', 0);
-            $discountType  = session('cart_discount_type', 'fixed');
-
-            if ($discountType == 'percent') {
-                $discountAmount = $total * $discountValue / 100;
-            } else {
-                $discountAmount = $discountValue;
+            if ($discount && $discount->isActive()) {
+                $cartItems = $this->normalizeCartItems($cart);
+                $discountAmount = $this->calculateDiscountAmount($discount, $cartItems);
             }
-
-            $discountAmount = min($discountAmount, $total);
         }
 
         $totalPayment = $total + $shippingFee - $discountAmount;
+        $orderPolicyRules = $this->getOrderPolicyRules();
 
         return view('pages.checkout', compact(
             'cart',
             'total',
             'shippingFee',
             'totalPayment',
-            'discountAmount'
+            'discountAmount',
+            'orderPolicyRules'
         ));
     }
 
@@ -68,16 +69,14 @@ class CheckoutController extends Controller
                 ->with('error', 'Vui lòng cập nhật thông tin khách hàng.');
         }
 
-        if (!$customer->province || !$customer->district || !$customer->ward) {
-            return redirect()->route('customer.profile')
-                ->with('error', 'Vui lòng cập nhật địa chỉ trước khi đặt hàng.');
-        }
-
         $request->validate([
             'receiver_name'    => 'required|string|max:255',
             'receiver_phone'   => 'required|string|max:20',
             'shipping_address' => 'required|string',
-            'payment_method'   => 'required|in:COD,VNPAY,MOMO'
+            'payment_method'   => 'required|in:COD,VNPAY,MOMO',
+            'order_policy_agree' => 'accepted',
+        ], [
+            'order_policy_agree.accepted' => 'Bạn cần đồng ý chính sách đặt hàng và hoàn tiền để tiếp tục.',
         ]);
 
         $cart = session()->get('cart', []);
@@ -116,7 +115,7 @@ class CheckoutController extends Controller
 
             if (!empty(session('cart_discount_code'))) {
 
-                $discount = Discount::where('code', session('cart_discount_code'))->first();
+                $discount = Discount::with('products:id,name')->where('code', session('cart_discount_code'))->first();
 
                 if (!$discount || !$discount->isActive()) {
                     throw new \Exception('Mã giảm giá không hợp lệ hoặc đã hết hạn');
@@ -133,13 +132,12 @@ class CheckoutController extends Controller
                 $discountId   = $discount->id;
                 $discountCode = $discount->code;
 
-                if ($discount->type == 'percent') {
-                    $discountAmount = $totalAmount * $discount->value / 100;
-                } else {
-                    $discountAmount = $discount->value;
-                }
+                $cartItems = $this->normalizeCartItems($cart);
+                $discountAmount = $this->calculateDiscountAmount($discount, $cartItems);
 
-                $discountAmount = min($discountAmount, $totalAmount);
+                if ($discountAmount <= 0) {
+                    throw new \Exception('Mã giảm giá không áp dụng cho sản phẩm trong giỏ hàng.');
+                }
             }
 
             $totalPayment = $totalAmount + $shippingFee - $discountAmount;
@@ -237,6 +235,7 @@ class CheckoutController extends Controller
         $batchDetails = [];
 
         foreach ($batches as $batch) {
+            /** @var ImportItem $batch */
 
             if ($remaining <= 0) break;
 
@@ -275,5 +274,61 @@ class CheckoutController extends Controller
 
         return redirect()->route('pages.home')
             ->with('order_success', $order->id);
+    }
+
+    private function normalizeCartItems(array $cart): Collection
+    {
+        $items = collect($cart)->map(function ($item, $variantId) {
+            $item['variant_id'] = (int) ($item['variant_id'] ?? $variantId);
+            return $item;
+        })->values();
+
+        $missingProductVariantIds = $items
+            ->filter(fn($item) => empty($item['product_id']))
+            ->pluck('variant_id')
+            ->unique()
+            ->values();
+
+        if ($missingProductVariantIds->isNotEmpty()) {
+            $variantProductMap = ProductVariant::query()
+                ->whereIn('id', $missingProductVariantIds)
+                ->pluck('product_id', 'id');
+
+            $items = $items->map(function ($item) use ($variantProductMap) {
+                if (empty($item['product_id'])) {
+                    $item['product_id'] = (int) ($variantProductMap[$item['variant_id']] ?? 0);
+                }
+                return $item;
+            });
+        }
+
+        return $items;
+    }
+
+    private function calculateDiscountAmount(Discount $discount, Collection $cartItems): float
+    {
+        $eligibleSubtotal = $discount->getEligibleSubtotal($cartItems);
+
+        if ($eligibleSubtotal <= 0) {
+            return 0;
+        }
+
+        if ($discount->min_order_value && $eligibleSubtotal < (float) $discount->min_order_value) {
+            return 0;
+        }
+
+        return $discount->getDiscountAmount($eligibleSubtotal);
+    }
+
+    private function getOrderPolicyRules(): array
+    {
+        return [
+            'Đơn hàng sau khi đặt sẽ ở trạng thái chờ xử lý.',
+            'Khách chỉ có thể tự hủy đơn khi đơn đang ở trạng thái chờ xử lý.',
+            'Với đơn đã thanh toán online (MoMo/VNPAY), khi hủy sẽ chuyển sang chờ xử lý hoàn tiền.',
+            'Yêu cầu hoàn tiền chỉ áp dụng cho đơn đã hoàn thành.',
+            'Yêu cầu hoàn tiền sẽ được admin duyệt; nếu được duyệt, đơn chuyển sang đã hoàn tiền.',
+            'Nếu yêu cầu hoàn tiền bị từ chối, đơn sẽ quay lại trạng thái trước đó.',
+        ];
     }
 }

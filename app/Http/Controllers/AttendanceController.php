@@ -69,7 +69,7 @@ class AttendanceController extends Controller
             ];
         });
 
-        $staffs = Staff::with('user')->get(); 
+        $staffs = Staff::with('user')->get();
 
         return view('admin.attendances.index', compact(
             'attendances',
@@ -167,10 +167,12 @@ class AttendanceController extends Controller
 
         $staffs = Staff::with('user')->get();
 
-        $calendarEvents = Attendance::with('user')->get()
+        $calendarEvents = Attendance::whereHas('staff.user')
+            ->with('staff.user')
+            ->get()
             ->map(function ($a) {
                 return [
-                    'title' => $a->user->name . ' - ' .
+                    'title' => $a->staff->user->name . ' - ' .
                         ($a->shift === 'morning' ? 'Ca sáng' : 'Ca chiều'),
                     'start' => $a->work_date . 'T' . $a->expected_check_in,
                     'end'   => $a->work_date . 'T' . $a->expected_check_out,
@@ -230,7 +232,7 @@ class AttendanceController extends Controller
         $user = Auth::user();
         $now  = Carbon::now('Asia/Ho_Chi_Minh');
 
-        if ($attendance->staff_id !== $user->staff->id) {
+        if ($attendance->staff_id !== $user->id) {
             abort(403);
         }
 
@@ -274,7 +276,7 @@ class AttendanceController extends Controller
         $user  = Auth::user();
         $staff = $user->staff;
 
-        if (!$staff || $attendance->staff_id !== $staff->id) {
+        if (!$staff || $attendance->staff_id !== $staff->user_id) {
             abort(403);
         }
 

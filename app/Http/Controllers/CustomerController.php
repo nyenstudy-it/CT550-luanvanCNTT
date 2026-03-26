@@ -8,6 +8,14 @@ use App\Models\Customer;
 
 class CustomerController extends Controller
 {
+    private const LOCK_REASON_PRESETS = [
+        'spam' => 'Nghi ngờ spam hoặc lạm dụng hệ thống',
+        'fraud' => 'Nghi ngờ gian lận trong giao dịch',
+        'policy' => 'Vi phạm chính sách sử dụng',
+        'chargeback' => 'Phát sinh tranh chấp/hoàn tiền bất thường',
+        'security' => 'Rủi ro bảo mật tài khoản',
+        'other' => 'Lý do khác',
+    ];
 
     // DANH SÁCH KHÁCH HÀNG
     public function list(Request $request)
@@ -43,7 +51,18 @@ class CustomerController extends Controller
             ->latest()
             ->paginate(10);
 
-        return view('admin.customers.list', compact('customers'));
+        $stats = [
+            'total' => Customer::count(),
+            'active' => Customer::whereHas('user', fn($q) => $q->where('status', 'active'))->count(),
+            'locked' => Customer::whereHas('user', fn($q) => $q->where('status', 'locked'))->count(),
+            'new_this_month' => Customer::whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count(),
+        ];
+
+        $lockReasonPresets = self::LOCK_REASON_PRESETS;
+
+        return view('admin.customers.list', compact('customers', 'stats', 'lockReasonPresets'));
     }
 
 
@@ -61,12 +80,28 @@ class CustomerController extends Controller
 
 
     // KHÓA TÀI KHOẢN
-    public function lock($id)
+    public function lock(Request $request, $id)
     {
+        $request->validate([
+            'reason_key' => 'required|string|in:' . implode(',', array_keys(self::LOCK_REASON_PRESETS)),
+            'reason_note' => 'nullable|string|max:255',
+        ]);
+
         $user = User::findOrFail($id);
 
+        $reasonKey = $request->input('reason_key');
+        $reasonLabel = self::LOCK_REASON_PRESETS[$reasonKey] ?? 'Lý do khác';
+        $reasonNote = trim((string) $request->input('reason_note'));
+
+        $lockedReason = $reasonLabel;
+        if ($reasonNote !== '') {
+            $lockedReason .= ' - ' . $reasonNote;
+        }
+
         $user->update([
-            'status' => 'locked'
+            'status' => 'locked',
+            'locked_reason' => $lockedReason,
+            'locked_at' => now(),
         ]);
 
         return redirect()->back()->with('success', 'Đã khóa tài khoản khách hàng');
@@ -80,7 +115,9 @@ class CustomerController extends Controller
         $user = User::findOrFail($id);
 
         $user->update([
-            'status' => 'active'
+            'status' => 'active',
+            'locked_reason' => null,
+            'locked_at' => null,
         ]);
 
         return redirect()->back()->with('success', 'Đã mở khóa tài khoản');

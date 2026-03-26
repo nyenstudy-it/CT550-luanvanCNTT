@@ -18,7 +18,9 @@ class ImportController extends Controller
 {
     public function list(Request $request)
     {
-        $query = Import::with(['supplier', 'items']);
+        $query = Import::with(['supplier', 'staff'])
+            ->withCount('items')
+            ->withSum('items as total_quantity', 'quantity');
 
         if ($request->supplier_id) {
             $query->where('supplier_id', $request->supplier_id);
@@ -38,8 +40,8 @@ class ImportController extends Controller
         if ($request->max_total) {
             $query->where('total_amount', '<=', $request->max_total);
         }
-        $imports = $query->orderBy('import_date', 'asc')
-            ->orderBy('id', 'asc')
+        $imports = $query->orderBy('import_date', 'desc')
+            ->orderBy('id', 'desc')
             ->paginate(10)
             ->withQueryString();
 
@@ -131,18 +133,56 @@ class ImportController extends Controller
 
     public function getProductsBySupplier($supplierId)
     {
-        $products = Product::where('supplier_id', $supplierId)
+        $products = Product::with(['variants.inventory'])
+            ->where('supplier_id', $supplierId)
             ->select('id', 'name')
             ->get();
+
+        $products = $products->map(function ($product) {
+            return [
+                'id' => $product->id,
+                'name' => $product->name,
+                'variant_count' => $product->variants->count(),
+                'total_stock' => $product->variants->sum(fn($variant) => $variant->inventory->quantity ?? 0),
+            ];
+        })->values();
 
         return response()->json($products);
     }
 
     public function getVariantsByProduct($productId)
     {
-        $variants = ProductVariant::where('product_id', $productId)
-            ->select('id', 'sku')
+        $variants = ProductVariant::with('inventory')
+            ->where('product_id', $productId)
+            ->select('id', 'sku', 'color', 'size', 'volume', 'weight', 'price')
+            ->addSelect([
+                'latest_import_price' => ImportItem::select('unit_price')
+                    ->whereColumn('product_variant_id', 'product_variants.id')
+                    ->latest('id')
+                    ->limit(1),
+            ])
             ->get();
+
+        $variants = $variants->map(function ($variant) {
+            $parts = collect([
+                $variant->sku,
+                $variant->color,
+                $variant->size ? 'Size ' . $variant->size : null,
+                $variant->volume,
+                $variant->weight,
+            ])->filter()->values();
+
+            return [
+                'id' => $variant->id,
+                'sku' => $variant->sku,
+                'label' => $parts->implode(' | '),
+                'stock' => $variant->inventory->quantity ?? 0,
+                'price' => (float) $variant->price,
+                'latest_import_price' => $variant->latest_import_price !== null
+                    ? (float) $variant->latest_import_price
+                    : null,
+            ];
+        })->values();
 
         return response()->json($variants);
     }

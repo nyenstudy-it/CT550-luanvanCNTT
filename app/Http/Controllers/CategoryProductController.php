@@ -7,12 +7,42 @@ use Illuminate\Http\Request;
 
 class CategoryProductController extends Controller
 {
-    public function list()
+    public function list(Request $request)
     {
-        $categories = CategoryProduct::query()
-        ->orderBy('id', 'asc')
-        ->get();
-        return view('admin.categories.list', compact('categories'));
+        $query = CategoryProduct::query();
+
+        if ($request->filled('keyword')) {
+            $keyword = trim((string) $request->keyword);
+            $query->where(function ($q) use ($keyword) {
+                $q->where('name', 'like', '%' . $keyword . '%')
+                    ->orWhere('description', 'like', '%' . $keyword . '%');
+            });
+        }
+
+        if ($request->filled('has_image')) {
+            if ($request->has_image === 'yes') {
+                $query->whereNotNull('image_url')->where('image_url', '!=', '');
+            } elseif ($request->has_image === 'no') {
+                $query->where(function ($q) {
+                    $q->whereNull('image_url')->orWhere('image_url', '');
+                });
+            }
+        }
+
+        $categories = $query
+            ->orderBy('id', 'asc')
+            ->paginate(10)
+            ->appends($request->query());
+
+        $summary = [
+            'total' => CategoryProduct::count(),
+            'with_image' => CategoryProduct::whereNotNull('image_url')->where('image_url', '!=', '')->count(),
+            'without_image' => CategoryProduct::where(function ($q) {
+                $q->whereNull('image_url')->orWhere('image_url', '');
+            })->count(),
+        ];
+
+        return view('admin.categories.list', compact('categories', 'summary'));
     }
 
     public function create()
@@ -60,7 +90,7 @@ class CategoryProductController extends Controller
         if ($request->hasFile('image')) {
             $path = $request->file('image')->store('category_images', 'public');
             $data['image_url'] = $path;
-        }   
+        }
 
         $category->update($data);
 

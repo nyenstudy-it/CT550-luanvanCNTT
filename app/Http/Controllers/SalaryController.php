@@ -36,7 +36,7 @@ class SalaryController extends Controller
 
         $staff = Staff::where('user_id', $staffUserId)->firstOrFail();
 
-        $attendances = Attendance::where('staff_id', $staff->id)
+        $attendances = Attendance::where('staff_id', $staff->user_id)
             ->whereMonth('work_date', $month)
             ->whereYear('work_date', $year)
             ->where('is_completed', 1)
@@ -55,7 +55,7 @@ class SalaryController extends Controller
 
         Salary::updateOrCreate(
             [
-                'staff_id' => $staff->id,
+                'staff_id' => $staff->user_id,
                 'month'    => $month,
                 'year'     => $year,
             ],

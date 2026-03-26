@@ -17,6 +17,8 @@ use App\Http\Controllers\DiscountController;
 use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\ReviewController;
+use \App\Http\Controllers\CommentController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\StaffController;
@@ -25,6 +27,8 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\SalaryController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\AdminReviewController;
 use Illuminate\Support\Facades\Route;
 use Termwind\Components\Raw;
 
@@ -38,6 +42,7 @@ Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
 Route::get('/cart', [CartController::class, 'list'])->name('cart.list');
 Route::post('/cart/update', [CartController::class, 'update'])->name('cart.update');
 Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
+Route::post('/cart/discount/save', [CartController::class, 'saveDiscount'])->name('cart.save_discount');
 Route::post('/cart/discount', [CartController::class, 'applyDiscount'])->name('cart.apply_discount');
 Route::get('/my-discounts', [DiscountController::class, 'customerIndex'])->name('discounts');
 Route::get('/register', [CustomerAuthController::class, 'showRegister'])->name('register');
@@ -67,11 +72,11 @@ Route::get('/reset-password/{token}', [ForgotPasswordController::class, 'showRes
 Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword'])
     ->name('password.update');
 
-    
+
 Route::middleware(['auth', 'role:customer'])->group(function () {
 
     Route::get('/profile', [CustomerAuthController::class, 'profile'])->name('customer.profile');
-    Route::post('/profile/update', [CustomerAuthController::class, 'profileUpdate'])->name('customer.profile.update');  
+    Route::post('/profile/update', [CustomerAuthController::class, 'profileUpdate'])->name('customer.profile.update');
 
     Route::get('/checkout', [CheckoutController::class, 'index'])
         ->name('checkout');
@@ -88,8 +93,6 @@ Route::middleware(['auth', 'role:customer'])->group(function () {
     Route::get('/order-success/{id}', [OrderController::class, 'success'])->name('orders.success');
 
     Route::post('/order/{id}/received', [OrderController::class, 'confirmReceived'])->name('orders.received');
-
-    Route::get('/bank-transfer/{id}', [PaymentController::class, 'bankTransfer'])->name('bank.transfer');
 
     Route::get('/payment/status/{order}', [PaymentController::class, 'status'])
         ->name('payment.status');
@@ -119,12 +122,22 @@ Route::middleware(['auth', 'role:customer'])->group(function () {
 
     Route::post('/order/{id}/refund', [OrderController::class, 'requestRefund'])
         ->name('orders.refund');
-    
+
+
+    Route::get('/notifications', [NotificationController::class, 'customerIndex'])->name('customer.notifications');
+    Route::get('/notifications/read/{id}', [NotificationController::class, 'read'])->name('customer.notifications.read');
+    Route::post('/notifications/mark-as-read/{id}', [NotificationController::class, 'markAsRead'])
+        ->name('customer.notifications.markAsRead');
+
+    Route::get('product/{product}/review/{order?}', [ReviewController::class, 'reviewForm'])->name('reviews.form');
+    Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
+    Route::post('/reviews/{review}/like', [\App\Http\Controllers\ReviewLikeController::class, 'toggle'])->name('reviews.like');
+    // Route reply của khách đã bị xóa — chỉ admin mới được phép reply (giống Shopee)
 });
 
-//Đăng ký ADMIN/STAFF
-Route::middleware(['auth', 'role:admin'])
-    ->get('/admin/register', [AdminController::class, 'register'])
+//Đăng ký ADMIN/STAFF (chỉ admin)
+Route::get('/admin/register', [AdminController::class, 'register'])
+    ->middleware(['auth', 'role:admin'])
     ->name('admin.register');
 
 
@@ -152,63 +165,69 @@ Route::middleware(['auth', 'role:admin'])
             ->name('admin.staff.destroy');
         Route::post('/staff/{id}/lock', [AdminController::class, 'staffLock'])
             ->name('admin.staff.lock');
-
         Route::post('/staff/{id}/unlock', [AdminController::class, 'staffUnlock'])
             ->name('admin.staff.unlock');
 
-        Route::get('/attendances/pending',[AttendanceController::class, 'pending']
-            )->name('admin.attendances.pending');
-
-        Route::post('/attendances/{attendance}/approve-late',[AttendanceController::class, 'approveLate']
-            )->name('admin.attendances.approveLate');
-
-        Route::post('/attendances/{attendance}/reject-late',[AttendanceController::class, 'rejectLate']
-            )->name('admin.attendances.rejectLate');
-
-        Route::post('/attendances/{attendance}/approve-early',[AttendanceController::class, 'approveEarly']
-            )->name('admin.attendances.approveEarly');
-
-        Route::post('/attendances/{attendance}/reject-early',[AttendanceController::class, 'rejectEarly']
-            )->name('admin.attendances.rejectEarly');
-
+        Route::get(
+            '/attendances/pending',
+            [AttendanceController::class, 'pending']
+        )->name('admin.attendances.pending');
+        Route::post(
+            '/attendances/{attendance}/approve-late',
+            [AttendanceController::class, 'approveLate']
+        )->name('admin.attendances.approveLate');
+        Route::post(
+            '/attendances/{attendance}/reject-late',
+            [AttendanceController::class, 'rejectLate']
+        )->name('admin.attendances.rejectLate');
+        Route::post(
+            '/attendances/{attendance}/approve-early',
+            [AttendanceController::class, 'approveEarly']
+        )->name('admin.attendances.approveEarly');
+        Route::post(
+            '/attendances/{attendance}/reject-early',
+            [AttendanceController::class, 'rejectEarly']
+        )->name('admin.attendances.rejectEarly');
         Route::get('/attendances', [AttendanceController::class, 'index'])
             ->name('admin.attendances.index');
-
         Route::get('/attendances/create', [AttendanceController::class, 'create'])
             ->name('admin.attendances.create');
-
         Route::post('/attendances', [AttendanceController::class, 'store'])
             ->name('admin.attendances.store');
-
         Route::get('/attendances/{attendance}/edit', [AttendanceController::class, 'edit'])
             ->name('admin.attendances.edit');
-
         Route::post('/attendances/{attendance}', [AttendanceController::class, 'update'])
             ->name('admin.attendances.update');
-
         Route::delete('/attendances/{attendance}', [AttendanceController::class, 'destroy'])
             ->name('admin.attendances.destroy');
-
-        Route::get('/salaries',[SalaryController::class, 'index']
-            )->name('admin.salaries.index');
-
-        Route::get('/salaries/calculate/{staffId}/{month}/{year}',[SalaryController::class, 'calculateMonthly']
-            )->name('admin.salaries.calculate');
+        Route::get(
+            '/salaries',
+            [SalaryController::class, 'index']
+        )->name('admin.salaries.index');
+        Route::get(
+            '/salaries/calculate/{staffId}/{month}/{year}',
+            [SalaryController::class, 'calculateMonthly']
+        )->name('admin.salaries.calculate');
     });
 
-// ADMIN + STAFF
+//  ADMIN + TẤT CẢ STAFF (dashboard, profile, thông báo)
 Route::middleware(['auth', 'role:admin,staff'])
     ->prefix('admin')
     ->group(function () {
-
-    Route::get('dashboard', [DashboardController::class, 'index'])
-        ->name('admin.dashboard');
-
-        // Route::get('/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
+        Route::get('dashboard', [DashboardController::class, 'index'])
+            ->name('admin.dashboard');
 
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.show');
         Route::post('/profile/update', [AdminController::class, 'profileUpdate'])->name('profile.update');
 
+        Route::get('/notifications', [NotificationController::class, 'adminIndex'])->name('admin.notifications');
+        Route::get('/notifications/read/{id}', [NotificationController::class, 'read'])->name('admin.notifications.read');
+    });
+
+//ADMIN + NHÂN VIÊN KHO (warehouse) Nhà phân phối, Danh mục, Sản phẩm, Kho hàng
+Route::middleware(['auth', 'can.position:warehouse'])
+    ->prefix('admin')
+    ->group(function () {
         Route::get('/suppliers', [SupplierController::class, 'index'])->name('admin.suppliers.list');
         Route::get('/suppliers/create', [SupplierController::class, 'create'])->name('admin.suppliers.create');
         Route::post('/suppliers/store', [SupplierController::class, 'store'])->name('admin.suppliers.store');
@@ -230,12 +249,8 @@ Route::middleware(['auth', 'role:admin,staff'])
         Route::post('/products/update/{id}', [ProductController::class, 'update'])->name('admin.products.update');
         Route::delete('/products/destroy/{id}', [ProductController::class, 'destroy'])->name('admin.products.destroy');
         Route::delete('/products/images/{id}', [ProductController::class, 'deleteImage'])->name('admin.products.images.delete');
-        Route::get(
-            '/products/{id}/popup',
-            [ProductController::class, 'showPopup']
-        )->name('admin.products.popup');
+        Route::get('/products/{id}/popup', [ProductController::class, 'showPopup'])->name('admin.products.popup');
 
-        // Product Variants
         Route::get('/products/{productId}/variants', [ProductVariantController::class, 'index'])
             ->name('admin.products.variants.index');
         Route::get('/products/{productId}/variants/create', [ProductVariantController::class, 'create'])
@@ -249,7 +264,6 @@ Route::middleware(['auth', 'role:admin,staff'])
         Route::delete('/products/variants/{id}/destroy', [ProductVariantController::class, 'destroy'])
             ->name('admin.products.variants.destroy');
 
-        // IMPORT 
         Route::get('/imports', [ImportController::class, 'list'])->name('admin.imports.list');
         Route::get('/imports/create', [ImportController::class, 'create'])->name('admin.imports.create');
         Route::post('/imports/store', [ImportController::class, 'store'])->name('admin.imports.store');
@@ -258,65 +272,72 @@ Route::middleware(['auth', 'role:admin,staff'])
         Route::get('/imports/get-products/{supplierId}', [ImportController::class, 'getProductsBySupplier']);
         Route::get('/imports/get-variants/{productId}', [ImportController::class, 'getVariantsByProduct']);
 
-    // INVENTORY
-    Route::get('/inventories', [InventoryController::class, 'list'])->name('admin.inventories.list');
+        Route::get('/inventories', [InventoryController::class, 'list'])->name('admin.inventories.list');
+        Route::get('/inventories/{variantId}/batches', [InventoryController::class, 'batchPopup'])
+            ->name('admin.inventories.batches');
+    });
 
+// ADMIN + THU NGÂN + NHÂN VIÊN XỬ LÝ ĐƠN (cashier, order_staff) Khách hàng, Đơn hàng
+Route::middleware(['auth', 'can.position:cashier,order_staff'])
+    ->prefix('admin')
+    ->group(function () {
+        Route::get('/customers', [CustomerController::class, 'list'])
+            ->name('admin.customers.list');
+        Route::get('/customers/{id}', [CustomerController::class, 'show'])
+            ->name('admin.customers.show');
+        Route::post('/customers/{id}/lock', [CustomerController::class, 'lock'])
+            ->name('admin.customers.lock');
+        Route::post('/customers/{id}/unlock', [CustomerController::class, 'unlock'])
+            ->name('admin.customers.unlock');
+        Route::get('/customers/search', [CustomerController::class, 'search'])
+            ->name('admin.customers.search');
+        Route::delete('/customers/{id}', [CustomerController::class, 'destroy'])
+            ->name('admin.customers.destroy');
 
-    // Khách hàng
-    Route::get('/customers', [CustomerController::class, 'list'])
-        ->name('admin.customers.list');
-    Route::get('/customers/{id}', [CustomerController::class, 'show'])
-        ->name('admin.customers.show');
-    Route::post('/customers/{id}/lock', [CustomerController::class, 'lock'])
-        ->name('admin.customers.lock');
-    Route::post('/customers/{id}/unlock', [CustomerController::class, 'unlock'])
-        ->name('admin.customers.unlock');
-    Route::get('/customers/search', [CustomerController::class, 'search'])
-        ->name('admin.customers.search');
-    Route::delete('/customers/{id}', [CustomerController::class, 'destroy'])
-        ->name('admin.customers.destroy');
+        Route::get('/orders', [AdminOrderController::class, 'index'])
+            ->name('admin.orders');
+        Route::get('/orders/{id}', [AdminOrderController::class, 'show'])
+            ->name('admin.orders.detail');
+        Route::post('/orders/update-status/{id}', [AdminOrderController::class, 'updateStatus'])
+            ->name('admin.orders.updateStatus');
+        Route::post('/orders/cancel/{id}', [AdminOrderController::class, 'cancel'])
+            ->name('admin.orders.cancel');
+        Route::post('/orders/{id}/approve-refund', [AdminOrderController::class, 'approveRefund'])
+            ->name('admin.orders.approveRefund');
+        Route::post('/orders/{id}/reject-refund', [AdminOrderController::class, 'rejectRefund'])
+            ->name('admin.orders.rejectRefund');
+    });
 
-    Route::get('/orders', [AdminOrderController::class, 'index'])
-        ->name('admin.orders');
+// ADMIN + NHÂN VIÊN XỬ LÝ ĐƠN (order_staff) Mã giảm giá, Đánh giá
+Route::middleware(['auth', 'can.position:order_staff'])
+    ->prefix('admin')
+    ->group(function () {
+        Route::get('/reviews', [AdminReviewController::class, 'index'])->name('admin.reviews');
+        Route::post('/reviews/{review}/approve', [AdminReviewController::class, 'approve'])->name('admin.reviews.approve');
+        Route::post('/reviews/{review}/reject', [AdminReviewController::class, 'reject'])->name('admin.reviews.reject');
+        Route::delete('/reviews/{review}', [AdminReviewController::class, 'destroy'])->name('admin.reviews.destroy');
+        Route::get('/reviews/{review}/replies', [AdminReviewController::class, 'replies'])->name('admin.reviews.replies');
+        Route::post('/reviews/{review}/reply', [AdminReviewController::class, 'reply'])->name('admin.reviews.reply');
 
-    Route::get('/orders/{id}', [AdminOrderController::class, 'show'])
-        ->name('admin.orders.detail');
+        Route::get('/discounts', [DiscountController::class, 'index'])->name('admin.discounts.index');
+        Route::get('/discounts/create', [DiscountController::class, 'create'])->name('admin.discounts.create');
+        Route::post('/discounts', [DiscountController::class, 'store'])->name('admin.discounts.store');
+        Route::get('/discounts/{discount}/edit', [DiscountController::class, 'edit'])->name('admin.discounts.edit');
+        Route::post('/discounts/{discount}', [DiscountController::class, 'update'])->name('admin.discounts.update');
+        Route::delete('/discounts/{discount}', [DiscountController::class, 'destroy'])->name('admin.discounts.destroy');
+    });
 
-    Route::post('/orders/update-status/{id}', [AdminOrderController::class, 'updateStatus'])
-        ->name('admin.orders.updateStatus');
-
-    Route::post('/orders/cancel/{id}', [AdminOrderController::class, 'cancel'])
-        ->name('admin.orders.cancel');
-
-    Route::post('/orders/{id}/approve-refund', [AdminOrderController::class, 'approveRefund'])
-        ->name('admin.orders.approveRefund');
-
-    Route::post('/orders/{id}/reject-refund', [AdminOrderController::class, 'rejectRefund'])
-        ->name('admin.orders.rejectRefund');
-
-    Route::get('/discounts', [DiscountController::class, 'index'])
-        ->name('admin.discounts.index');
-
-    Route::get('/discounts/create', [DiscountController::class, 'create'])
-        ->name('admin.discounts.create');
-    Route::post('/discounts', [DiscountController::class, 'store'])
-        ->name('admin.discounts.store');
-
-    Route::get('/discounts/{discount}/edit', [DiscountController::class, 'edit'])
-        ->name('admin.discounts.edit');
-    Route::post('/discounts/{discount}', [DiscountController::class, 'update'])
-        ->name('admin.discounts.update');
-
-    Route::delete('/discounts/{discount}', [DiscountController::class, 'destroy'])
-        ->name('admin.discounts.destroy');
-
-    Route::get('blogs', [BlogController::class, 'adminIndex'])->name('admin.blogs.index');
-    Route::get('blogs/create', [BlogController::class, 'create'])->name('admin.blogs.create');
-    Route::post('blogs', [BlogController::class, 'store'])->name('admin.blogs.store');
-    Route::get('blogs/{blog}/edit', [BlogController::class, 'edit'])->name('admin.blogs.edit');
-    Route::post('blogs/{blog}', [BlogController::class, 'update'])->name('admin.blogs.update');
-    Route::delete('blogs/{blog}', [BlogController::class, 'destroy'])->name('admin.blogs.destroy');
-});
+// ADMIN + THU NGÂN (cashier) Blog
+Route::middleware(['auth', 'can.position:cashier'])
+    ->prefix('admin')
+    ->group(function () {
+        Route::get('blogs', [BlogController::class, 'adminIndex'])->name('admin.blogs.index');
+        Route::get('blogs/create', [BlogController::class, 'create'])->name('admin.blogs.create');
+        Route::post('blogs', [BlogController::class, 'store'])->name('admin.blogs.store');
+        Route::get('blogs/{blog}/edit', [BlogController::class, 'edit'])->name('admin.blogs.edit');
+        Route::post('blogs/{blog}', [BlogController::class, 'update'])->name('admin.blogs.update');
+        Route::delete('blogs/{blog}', [BlogController::class, 'destroy'])->name('admin.blogs.destroy');
+    });
 
 // STAFF ATTENDANCE
 Route::middleware(['auth', 'role:staff'])
@@ -328,8 +349,8 @@ Route::middleware(['auth', 'role:staff'])
             ->name('staff.attendances.check_in');
         Route::post('/attendances/{attendance}/check-out', [AttendanceController::class, 'checkOut'])
             ->name('staff.attendances.check_out');
-        Route::post('/attendances/{attendance}/late-reason',[AttendanceController::class, 'submitLateReason'])
+        Route::post('/attendances/{attendance}/late-reason', [AttendanceController::class, 'submitLateReason'])
             ->name('staff.attendances.submitLateReason');
-        Route::post('/attendances/{attendance}/early-reason',[AttendanceController::class, 'submitEarlyReason'])
+        Route::post('/attendances/{attendance}/early-reason', [AttendanceController::class, 'submitEarlyReason'])
             ->name('staff.attendances.submitEarlyReason');
     });

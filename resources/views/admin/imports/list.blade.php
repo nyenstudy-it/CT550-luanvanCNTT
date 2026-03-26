@@ -5,6 +5,27 @@
 
         <div class="bg-light rounded p-4">
 
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-4">
+                    <div class="border rounded bg-white p-3 h-100">
+                        <small class="text-muted d-block mb-1">Tổng phiếu nhập</small>
+                        <h4 class="mb-0">{{ $imports->total() }}</h4>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-4">
+                    <div class="border rounded bg-white p-3 h-100">
+                        <small class="text-muted d-block mb-1">Đang hiển thị</small>
+                        <h4 class="mb-0 text-primary">{{ $imports->count() }}</h4>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-4">
+                    <div class="border rounded bg-white p-3 h-100">
+                        <small class="text-muted d-block mb-1">Trang hiện tại</small>
+                        <h4 class="mb-0 text-success">{{ $imports->currentPage() }}/{{ $imports->lastPage() }}</h4>
+                    </div>
+                </div>
+            </div>
+
             <form method="GET" class="row g-3 mb-3">
 
                 <div class="col-md-3">
@@ -46,7 +67,11 @@
             </form>
 
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="mb-0">Danh sách phiếu nhập kho</h6>
+                <div>
+                    <h6 class="mb-1">Danh sách phiếu nhập kho</h6>
+                    <small class="text-muted">Ưu tiên đủ thông tin để tìm phiếu, đối chiếu người nhập và mở lại phiếu khi
+                        cần in/xem nhanh.</small>
+                </div>
                 <a href="{{ route('admin.imports.create') }}" class="btn btn-primary btn-sm">
                     + Nhập kho
                 </a>
@@ -57,11 +82,14 @@
                     <thead class="table-light">
                         <tr>
                             <th>STT</th>
+                            <th>Mã phiếu</th>
                             <th>Nhà phân phối</th>
+                            <th>Người nhập</th>
                             <th>Ngày nhập</th>
+                            <th>Số dòng</th>
+                            <th>Tổng SL nhập</th>
                             <th>Tổng tiền</th>
-                            <th>Số mặt hàng</th>
-                            <th width="120">Chi tiết</th>
+                            <th width="180">Thao tác</th>
                         </tr>
                     </thead>
 
@@ -69,21 +97,32 @@
                         @foreach ($imports as $index => $import)
                             <tr>
                                 <td>{{ $imports->firstItem() + $index }}</td>
-                                <td>{{ $import->supplier->name ?? '—' }}</td>
-                                <td>{{ $import->import_date }}</td>
-                                <td>{{ number_format($import->total_amount) }} đ</td>
-                                <td>{{ $import->items->count() }}</td>
                                 <td>
-                                    <a href="{{ route('admin.imports.show', $import->id) }}" class="btn btn-sm btn-info">
-                                        Xem
-                                    </a>
+                                    <span class="fw-semibold">PN-{{ str_pad($import->id, 5, '0', STR_PAD_LEFT) }}</span>
+                                </td>
+                                <td>{{ $import->supplier->name ?? '—' }}</td>
+                                <td>{{ $import->staff->name ?? '—' }}</td>
+                                <td>{{ \Carbon\Carbon::parse($import->import_date)->format('d/m/Y') }}</td>
+                                <td>{{ number_format($import->items_count ?? 0) }}</td>
+                                <td>{{ number_format($import->total_quantity ?? 0) }}</td>
+                                <td>{{ number_format($import->total_amount) }} đ</td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <a href="{{ route('admin.imports.show', $import->id) }}" class="btn btn-sm btn-info">
+                                            Xem
+                                        </a>
+                                        <a href="{{ route('admin.imports.print', $import->id) }}"
+                                            class="btn btn-sm btn-outline-secondary">
+                                            In phiếu
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
 
                         @if ($imports->isEmpty())
                             <tr>
-                                <td colspan="6" class="text-center">
+                                <td colspan="9" class="text-center">
                                     Chưa có phiếu nhập nào
                                 </td>
                             </tr>

@@ -122,69 +122,91 @@
 
                         @forelse($products as $product)
 
-                                                                                                                                                                            @php
-                            $price = optional($product->variants->first())->price ?? 0;
-                            $image = $product->image
-                                ? asset('storage/' . $product->image)
-                                : asset('images/no-image.png');
-                                                                                                                                                                            @endphp
+                            @php
+                                $price = optional($product->variants->first())->price ?? 0;
+                                $finalPrice = $product->display_final_price ?? $price;
+                                $basePrice = $product->display_base_price ?? $price;
+                                $hasDiscount = (bool) ($product->display_has_discount ?? false);
+                                $image = $product->image
+                                    ? asset('storage/' . $product->image)
+                                    : asset('images/no-image.png');
+                            @endphp
 
-                                                                                                                                                                        <div class="col-lg-4 col-md-6 col-sm-6 mb-4">
+                            <div class="col-lg-4 col-md-6 col-sm-6 mb-4">
 
-                                                                                                                                                                            <div class="product__item custom-card">
+                                <div class="product__item custom-card">
 
-                                                                                                                                                                                <!-- ẢNH -->
-                                                                                                                                                                                <div class="product__item__pic">
-                                                                                                                                                                                    <a href="{{ route('products.show', $product->id) }}">
-                                                                                                                                                                                        <img src="{{ $image }}" alt="{{ $product->name }}">
-                                                                                                                                                                                    </a>
+                                    <!-- ẢNH -->
+                                    <div class="product__item__pic">
+                                        <a href="{{ route('products.show', $product->id) }}">
+                                            <img src="{{ $image }}" alt="{{ $product->name }}">
+                                        </a>
 
-                                                                                                                                                                                    <form action="{{ route('wishlist.toggle', $product->id) }}" method="POST" class="wishlist-btn">
-                                                                                                                                                                                        @csrf
-                                                                                                                                                                                    <button type="submit">
-                                                                                                                                                                                        <i class="fa fa-heart {{ $product->is_favorited ? 'text-danger' : '' }}"></i>
-                                                                                                                                                                                    </button>
+                                        <form action="{{ route('wishlist.toggle', $product->id) }}" method="POST"
+                                            class="wishlist-btn">
+                                            @csrf
+                                            <button type="submit">
+                                                <i class="fa fa-heart {{ $product->is_favorited ? 'text-danger' : '' }}"></i>
+                                            </button>
 
-                                                                                                                                                                                    </form>
+                                        </form>
 
-                                                                                                                                                                                </div>
+                                    </div>
 
-                                                                                                                                                                                <!-- TEXT -->
-                                                                                                                                                                                <div class="product__item__text">
+                                    <!-- TEXT -->
+                                    <div class="product__item__text">
 
-                                                                                                                                                                                    <!-- TÊN -->
-                                                                                                                                                                                    <h6 class="product-name">
-                                                                                                                                                                                        <a href="{{ route('products.show', $product->id) }}">
-                                                                                                                                                                                            {{ $product->name }}
-                                                                                                                                                                                        </a>
-                                                                                                                                                                                    </h6>
+                                        @php $ocop = (int) ($product->ocop_star ?? 0); @endphp
+                                        <!-- TÊN + SAO OCOP -->
+                                        <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
+                                            <h6 class="product-name mb-0" style="line-height:1.35;">
+                                                <a href="{{ route('products.show', $product->id) }}"
+                                                    style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;">
+                                                    {{ $product->name }}
+                                                </a>
+                                            </h6>
+                                            @if($ocop > 0)
+                                                <span
+                                                    style="flex-shrink:0;font-size:11px;font-weight:700;color:#92600a;background:#fef9c3;border:1px solid #fde68a;border-radius:999px;padding:2px 8px;white-space:nowrap;display:inline-flex;align-items:center;gap:3px;">
+                                                    <i class="fa fa-star" style="font-size:10px;color:#f59e0b;"></i>{{ $ocop }} sao
+                                                </span>
+                                            @endif
+                                        </div>
 
-                                                                                                                                                                                    <!-- ⭐ OCOP -->
-                                                                                                                                                                                    <div class="product__rating">
-                                                                                                                                                                                        @php $ocop = $product->ocop_star ?? 0; @endphp
+                                        <!-- ⭐ Đánh giá khách hàng -->
+                                        <div class="product__rating" style="margin-bottom:6px;">
+                                            @php
+                                                $avgRating = round((float) ($product->avg_rating ?? 0));
+                                                $reviewCount = (int) ($product->review_count ?? 0);
+                                            @endphp
 
-                                                                                                                                                                                        @for($i = 1; $i <= 5; $i++)
-                                                                                                                                                                                            <i class="fa fa-star {{ $i <= $ocop ? 'text-warning' : 'text-secondary' }}"></i>
-                                                                                                                                                                                        @endfor
+                                            @for($i = 1; $i <= 5; $i++)
+                                                <i
+                                                    class="fa fa-star {{ $i <= $avgRating ? 'text-warning' : 'text-secondary' }}"></i>
+                                            @endfor
 
-                                                                                                                                                                                        @if($ocop > 0)
-                                                                                                                                                                                            <span class="ocop-label">{{ $ocop }} OCOP</span>
-                                                                                                                                                                                        @endif
-                                                                                                                                                                                    </div>
+                                            <span class="ocop-label">({{ $reviewCount }})</span>
+                                        </div>
 
-                                                                                                                                                                                    <!-- GIÁ -->
-                                                                                                                                                                                    <h5>{{ number_format($price) }}₫</h5>
+                                        <!-- GIÁ -->
+                                        @if($hasDiscount)
+                                            <h5 class="text-danger mb-0">{{ number_format($finalPrice) }}₫</h5>
+                                            <small class="text-muted"><del>{{ number_format($basePrice) }}₫</del>
+                                                {{ $product->display_discount_label }}</small>
+                                        @else
+                                            <h5>{{ number_format($price) }}₫</h5>
+                                        @endif
 
-                                                                                                                                                                                    <!-- 🔥 MUA NGAY -->
-                                                                                                                                                                                    <a href="{{ route('products.show', $product->id) }}" class="buy-now-btn">
-                                                                                                                                                                                        <i class="fa fa-bolt"></i> Mua ngay
-                                                                                                                                                                                    </a>
+                                        <!-- 🔥 MUA NGAY -->
+                                        <a href="{{ route('products.show', $product->id) }}" class="buy-now-btn">
+                                            <i class="fa fa-bolt"></i> Mua ngay
+                                        </a>
 
-                                                                                                                                                                                </div>
+                                    </div>
 
-                                                                                                                                                                            </div>
+                                </div>
 
-                                                                                                                                                                        </div>
+                            </div>
 
 
 
@@ -198,7 +220,7 @@
 
                     <!-- PAGINATION -->
                     <div class="mt-4">
-                        {{ $products->links() }}
+                        {{ $products->appends(request()->query())->links() }}
                     </div>
 
                 </div>

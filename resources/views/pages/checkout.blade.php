@@ -6,6 +6,75 @@
 
 @section('content')
 
+                <style>
+                    .policy-modal-overlay {
+                        position: fixed;
+                        inset: 0;
+                        background: rgba(0, 0, 0, 0.45);
+                        display: none;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 2050;
+                        padding: 16px;
+                    }
+
+                    .policy-modal-card {
+                        width: 100%;
+                        max-width: 760px;
+                        max-height: 90vh;
+                        overflow: auto;
+                        background: #fff;
+                        border-radius: 14px;
+                        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+                    }
+
+                    .policy-modal-header {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding: 14px 18px;
+                        border-bottom: 1px solid #ececec;
+                    }
+
+                    .policy-modal-title {
+                        margin: 0;
+                        font-size: 20px;
+                        font-weight: 700;
+                    }
+
+                    .policy-close-btn {
+                        border: none;
+                        background: transparent;
+                        font-size: 28px;
+                        line-height: 1;
+                        color: #666;
+                        cursor: pointer;
+                    }
+
+                    .policy-modal-body {
+                        padding: 18px 22px 10px;
+                        text-align: left;
+                    }
+
+                    .policy-rules {
+                        margin: 0;
+                        padding-left: 20px;
+                    }
+
+                    .policy-rules li {
+                        margin-bottom: 10px;
+                        line-height: 1.5;
+                    }
+
+                    .policy-modal-footer {
+                        display: flex;
+                        justify-content: flex-end;
+                        gap: 10px;
+                        padding: 12px 18px 18px;
+                        border-top: 1px solid #ececec;
+                    }
+                </style>
+
                 <section class="checkout spad">
                 <div class="container">
 
@@ -28,8 +97,9 @@
                 @endif
 
 
-                <form action="{{ route('checkout.store') }}" method="POST">
+                <form id="checkoutForm" action="{{ route('checkout.store') }}" method="POST">
                 @csrf
+                <input type="hidden" name="order_policy_agree" id="orderPolicyAgreeInput" value="0">
 
                 <div class="row">
 
@@ -76,13 +146,44 @@
 
                 <div class="mb-3">
 
+                @php
+                    $customer = auth()->user()?->customer;
+                    $savedFullAddress = trim((string) ($customer?->full_address ?? ''));
+                    $canUseDefaultAddress = (bool) ($customer?->is_default_address) && $savedFullAddress !== '';
+                    $defaultAddress = $canUseDefaultAddress ? $savedFullAddress : '';
+                    $initialShippingAddress = old('shipping_address', $defaultAddress);
+                @endphp
+
                 <label>Địa chỉ giao hàng *</label>
 
-                <textarea name="shipping_address" class="form-control" rows="3"
-                    required>{{ old('shipping_address', optional(auth()->user()->customer)->full_address) }}</textarea>
+                @if($canUseDefaultAddress)
+                    <div class="mb-2 p-2" style="background:#f8fff0;border:1px solid #d8ebbf;border-radius:8px;">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                            <span class="badge bg-success">Mặc định</span>
+                            <small class="text-muted">{{ $defaultAddress }}</small>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" id="use-default-address" class="btn btn-sm btn-outline-success">
+                                Dùng địa chỉ mặc định
+                            </button>
+                            <button type="button" id="clear-shipping-address" class="btn btn-sm btn-outline-secondary">
+                                Nhập địa chỉ khác
+                            </button>
+                        </div>
+                    </div>
+                @else
+                    <div class="mb-2 p-2" style="background:#fff8e1;border:1px solid #f3df9b;border-radius:8px;">
+                        <small class="text-muted">
+                            Bạn chưa có địa chỉ mặc định hoặc địa chỉ còn trống. Vui lòng nhập địa chỉ giao hàng hoặc cập nhật hồ sơ.
+                        </small>
+                    </div>
+                @endif
 
-                <small class="text-muted">
-                Địa chỉ mặc định được lấy từ hồ sơ khách hàng. Bạn có thể chỉnh sửa nếu muốn.
+                <textarea id="shipping_address" name="shipping_address" class="form-control" rows="3"
+                    required>{{ $initialShippingAddress }}</textarea>
+
+                <small id="shipping-address-mode" class="text-muted">
+                    {{ $canUseDefaultAddress && $initialShippingAddress === $defaultAddress ? 'Đang dùng địa chỉ mặc định đã lưu.' : 'Bạn có thể nhập địa chỉ nhận hàng khác với địa chỉ mặc định.' }}
                 </small>
 
                 <br>
@@ -290,26 +391,10 @@
                 </label>
 
                 </div>
-
-
-                <div class="form-check">
-
-                <input
-                class="form-check-input"
-                type="radio"
-                name="payment_method"
-                value="BANK_TRANSFER"
-                {{ old('payment_method') == 'BANK_TRANSFER' ? 'checked' : '' }}>
-
-                <label class="form-check-label">
-                🏧 Chuyển khoản ngân hàng
-                </label>
-
-                </div>
                 </div>
 
 
-                <button type="submit" class="checkout-btn">
+                <button type="submit" class="checkout-btn" id="placeOrderBtn">
                 XÁC NHẬN ĐẶT HÀNG
                 </button>
 
@@ -321,7 +406,157 @@
 
                 </form>
 
+                <div id="orderPolicyModal" class="policy-modal-overlay" style="display:none;" aria-hidden="true">
+                    <div class="policy-modal-card" role="dialog" aria-modal="true" aria-labelledby="orderPolicyTitle">
+                        <div class="policy-modal-header">
+                            <h5 class="policy-modal-title" id="orderPolicyTitle">Chính sách đặt hàng và hoàn tiền</h5>
+                            <button type="button" class="policy-close-btn" id="closePolicyModalBtn" aria-label="Đóng">&times;</button>
+                        </div>
+                        <div class="policy-modal-body">
+                            <div class="alert alert-light border mb-3" role="alert">
+                                Vui lòng đọc kỹ chính sách dưới đây trước khi xác nhận đặt hàng.
+                            </div>
+
+                            <ul class="policy-rules">
+                                @foreach(($orderPolicyRules ?? []) as $rule)
+                                    <li>{{ $rule }}</li>
+                                @endforeach
+                            </ul>
+
+                            <div class="form-check mt-3">
+                                <input class="form-check-input" type="checkbox" id="orderPolicyAgree" value="1">
+                                <label class="form-check-label" for="orderPolicyAgree">
+                                    Tôi đã đọc và đồng ý với chính sách đặt hàng, hủy đơn và hoàn tiền.
+                                </label>
+                            </div>
+
+                            <small id="orderPolicyError" class="text-danger d-none d-block mt-2">
+                                Bạn cần tích đồng ý để tiếp tục đặt hàng.
+                            </small>
+                        </div>
+                        <div class="policy-modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" id="closePolicyModalFooterBtn">Đóng</button>
+                            <button type="button" class="btn btn-success" id="confirmPolicyBtn">Đồng ý và tiếp tục đặt hàng</button>
+                        </div>
+                    </div>
+                </div>
+
                 </div>
                 </section>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', function () {
+                        const btnUseDefault = document.getElementById('use-default-address');
+                        const btnClearShipping = document.getElementById('clear-shipping-address');
+                        const shippingAddress = document.getElementById('shipping_address');
+                        const modeText = document.getElementById('shipping-address-mode');
+                        const defaultAddress = @json($defaultAddress ?? '');
+
+                        if (btnUseDefault && shippingAddress && defaultAddress) {
+                            btnUseDefault.addEventListener('click', function () {
+                                shippingAddress.value = defaultAddress;
+                                shippingAddress.focus();
+                                if (modeText) {
+                                    modeText.textContent = 'Đang dùng địa chỉ mặc định đã lưu.';
+                                }
+                            });
+                        }
+
+                        if (btnClearShipping && shippingAddress) {
+                            btnClearShipping.addEventListener('click', function () {
+                                shippingAddress.value = '';
+                                shippingAddress.focus();
+                                if (modeText) {
+                                    modeText.textContent = 'Bạn đang nhập địa chỉ nhận hàng mới.';
+                                }
+                            });
+                        }
+
+                        if (shippingAddress && modeText && defaultAddress) {
+                            shippingAddress.addEventListener('input', function () {
+                                if (shippingAddress.value.trim() === defaultAddress.trim()) {
+                                    modeText.textContent = 'Đang dùng địa chỉ mặc định đã lưu.';
+                                } else {
+                                    modeText.textContent = 'Bạn có thể nhập địa chỉ nhận hàng khác với địa chỉ mặc định.';
+                                }
+                            });
+                        }
+
+                        const checkoutForm = document.getElementById('checkoutForm');
+                        const orderPolicyModalEl = document.getElementById('orderPolicyModal');
+                        const orderPolicyAgree = document.getElementById('orderPolicyAgree');
+                        const orderPolicyAgreeInput = document.getElementById('orderPolicyAgreeInput');
+                        const orderPolicyError = document.getElementById('orderPolicyError');
+                        const closePolicyModalBtn = document.getElementById('closePolicyModalBtn');
+                        const closePolicyModalFooterBtn = document.getElementById('closePolicyModalFooterBtn');
+                        const confirmPolicyBtn = document.getElementById('confirmPolicyBtn');
+
+                        let canSubmitOrder = false;
+
+                        function openPolicyModal() {
+                            if (!orderPolicyModalEl) return;
+                            orderPolicyError.classList.add('d-none');
+                            orderPolicyModalEl.style.display = 'flex';
+                            orderPolicyModalEl.setAttribute('aria-hidden', 'false');
+                            document.body.style.overflow = 'hidden';
+                        }
+
+                        function closePolicyModal() {
+                            if (!orderPolicyModalEl) return;
+                            orderPolicyModalEl.style.display = 'none';
+                            orderPolicyModalEl.setAttribute('aria-hidden', 'true');
+                            document.body.style.overflow = '';
+                        }
+
+                        if (checkoutForm && orderPolicyModalEl) {
+                            checkoutForm.addEventListener('submit', function (e) {
+                                if (canSubmitOrder) {
+                                    return;
+                                }
+
+                                e.preventDefault();
+                                openPolicyModal();
+                            });
+                        }
+
+                        if (confirmPolicyBtn && checkoutForm && orderPolicyAgree) {
+                            confirmPolicyBtn.addEventListener('click', function () {
+                                if (!orderPolicyAgree.checked) {
+                                    orderPolicyError.classList.remove('d-none');
+                                    return;
+                                }
+
+                                canSubmitOrder = true;
+                                if (orderPolicyAgreeInput) {
+                                    orderPolicyAgreeInput.value = '1';
+                                }
+                                closePolicyModal();
+                                checkoutForm.submit();
+                            });
+                        }
+
+                        if (closePolicyModalBtn) {
+                            closePolicyModalBtn.addEventListener('click', closePolicyModal);
+                        }
+
+                        if (closePolicyModalFooterBtn) {
+                            closePolicyModalFooterBtn.addEventListener('click', closePolicyModal);
+                        }
+
+                        if (orderPolicyModalEl) {
+                            orderPolicyModalEl.addEventListener('click', function (event) {
+                                if (event.target === orderPolicyModalEl) {
+                                    closePolicyModal();
+                                }
+                            });
+                        }
+
+                        document.addEventListener('keydown', function (event) {
+                            if (event.key === 'Escape' && orderPolicyModalEl && orderPolicyModalEl.style.display !== 'none') {
+                                closePolicyModal();
+                            }
+                        });
+                    });
+                </script>
 
 @endsection

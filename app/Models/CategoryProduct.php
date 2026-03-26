@@ -15,8 +15,8 @@ class CategoryProduct extends Model
         'image_url',
     ];
 
-    // public function products()
-    // {
-    //     return $this->hasMany(Product::class, 'category_product_id');
-    // }
+    public function products()
+    {
+        return $this->hasMany(Product::class, 'category_id');
+    }
 }

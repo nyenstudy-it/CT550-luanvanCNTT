@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\Notification;
+use App\Models\User;
 
 class PaymentController extends Controller
 {
@@ -133,8 +135,9 @@ class PaymentController extends Controller
                     'status' => 'paid',
                     'paid_at' => now()
                 ]);
-
             }
+
+            $this->createOrderSuccessNotifications($order);
 
             return redirect()->route('orders.detail', $order->id)
                 ->with('success', 'Thanh toán MoMo thành công');
@@ -148,8 +151,6 @@ class PaymentController extends Controller
 
             return redirect()->route('orders.detail', $order->id)
                 ->with('error', 'Thanh toán thất bại');
-
-                
         }
     }
     public function vnpay($orderId)
@@ -167,7 +168,7 @@ class PaymentController extends Controller
         $vnp_TxnRef = $order->id . "_" . time();
         $vnp_OrderInfo = "Thanh toan don hang #" . $order->id;
         $vnp_OrderType = "billpayment";
-        $vnp_Amount = $order->total_amount * 100; 
+        $vnp_Amount = $order->total_amount * 100;
         $vnp_Locale = "vn";
         $vnp_IpAddr = request()->ip();
 
@@ -272,6 +273,8 @@ class PaymentController extends Controller
             }
 
             if ($request->vnp_ResponseCode == '00') {
+                $this->createOrderSuccessNotifications($order);
+
                 return redirect()->route('orders.detail', $orderId)
                     ->with('success', 'Thanh toán VNPAY thành công');
             } else {
@@ -282,5 +285,50 @@ class PaymentController extends Controller
 
         return redirect()->route('orders.my')
             ->with('error', 'Sai chữ ký VNPAY');
+    }
+
+    private function createOrderSuccessNotifications(Order $order): void
+    {
+        if (!$order->customer || !$order->customer->user_id) {
+            return;
+        }
+
+        $customerUserId = $order->customer->user_id;
+
+        $existsCustomer = Notification::where('type', 'order_success')
+            ->where('related_id', $order->id)
+            ->where('user_id', $customerUserId)
+            ->exists();
+
+        if (!$existsCustomer) {
+            Notification::create([
+                'user_id' => $customerUserId,
+                'type' => 'order_success',
+                'title' => 'Đặt hàng thành công',
+                'content' => 'Đơn #' . $order->id . ' đã được tạo',
+                'related_id' => $order->id,
+                'is_read' => false,
+            ]);
+        }
+
+        $admins = User::where('role', 'admin')->get();
+
+        foreach ($admins as $admin) {
+            $existsAdmin = Notification::where('type', 'new_order')
+                ->where('related_id', $order->id)
+                ->where('user_id', $admin->id)
+                ->exists();
+
+            if (!$existsAdmin) {
+                Notification::create([
+                    'user_id' => $admin->id,
+                    'type' => 'new_order',
+                    'title' => 'Có đơn hàng mới',
+                    'content' => 'Đơn #' . $order->id . ' vừa được tạo',
+                    'related_id' => $order->id,
+                    'is_read' => false,
+                ]);
+            }
+        }
     }
 }

@@ -73,7 +73,7 @@
 
                 <!-- Danh sách Blog -->
                 <div class="col-lg-8 col-md-7">
-                    <div class="row">
+                    <div class="row g-4">
                         @forelse ($blogs as $blog)
                             <div class="col-lg-6 col-md-6 col-sm-6">
                                 <div class="blog__item">

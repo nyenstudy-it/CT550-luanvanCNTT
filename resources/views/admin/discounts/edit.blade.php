@@ -32,6 +32,36 @@
                             </div>
                         </div>
 
+                        <div class="row mb-3">
+                            <label class="col-sm-2 col-form-label">Phạm vi áp dụng</label>
+                            <div class="col-sm-10">
+                                @php
+                                    $isProductScope = $discount->products->isNotEmpty();
+                                @endphp
+                                <select name="scope" id="discountScope" class="form-select" required>
+                                    <option value="all" {{ old('scope', $isProductScope ? 'product' : 'all') == 'all' ? 'selected' : '' }}>Toàn shop</option>
+                                    <option value="product" {{ old('scope', $isProductScope ? 'product' : 'all') == 'product' ? 'selected' : '' }}>Theo sản phẩm</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3" id="productSelectWrap" style="display: none;">
+                            <label class="col-sm-2 col-form-label">Sản phẩm áp dụng</label>
+                            <div class="col-sm-10">
+                                @php
+                                    $selectedProducts = collect(old('product_ids', $discount->products->pluck('id')->all()));
+                                @endphp
+                                <select name="product_ids[]" class="form-select" multiple size="8">
+                                    @foreach($products as $product)
+                                        <option value="{{ $product->id }}" {{ $selectedProducts->contains($product->id) ? 'selected' : '' }}>
+                                            {{ $product->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted">Giữ Ctrl hoặc Cmd để chọn nhiều sản phẩm.</small>
+                            </div>
+                        </div>
+
                         {{-- Giá trị --}}
                         <div class="row mb-3">
                             <label class="col-sm-2 col-form-label">Giá trị</label>
@@ -93,4 +123,20 @@
             </div>
         </div>
     </div>
+
+    @push('scripts')
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const scopeEl = document.getElementById('discountScope');
+                const productWrap = document.getElementById('productSelectWrap');
+
+                function toggleProductSelect() {
+                    productWrap.style.display = scopeEl.value === 'product' ? '' : 'none';
+                }
+
+                scopeEl.addEventListener('change', toggleProductSelect);
+                toggleProductSelect();
+            });
+        </script>
+    @endpush
 @endsection

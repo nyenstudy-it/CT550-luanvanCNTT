@@ -9,7 +9,9 @@ use App\Models\Payment;
 use App\Models\Inventory;
 use App\Models\ImportItem;
 use App\Models\OrderCancellation;
-
+use App\Models\OrderReturn;
+use App\Models\OrderReturnImage;
+use App\Models\Product;
 
 class Order extends Model
 {
@@ -28,9 +30,9 @@ class Order extends Model
 
     public function items()
     {
-        return $this->hasMany(OrderItem::class);
+        return $this->hasMany(OrderItem::class); 
     }
-
+    
    public function payment()
 {
     return $this->hasOne(Payment::class)->latestOfMany();
@@ -45,5 +47,20 @@ class Order extends Model
     public function cancellation()
     {
         return $this->hasOne(OrderCancellation::class);
+    }
+
+    public function returnInfo()
+    {
+        return $this->hasOne(\App\Models\OrderReturn::class);
+    }
+
+    public function returns()
+    {
+        return $this->hasMany(OrderReturn::class, 'order_id'); // OrderReturn là model của bảng trả hàng/hoàn tiền
+    }
+
+    public function order_items()
+    {
+        return $this->hasMany(OrderItem::class);
     }
 }

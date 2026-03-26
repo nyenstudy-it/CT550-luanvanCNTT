@@ -3,12 +3,42 @@
 @section('content')
     <div class="container-fluid pt-4 px-4">
         <div class="bg-light rounded p-4">
-{{-- 
-            <form method="GET" action="{{ route('admin.suppliers.list') }}" class="row g-3 mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div>
+                    <h5 class="mb-1">Danh sách nhà phân phối</h5>
+                    <small class="text-muted">Theo dõi thông tin liên hệ và địa chỉ để quản lý nguồn cung.</small>
+                </div>
+                <a href="{{ route('admin.suppliers.create') }}" class="btn btn-sm btn-success">+ Thêm nhà phân phối</a>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-4">
+                    <div class="border rounded bg-white p-3 h-100">
+                        <small class="text-muted d-block mb-1">Tổng nhà phân phối</small>
+                        <h4 class="mb-0">{{ $summary['total'] ?? 0 }}</h4>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-4">
+                    <div class="border rounded bg-white p-3 h-100">
+                        <small class="text-muted d-block mb-1">Có số điện thoại</small>
+                        <h4 class="mb-0 text-success">{{ $summary['with_phone'] ?? 0 }}</h4>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-4">
+                    <div class="border rounded bg-white p-3 h-100">
+                        <small class="text-muted d-block mb-1">Có địa chỉ</small>
+                        <h4 class="mb-0 text-primary">{{ $summary['with_address'] ?? 0 }}</h4>
+                    </div>
+                </div>
+            </div>
+
+            <form method="GET" action="{{ route('admin.suppliers.list') }}"
+                class="row g-3 mb-4 border rounded bg-white p-3">
 
                 <div class="col-md-3">
                     <label class="form-label">Tên nhà phân phối</label>
-                    <input type="text" name="name" value="{{ request('name') }}" class="form-control" placeholder="Nhập tên NPP">
+                    <input type="text" name="name" value="{{ request('name') }}" class="form-control"
+                        placeholder="Nhập tên NPP">
                 </div>
 
                 <div class="col-md-3">
@@ -24,23 +54,11 @@
                 </div>
 
                 <div class="col-md-3 d-flex align-items-end gap-2">
-                    <button type="submit" class="btn btn-primary w-100">
-                        Lọc
-                    </button>
-
-                    <a href="{{ route('admin.suppliers.list') }}" class="btn btn-secondary w-100">
-                        Reset
-                    </a>
+                    <button type="submit" class="btn btn-primary">Lọc</button>
+                    <a href="{{ route('admin.suppliers.list') }}" class="btn btn-secondary">Đặt lại</a>
                 </div>
 
-            </form> --}}
-
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="mb-0">Danh sách nhà phân phối</h6>
-                <a href="{{ route('admin.suppliers.create') }}" class="btn btn-primary btn-sm">
-                    + Thêm nhà phân phối
-                </a>
-            </div>
+            </form>
 
             <div class="table-responsive">
                 <table class="table table-bordered table-hover align-middle">
@@ -58,13 +76,14 @@
                     <tbody>
                         @foreach ($suppliers as $index => $supplier)
                             <tr>
-                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $suppliers->firstItem() + $index }}</td>
                                 <td>{{ $supplier->name }}</td>
                                 <td>{{ $supplier->phone }}</td>
                                 <td>{{ $supplier->address }}</td>
                                 <td>{{ $supplier->description ?? '—' }}</td>
                                 <td>
-                                    <a href="{{ route('admin.suppliers.edit', $supplier->id) }}" class="btn btn-sm btn-warning">
+                                    <a href="{{ route('admin.suppliers.edit', $supplier->id) }}"
+                                        class="btn btn-sm btn-warning mb-1">
                                         Sửa
                                     </a>
 
@@ -72,7 +91,7 @@
                                         class="d-inline" onsubmit="return confirm('Xóa nhà phân phối này?')">
                                         @csrf
                                         @method('DELETE')
-                                        <button class="btn btn-sm btn-danger">
+                                        <button class="btn btn-sm btn-danger mb-1">
                                             Xóa
                                         </button>
                                     </form>
@@ -89,7 +108,9 @@
                         @endif
                     </tbody>
                 </table>
-                {{ $suppliers->appends(request()->query())->links() }}
+                <div class="mt-3">
+                    {{ $suppliers->appends(request()->query())->links() }}
+                </div>
 
             </div>
 

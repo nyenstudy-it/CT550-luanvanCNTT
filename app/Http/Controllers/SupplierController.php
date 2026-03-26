@@ -27,7 +27,13 @@ class SupplierController extends Controller
             ->orderBy('id', 'asc')
             ->paginate(10);
 
-        return view('admin.suppliers.list', compact('suppliers'));
+        $summary = [
+            'total' => Supplier::count(),
+            'with_phone' => Supplier::whereNotNull('phone')->where('phone', '!=', '')->count(),
+            'with_address' => Supplier::whereNotNull('address')->where('address', '!=', '')->count(),
+        ];
+
+        return view('admin.suppliers.list', compact('suppliers', 'summary'));
     }
 
 

@@ -72,21 +72,29 @@ class CustomerAuthController extends Controller
             'password' => 'required'
         ]);
 
-        if (Auth::attempt([
-            'email'    => $request->email,
-            'password' => $request->password,
-            'role'     => 'customer',
-            'status'   => 'active'
-        ])) {
+        $user = User::where('email', $request->email)
+            ->where('role', 'customer')
+            ->first();
 
-            $request->session()->regenerate();
-
-            return redirect('/')->with('success', 'Đăng nhập thành công');
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return back()
+                ->withInput()
+                ->with('error', 'Email hoặc mật khẩu không đúng');
         }
 
-        return back()
-            ->withInput()
-            ->with('error', 'Sai thông tin hoặc tài khoản bị khóa');
+        if ($user->status !== 'active') {
+            $reason = $user->locked_reason ?: 'Tài khoản đang bị khóa, vui lòng liên hệ quản trị viên.';
+
+            return back()
+                ->withInput()
+                ->with('error', 'Tài khoản của bạn đã bị khóa. Lý do: ' . $reason);
+        }
+
+        Auth::login($user);
+
+        $request->session()->regenerate();
+
+        return redirect('/')->with('success', 'Đăng nhập thành công');
     }
 
     public function logout(Request $request)
@@ -107,74 +115,75 @@ class CustomerAuthController extends Controller
     }
 
     public function profileUpdate(Request $request)
-{
-    $user = Auth::user();
-    $customer = $user->customer;
+    {
+        $user = Auth::user();
+        $customer = $user->customer;
 
-    $request->validate([
-        'name'     => 'required|max:255',
-        'email'    => 'required|email|unique:users,email,' . $user->id,
-        'phone'    => 'required',
-        'address'  => 'nullable|string|max:255',
-        'province' => 'nullable|string|max:255',
-        'district' => 'nullable|string|max:255',
-        'ward'     => 'nullable|string|max:255',
-        'date_of_birth' => 'nullable|date',
-        'gender'   => 'nullable|in:male,female,other',
-        'current_password' => 'required_with:password',
-        'password' => 'nullable|min:6|confirmed',
-        'avatar'   => 'nullable|image|max:2048'
-    ]);
-
-    DB::beginTransaction();
-
-    try {
-        $user->update([
-            'name'  => $request->name,
-            'email' => $request->email
+        $request->validate([
+            'name'     => 'required|max:255',
+            'email'    => 'required|email|unique:users,email,' . $user->id,
+            'phone'    => 'required',
+            'address'  => 'nullable|string|max:255',
+            'province' => 'nullable|string|max:255',
+            'district' => 'nullable|string|max:255',
+            'ward'     => 'nullable|string|max:255',
+            'date_of_birth' => 'nullable|date',
+            'gender'   => 'nullable|in:male,female,other',
+            'current_password' => 'required_with:password',
+            'password' => 'nullable|min:6|confirmed',
+            'avatar'   => 'nullable|image|max:2048',
+            'is_default_address' => 'nullable|boolean'
         ]);
 
-        if ($request->filled('password')) {
+        DB::beginTransaction();
 
-            if (!Hash::check($request->current_password, $user->password)) {
-                return back()->withErrors([
-                    'current_password' => 'Mật khẩu hiện tại không đúng'
-                ])->withInput();
+        try {
+            $user->update([
+                'name'  => $request->name,
+                'email' => $request->email
+            ]);
+
+            if ($request->filled('password')) {
+
+                if (!Hash::check($request->current_password, $user->password)) {
+                    return back()->withErrors([
+                        'current_password' => 'Mật khẩu hiện tại không đúng'
+                    ])->withInput();
+                }
+
+                $user->update([
+                    'password' => Hash::make($request->password)
+                ]);
             }
 
-            $user->update([
-                'password' => Hash::make($request->password)
-            ]);
-        }
+            if ($request->hasFile('avatar')) {
 
-        if ($request->hasFile('avatar')) {
+                // Xoá avatar cũ nếu có
+                if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+                    Storage::disk('public')->delete($user->avatar);
+                }
 
-            // Xoá avatar cũ nếu có
-            if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
-                Storage::disk('public')->delete($user->avatar);
+                $path = $request->file('avatar')->store('avatars', 'public');
+
+                $user->update([
+                    'avatar' => $path
+                ]);
             }
 
-            $path = $request->file('avatar')->store('avatars', 'public');
+            if ($customer) {
+                $customer->update([
+                    'phone'         => $request->phone,
+                    'address'       => $request->address,
+                    'province'      => $request->province,
+                    'district'      => $request->district,
+                    'ward'          => $request->ward,
+                    'date_of_birth' => $request->date_of_birth,
+                    'gender'        => $request->gender,
+                    'is_default_address' => (int) $request->boolean('is_default_address')
+                ]);
+            }
 
-            $user->update([
-                'avatar' => $path
-            ]);
-        }
-
-        if ($customer) {
-            $customer->update([
-                'phone'         => $request->phone,
-                'address'       => $request->address,
-                'province'      => $request->province,
-                'district'      => $request->district,
-                'ward'          => $request->ward,
-                'date_of_birth' => $request->date_of_birth,
-                'gender'        => $request->gender,
-                'is_default_address' => $request->is_default_address
-            ]);
-        }
-
-        DB::commit();
+            DB::commit();
 
             if ($request->redirect == 'checkout') {
                 return redirect()->route('checkout')
@@ -184,10 +193,9 @@ class CustomerAuthController extends Controller
             return back()->with('success', 'Cập nhật thông tin thành công');
         } catch (\Exception $e) {
 
-        DB::rollBack();
+            DB::rollBack();
 
-        return back()->with('error', 'Có lỗi xảy ra, vui lòng thử lại.');
+            return back()->with('error', 'Có lỗi xảy ra, vui lòng thử lại.');
+        }
     }
-}
-
 }

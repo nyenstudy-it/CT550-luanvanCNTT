@@ -29,7 +29,7 @@
                             </ul>
                         </div>
                         <div class="header__top__right__auth">
-                        
+
                             @auth
                                 @if(auth()->user()->role === 'customer')
                                     <div class="dropdown">
@@ -112,16 +112,60 @@
                         <li>
                             <a href="{{ route('wishlist.index') }}">
                                 <i class="fa fa-heart"></i>
-                                <span>
-                                    {{ auth()->check() ? auth()->user()->wishlists()->count() : 0 }}
-                                </span>
+                                <span>{{ auth()->check() ? auth()->user()->wishlists()->count() : 0 }}</span>
                             </a>
                         </li>
 
-                        <li><a href="{{ route('cart.list') }}"><i class="fa fa-shopping-bag"></i> <span>{{ session('cart') ? count(session('cart')) : 0 }}</span></a></li>
+                        <li>
+                            <a href="{{ route('cart.list') }}">
+                                <i class="fa fa-shopping-bag"></i>
+                                <span>{{ session('cart') ? count(session('cart')) : 0 }}</span>
+                            </a>
+                        </li>
+
+                        @auth
+                            @if(auth()->user()->role === 'customer')
+                                <li class="nav-item dropdown position-relative">
+                                    <a href="#" class="customer-notification-toggle position-relative">
+                                        <i class="fa fa-bell"></i>
+                                        @if($unreadCount > 0)
+                                            <span class="notification-badge">{{ $unreadCount }}</span>
+                                        @endif
+                                    </a>
+
+                                    <ul class="customer-notification-dropdown">
+                                        @forelse($notifications ?? [] as $noti)
+                                            <li>
+                                                <a href="{{ route('customer.notifications.read', $noti->id) }}"
+                                                    class="dropdown-item {{ !$noti->is_read ? 'unread' : '' }}">
+
+                                                    <h6 class="fw-normal mb-1">{{ $noti->title }}</h6>
+                                                    <small class="text-muted d-block">{{ $noti->display_content }}</small>
+                                                    <small class="text-muted">{{ $noti->created_at->diffForHumans() }}</small>
+                                                </a>
+                                            </li>
+
+                                            <hr class="dropdown-divider">
+
+                                        @empty
+                                            <li><span class="dropdown-item text-center">Không có thông báo</span></li>
+                                        @endforelse
+
+                                        <li>
+                                            <a href="{{ route('customer.notifications') }}"
+                                                class="dropdown-item text-center view-all">
+                                                Xem tất cả
+                                            </a>
+
+                                        </li>
+                                    </ul>
+                                </li>
+
+                            @endif
+                        @endauth
                     </ul>
-                    {{-- <div class="header__cart__price">item: <span>$150.00</span></div> --}}
                 </div>
+
             </div>
         </div>
         <div class="humberger__open">
@@ -129,4 +173,23 @@
         </div>
     </div>
 </header>
-<!-- Header Section End -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const bell = document.querySelector('.customer-notification-toggle');
+        const dropdown = document.querySelector('.customer-notification-dropdown');
+
+        if (bell && dropdown) {
+            bell.addEventListener('click', function (e) {
+                e.preventDefault();
+                dropdown.classList.toggle('show');
+            });
+
+            document.addEventListener('click', function (e) {
+                if (!bell.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.remove('show');
+                }
+            });
+        }
+    });
+
+</script>

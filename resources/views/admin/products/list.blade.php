@@ -4,6 +4,27 @@
             <div class="container-fluid pt-4 px-4">
                 <div class="bg-light rounded p-4">
 
+                    <div class="row g-3 mb-4">
+                        <div class="col-12 col-sm-4">
+                            <div class="border rounded bg-white p-3 h-100">
+                                <small class="text-muted d-block mb-1">Tổng sản phẩm</small>
+                                <h4 class="mb-0">{{ $products->total() }}</h4>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-4">
+                            <div class="border rounded bg-white p-3 h-100">
+                                <small class="text-muted d-block mb-1">Đang hiển thị</small>
+                                <h4 class="mb-0 text-primary">{{ $products->count() }}</h4>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-4">
+                            <div class="border rounded bg-white p-3 h-100">
+                                <small class="text-muted d-block mb-1">Trang hiện tại</small>
+                                <h4 class="mb-0 text-success">{{ $products->currentPage() }}/{{ $products->lastPage() }}</h4>
+                            </div>
+                        </div>
+                    </div>
+
                     <form method="GET" action="{{ route('admin.products.list') }}" class="row g-3 mb-3">
                         <div class="col-md-2">
                             <label class="form-label">Danh mục</label>

@@ -1,111 +1,28 @@
 @extends('admin.layouts.layout_admin')
 
 @section('content')
-    <div class="container-fluid pt-4 px-4">
-        <div class="bg-light rounded h-100 p-4">
-            <h6 class="mb-4">Chỉnh sửa nhân viên</h6>
-            @if ($errors->any())
-                <div class="alert alert-danger">
-                    <ul class="mb-0">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
-            <form method="POST" action="{{ route('admin.staff.update', $staff->user_id) }}" enctype="multipart/form-data">
-                @csrf
-
-                <div class="row mb-3">
-                    <label class="col-sm-2 col-form-label">Tên</label>
-                    <div class="col-sm-10">
-                        <input type="text" name="name" class="form-control" value="{{ old('name', $staff->user->name) }}"
-                            required>
-                    </div>
-                </div>
-                <div class="row mb-3">
-                    <label class="col-sm-2 col-form-label">SĐT</label>
-                    <div class="col-sm-10">
-                        <input type="text" name="phone" class="form-control" value="{{ old('phone', $staff->phone) }}">
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <label class="col-sm-2 col-form-label">Địa chỉ</label>
-                    <div class="col-sm-10">
-                        <input type="text" name="address" class="form-control"
-                            value="{{ old('address', $staff->address) }}">
-                    </div>
-                </div>
-                <div class="row mb-3">
-                    <label class="col-sm-2 col-form-label">Chức vụ</label>
-                    <div class="col-sm-10">
-                        <select name="position" class="form-select" required>
-                            <option value="">-- Chọn chức vụ --</option>
-
-                            <option value="cashier" {{ old('position', $staff->position) === 'cashier' ? 'selected' : '' }}>
-                                Thu ngân
-                            </option>
-
-                            <option value="warehouse" {{ old('position', $staff->position) === 'warehouse' ? 'selected' : '' }}>
-                                Nhân viên kho
-                            </option>
-
-                            <option value="order_staff" {{ old('position', $staff->position) === 'order_staff' ? 'selected' : '' }}>
-                                Nhân viên xử lý đơn hàng
-                            </option>
-                        </select>
-                    </div>
-                </div>
-                <div class="row mb-3">
-                    <label class="col-sm-2 col-form-label">Trạng thái</label>
-                    <div class="col-sm-10">
-                        <select name="employment_status" class="form-select" required>
-
-                            <option value="probation" {{ old('employment_status', $staff->employment_status) === 'probation' ? 'selected' : '' }}>
-                                Thử việc
-                            </option>
-
-                            <option value="official" {{ old('employment_status', $staff->employment_status) === 'official' ? 'selected' : '' }}>
-                                Chính thức
-                            </option>
-
-                            <option value="resigned" {{ old('employment_status', $staff->employment_status) === 'resigned' ? 'selected' : '' }}>
-                                Nghỉ việc
-                            </option>
-
-                        </select>
-                    </div>
-                </div>
-                <div class="row mb-3">
-                    <label class="col-sm-2 col-form-label">Ngày vào làm</label>
-                    <div class="col-sm-10">
-                        <input type="date" name="start_date" class="form-control"
-                            value="{{ old('start_date', optional($staff->start_date)->format('Y-m-d')) }}">
-
-                    </div>
-                </div>
-                <div class="row mb-4">
-                    <label class="col-sm-2 col-form-label">Ảnh đại diện</label>
-                    <div class="col-sm-10">
-
-                        <div class="mb-2">
-                            <img src="{{ $staff->user->avatar
-    ? asset('storage/' . $staff->user->avatar)
-    : asset('img/user.jpg') }}" width="80" class="rounded-circle">
-                        </div>
-
-                        <input type="file" name="avatar" class="form-control">
-                    </div>
-                </div>
-
-                <button class="btn btn-primary">Cập nhật</button>
-                <a href="{{ route('admin.staff.list') }}" class="btn btn-secondary">
-                    Quay lại
-                </a>
-
-            </form>
+<div class="container-fluid pt-4 px-4">
+    <div class="bg-light rounded p-4">
+        <div class="mb-4">
+            <h5 class="mb-1">Chỉnh sửa nhân viên</h5>
+            <small class="text-muted">Cập nhật hồ sơ, mức lương và tình trạng làm việc của nhân viên trong cùng một màn
+                hình.</small>
         </div>
+        @if ($errors->any())
+            <div class="alert alert-danger">
+                <ul class="mb-0">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <form method="POST" action="{{ route('admin.staff.update', $staff->user_id) }}" enctype="multipart/form-data">
+            @csrf
+            @php($submitLabel = 'Cập nhật nhân viên')
+            @include('admin.staff._form')
+        </form>
     </div>
+</div>
 @endsection

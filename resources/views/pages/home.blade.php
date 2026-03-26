@@ -4,46 +4,140 @@
 @endsection
 @section('content')
 
-                <!-- Categories Section Begin -->
-                <section class="categories">
-                    <div class="container">
-                        <div class="row">
-                            <div class="categories__slider owl-carousel">
-                                <div class="col-lg-3">
-                                    <div class="categories__item set-bg"
-                                        data-setbg="{{ asset('frontend/images/categories/cat-1.jpg') }}">
-                                        <h5><a href="#">Sản phẩm chế biến</a></h5>
-                                    </div>
-                                </div>
-                                <div class="col-lg-3">
-                                    <div class="categories__item set-bg"
-                                        data-setbg="{{ asset('frontend/images/categories/cat-2.jpg') }}">
-                                        <h5><a href="#">Gạo đặc sản</a></h5>
-                                    </div>
-                                </div>
-                                <div class="col-lg-3">
-                                    <div class="categories__item set-bg"
-                                        data-setbg="{{ asset('frontend/images/categories/cat-3.jpg') }}">
-                                        <h5><a href="#">Nông sản</a></h5>
-                                    </div>
-                                </div>
-                                <div class="col-lg-3">
-                                    <div class="categories__item set-bg"
-                                        data-setbg="{{ asset('frontend/images/categories/cat-4.jpg') }}">
-                                        <h5><a href="#">Thủ công mỹ nghệ</a></h5>
-                                    </div>
-                                </div>
-                                <div class="col-lg-3">
-                                    <div class="categories__item set-bg"
-                                        data-setbg="{{ asset('frontend/images/categories/cat-5.jpg') }}">
-                                        <h5><a href="#">Mỹ phẩm thiên nhiên</a></h5>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+    <style>
+        .voucher-card-system {
+            position: relative;
+            background: linear-gradient(135deg, #ffffff 0%, #f7fcf5 100%);
+            border: 1px solid #d9e7d1;
+            border-left: 6px solid #66a84f;
+            border-radius: 14px;
+            box-shadow: 0 12px 24px rgba(22, 58, 24, 0.12);
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            min-height: 210px;
+        }
+
+        .voucher-card-system:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 30px rgba(22, 58, 24, 0.18);
+        }
+
+        .voucher-card-system::after {
+            content: "";
+            position: absolute;
+            top: -30px;
+            right: -30px;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: rgba(102, 168, 79, 0.12);
+        }
+
+        .voucher-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(102, 168, 79, 0.08);
+            border-bottom: 1px dashed #d9e7d1;
+            position: relative;
+            z-index: 1;
+        }
+
+        .voucher-icon i {
+            font-size: 1.5rem;
+            color: #2d7a3f;
+        }
+
+        .voucher-code {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #ffffff;
+            background: linear-gradient(135deg, #2d7a3f 0%, #3f944e 100%);
+            padding: 6px 12px;
+            border-radius: 999px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 6px 12px rgba(45, 122, 63, 0.25);
+        }
+
+        .voucher-status {
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .voucher-card-system.active .voucher-status {
+            background: #e8f6eb;
+            color: #2d7a3f;
+        }
+
+        .voucher-card-system.expired .voucher-status {
+            background: #fdecef;
+            color: #bb2d3b;
+        }
+
+        .voucher-card-system.used .voucher-status {
+            background: #eceff3;
+            color: #4f5d70;
+        }
+
+        .voucher-card-system.expired {
+            border-left-color: #d9534f;
+            background: linear-gradient(135deg, #ffffff 0%, #fff6f6 100%);
+        }
+
+        .voucher-card-system.used {
+            border-left-color: #8c9aa7;
+            background: linear-gradient(135deg, #ffffff 0%, #f6f8fa 100%);
+        }
+
+        .voucher-body {
+            padding: 15px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .voucher-value,
+        .voucher-date {
+            margin-bottom: 6px;
+            font-size: 0.95rem;
+            color: #415048;
+        }
+
+        .voucher-footer {
+            padding: 15px 20px;
+            position: relative;
+            z-index: 1;
+        }
+    </style>
+
+        <!-- Categories Section Begin -->
+        <section class="categories">
+            <div class="container">
+                <div class="row">
+                    <div class="categories__slider owl-carousel">
+
+                        @foreach ($categories as $category)
+                                            <div class="categories__item set-bg" data-setbg="{{ $category->image_url
+                            ? asset('storage/' . $category->image_url)
+                            : asset('frontend/images/categories/cat-1.jpg') }}">
+
+                                                <h5>
+                                                    <a href="{{ route('categories.show', $category->id) }}">
+                                                        {{ $category->name }}
+                                                    </a>
+                                                </h5>
+
+                                            </div>
+                        @endforeach
+
                     </div>
-                </section>
-                <!-- Categories Section End -->
+                </div>
+            </div>
+        </section>
+        <!-- Categories Section End -->
+
 
     <!-- Vouchers Section Begin -->
     <section class="vouchers spad">
@@ -53,20 +147,31 @@
             <div class="voucher-carousel owl-carousel owl-theme">
                 @forelse ($discounts as $discount)
                     @php
-                        $now = now();
-                        $status = 'Đang áp dụng';
-                        if ($discount->start_at && $now->lt($discount->start_at)) {
-                            $status = 'Chưa bắt đầu';
-                        } elseif ($discount->end_at && $now->gt($discount->end_at)) {
-                            $status = 'Hết hạn';
-                        }
+    $now = now();
+    $status = 'Đang áp dụng';
+    $statusClass = 'active';
+    $isSaved = in_array($discount->code, $savedDiscountCodes ?? []);
+    if ($discount->start_at && $now->lt($discount->start_at)) {
+        $status = 'Chưa bắt đầu';
+        $statusClass = 'used';
+    } elseif ($discount->end_at && $now->gt($discount->end_at)) {
+        $status = 'Hết hạn';
+        $statusClass = 'expired';
+    }
                     @endphp
 
                     <div class="item">
-                        <div class="voucher-card p-3 rounded shadow-sm d-flex flex-column justify-content-between">
-                            <div class="voucher-info mb-2">
-                                <h5 class="voucher-code mb-1">{{ $discount->code }}</h5>
-                                <p class="mb-1 small">
+                        <div class="voucher-card voucher-card-system {{ $statusClass }}">
+                            <div class="voucher-header">
+                                <div class="voucher-icon">
+                                    <i class="fa fa-ticket-alt"></i>
+                                </div>
+                                <div class="voucher-code">{{ $discount->code }}</div>
+                                <div class="voucher-status">{{ $status }}</div>
+                            </div>
+
+                            <div class="voucher-body">
+                                <p class="voucher-value">
                                     <strong>Giá trị:</strong>
                                     @if($discount->type == 'percent')
                                         {{ $discount->value }} %
@@ -74,18 +179,30 @@
                                         {{ number_format($discount->value, 0, ',', '.') }} đ
                                     @endif
                                 </p>
-                                <p class="mb-0 small">
+
+                                <p class="voucher-date">
                                     <strong>Hạn:</strong> {{ $discount->end_at?->format('d/m/Y') ?? 'Không giới hạn' }}
                                 </p>
+
+                                <p class="voucher-date mb-0">
+                                    <strong>Phạm vi:</strong> Toàn shop
+                                </p>
                             </div>
-                            <div class="d-flex justify-content-between align-items-center mt-2">
-                                <button class="btn btn-sm btn-outline-success save-voucher" data-code="{{ $discount->code }}">
-                                    Lưu
-                                </button>
-                                <span
-                                    class="badge bg-{{ $status == 'Đang áp dụng' ? 'success' : ($status == 'Chưa bắt đầu' ? 'secondary' : 'danger') }}">
-                                    {{ $status }}
-                                </span>
+
+                            <div class="voucher-footer">
+                                @if($isSaved)
+                                    <button class="btn btn-sm btn-success w-100" disabled>
+                                        Đã lưu
+                                    </button>
+                                @else
+                                    <form action="{{ route('cart.save_discount') }}" method="POST" class="mb-0">
+                                        @csrf
+                                        <input type="hidden" name="code" value="{{ $discount->code }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-success w-100">
+                                            Lưu
+                                        </button>
+                                    </form>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -113,27 +230,6 @@
                     992: { items: 4 }
                 }
             });
-
-            // Voucher save button
-            const saved = JSON.parse(localStorage.getItem('savedVouchers')) || [];
-            document.querySelectorAll('.save-voucher').forEach(btn => {
-                const code = btn.dataset.code;
-                if (saved.includes(code)) {
-                    btn.innerText = 'Đã lưu';
-                    btn.disabled = true;
-                }
-                btn.addEventListener('click', function () {
-                    if (!saved.includes(code)) {
-                        saved.push(code);
-                        localStorage.setItem('savedVouchers', JSON.stringify(saved));
-                        this.innerText = 'Đã lưu';
-                        this.disabled = true;
-                        alert('Đã lưu mã: ' + code);
-                    } else {
-                        alert('Mã đã lưu: ' + code);
-                    }
-                });
-            });
         });
     </script>
 
@@ -160,20 +256,47 @@
                                 <div class="row featured__filter">
                                 @foreach ($products as $product)
                                                 @php
-        $variant = $product->variants->first();
+    $variant = $product->variants->first();
+    $inWishlist = auth()->check()
+        && \App\Models\Wishlist::where('user_id', auth()->id())
+            ->where('product_id', $product->id)->exists();
                                                 @endphp
+
+                                                {{-- Hidden forms for wishlist & cart --}}
+                                                <form id="wishlist-home-{{ $product->id }}"
+                                                    action="{{ route('wishlist.toggle', $product->id) }}"
+                                                    method="POST" class="d-none">
+                                                    @csrf
+                                                </form>
+                                                @if($variant)
+                                                <form id="cart-home-{{ $product->id }}"
+                                                    action="{{ route('cart.add') }}"
+                                                    method="POST" class="d-none">
+                                                    @csrf
+                                                    <input type="hidden" name="variant_id" value="{{ $variant->id }}">
+                                                    <input type="hidden" name="quantity" value="1">
+                                                </form>
+                                                @endif
 
                                                 <div class="col-lg-3 col-md-4 col-sm-6 mix cat-{{ $product->category_id }}">
                                                     <div class="featured__item">
 
                                                         <div class="featured__item__pic set-bg" data-setbg="{{ $product->image
-            ? asset('storage/' . $product->image)
-            : asset('images/no-image.png') }}">
+        ? asset('storage/' . $product->image)
+        : asset('images/no-image.png') }}">
                                                             <ul class="featured__item__pic__hover">
-                                                                <li><a href="#"><i class="fa fa-heart"></i></a></li>
-                                                                <li><a href="#"><i class="fa fa-retweet"></i></a></li>
                                                                 <li>
-                                                                    <a href="{{ route('products.show', $product->id) }}">
+                                                                    <a href="javascript:void(0)"
+                                                                        onclick="homeWishlist({{ $product->id }});"
+                                                                        style="{{ $inWishlist ? 'color:#e74c3c;' : '' }}"
+                                                                        title="{{ $inWishlist ? 'Bỏ yêu thích' : 'Thêm yêu thích' }}">
+                                                                        <i class="fa fa-heart"></i>
+                                                                    </a>
+                                                                </li>
+                                                                <li><a href="{{ route('products.show', $product->id) }}"><i class="fa fa-retweet"></i></a></li>
+                                                                <li>
+                                                                    <a href="{{ route('products.show', $product->id) }}"
+                                                                        title="Xem chi tiết sản phẩm">
                                                                         <i class="fa fa-shopping-cart"></i>
                                                                     </a>
                                                                 </li>
@@ -186,9 +309,12 @@
                                                                     {{ $product->name }}
                                                                 </a>
                                                             </h6>
-                                                            <h5>
-                                                                {{ number_format($variant?->price ?? 0) }} đ
-                                                            </h5>
+                                                            @if($product->display_has_discount)
+                                                                <h5 class="mb-0 text-danger">{{ number_format($product->display_final_price) }} đ</h5>
+                                                                <small class="text-muted"><del>{{ number_format($product->display_base_price) }} đ</del> {{ $product->display_discount_label }}</small>
+                                                            @else
+                                                                <h5>{{ number_format($variant?->price ?? 0) }} đ</h5>
+                                                            @endif
                                                         </div>
 
                                                     </div>
@@ -209,13 +335,22 @@
                     <div class="container">
                         <div class="row">
                             <div class="col-lg-6 col-md-6 col-sm-6">
-                                <div class="banner__pic">
-                                    <img src="{{ asset('frontend/images/banner/banner-1.jpg') }}" alt="">
+                                <div class="banner__item">
+                                    <img src="{{ asset('frontend/images/banner/banner-1.png') }}" alt="">
+                                    <div class="banner__text">
+                                        <h3>Sản phẩm OCOP Đồng Tháp</h3>
+                                        <p>Cửa hàng Sen Hồng OCOP</p>
+                                    </div>
                                 </div>
                             </div>
+
                             <div class="col-lg-6 col-md-6 col-sm-6">
-                                <div class="banner__pic">
-                                    <img src="{{ asset('frontend/images/banner/banner-2.jpg') }}" alt="">
+                                <div class="banner__item">
+                                    <img src="{{ asset('frontend/images/banner/banner-2.png') }}" alt="">
+                                    <div class="banner__text">
+                                        <h3>Đặc sản địa phương</h3>
+                                        <p>Chất lượng – Uy tín – An toàn</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -236,23 +371,26 @@
 
                                                 @foreach ($chunk as $product)
                                                                         @php
-            $variant = $product->variants->first();
+        $variant = $product->variants->first();
                                                                         @endphp
 
                                                                         <a href="{{ route('products.show', $product->id) }}" class="latest-product__item">
 
                                                                             <div class="latest-product__item__pic">
                                                                                 <img src="{{ $product->image
-                ? asset('storage/' . $product->image)
-                : asset('images/no-image.png') }}" width="60" height="60" class="rounded"
+            ? asset('storage/' . $product->image)
+            : asset('images/no-image.png') }}" width="60" height="60" class="rounded"
                                                                                     style="object-fit: cover" alt="{{ $product->name }}">
                                                                             </div>
 
                                                                             <div class="latest-product__item__text">
                                                                                 <h6>{{ $product->name }}</h6>
-                                                                                <span>
-                                                                                    {{ number_format($variant?->price ?? 0) }} đ
-                                                                                </span>
+                                                                                @if($product->display_has_discount)
+                                                                                    <span class="text-danger">{{ number_format($product->display_final_price) }} đ</span>
+                                                                                    <small class="text-muted d-block"><del>{{ number_format($product->display_base_price) }} đ</del> {{ $product->display_discount_label }}</small>
+                                                                                @else
+                                                                                    <span>{{ number_format($variant?->price ?? 0) }} đ</span>
+                                                                                @endif
                                                                             </div>
 
                                                                         </a>
@@ -269,64 +407,32 @@
                                 <div class="latest-product__text">
                                     <h4>Sản phẩm bán chạy</h4>
                                     <div class="latest-product__slider owl-carousel">
-                                        <div class="latest-prdouct__slider__item">
-                                            <a href="#" class="latest-product__item">
-                                                <div class="latest-product__item__pic">
-                                                    <img src="{{ asset('frontend/images/latest-product/lp-1.jpg') }}" alt="">
-                                                </div>
-                                                <div class="latest-product__item__text">
-                                                    <h6>Crab Pool Security</h6>
-                                                    <span>$30.00</span>
-                                                </div>
-                                            </a>
-                                            <a href="#" class="latest-product__item">
-                                                <div class="latest-product__item__pic">
-                                                    <img src="{{ asset('frontend/images/latest-product/lp-2.jpg') }}" alt="">
-                                                </div>
-                                                <div class="latest-product__item__text">
-                                                    <h6>Crab Pool Security</h6>
-                                                    <span>$30.00</span>
-                                                </div>
-                                            </a>
-                                            <a href="#" class="latest-product__item">
-                                                <div class="latest-product__item__pic">
-                                                    <img src="{{ asset('frontend/images/latest-product/lp-3.jpg') }}" alt="">
-                                                </div>
-                                                <div class="latest-product__item__text">
-                                                    <h6>Crab Pool Security</h6>
-                                                    <span>$30.00</span>
-                                                </div>
-                                            </a>
-                                        </div>
-                                        <div class="latest-prdouct__slider__item">
-                                            <a href="#" class="latest-product__item">
-                                                <div class="latest-product__item__pic">
-                                                    <img src="{{ asset('frontend/images/latest-product/lp-1.jpg') }}" alt="">
-                                                </div>
-                                                <div class="latest-product__item__text">
-                                                    <h6>Crab Pool Security</h6>
-                                                    <span>$30.00</span>
-                                                </div>
-                                            </a>
-                                            <a href="#" class="latest-product__item">
-                                                <div class="latest-product__item__pic">
-                                                    <img src="{{ asset('frontend/images/latest-product/lp-2.jpg') }}" alt="">
-                                                </div>
-                                                <div class="latest-product__item__text">
-                                                    <h6>Crab Pool Security</h6>
-                                                    <span>$30.00</span>
-                                                </div>
-                                            </a>
-                                            <a href="#" class="latest-product__item">
-                                                <div class="latest-product__item__pic">
-                                                    <img src="{{ asset('frontend/images/latest-product/lp-3.jpg') }}" alt="">
-                                                </div>
-                                                <div class="latest-product__item__text">
-                                                    <h6>Crab Pool Security</h6>
-                                                    <span>$30.00</span>
-                                                </div>
-                                            </a>
-                                        </div>
+                                        @forelse ($bestSellingProducts->chunk(3) as $chunk)
+                                            <div class="latest-prdouct__slider__item">
+                                                @foreach ($chunk as $bsProduct)
+                                                    @php $bsVariant = $bsProduct->variants->first(); @endphp
+                                                    <a href="{{ route('products.show', $bsProduct->id) }}" class="latest-product__item">
+                                                        <div class="latest-product__item__pic">
+                                                            <img src="{{ $bsProduct->image ? asset('storage/' . $bsProduct->image) : asset('images/no-image.png') }}"
+                                                                width="60" height="60" class="rounded" style="object-fit:cover" alt="{{ $bsProduct->name }}">
+                                                        </div>
+                                                        <div class="latest-product__item__text">
+                                                            <h6>{{ $bsProduct->name }}</h6>
+                                                            @if($bsProduct->display_has_discount)
+                                                                <span class="text-danger">{{ number_format($bsProduct->display_final_price) }} đ</span>
+                                                                <small class="text-muted d-block"><del>{{ number_format($bsProduct->display_base_price) }} đ</del> {{ $bsProduct->display_discount_label }}</small>
+                                                            @else
+                                                                <span>{{ number_format($bsVariant?->price ?? 0) }} đ</span>
+                                                            @endif
+                                                        </div>
+                                                    </a>
+                                                @endforeach
+                                            </div>
+                                        @empty
+                                            <div class="latest-prdouct__slider__item">
+                                                <p class="text-muted px-2 py-3">Chưa có dữ liệu</p>
+                                            </div>
+                                        @endforelse
                                     </div>
                                 </div>
                             </div>
@@ -334,64 +440,32 @@
                                 <div class="latest-product__text">
                                     <h4>Đánh giá cao</h4>
                                     <div class="latest-product__slider owl-carousel">
-                                        <div class="latest-prdouct__slider__item">
-                                            <a href="#" class="latest-product__item">
-                                                <div class="latest-product__item__pic">
-                                                    <img src="{{ asset('frontend/images/latest-product/lp-1.jpg') }}" alt="">
-                                                </div>
-                                                <div class="latest-product__item__text">
-                                                    <h6>Crab Pool Security</h6>
-                                                    <span>$30.00</span>
-                                                </div>
-                                            </a>
-                                            <a href="#" class="latest-product__item">
-                                                <div class="latest-product__item__pic">
-                                                    <img src="{{ asset('frontend/images/latest-product/lp-2.jpg') }}" alt="">
-                                                </div>
-                                                <div class="latest-product__item__text">
-                                                    <h6>Crab Pool Security</h6>
-                                                    <span>$30.00</span>
-                                                </div>
-                                            </a>
-                                            <a href="#" class="latest-product__item">
-                                                <div class="latest-product__item__pic">
-                                                    <img src="{{ asset('frontend/images/latest-product/lp-3.jpg') }}" alt="">
-                                                </div>
-                                                <div class="latest-product__item__text">
-                                                    <h6>Crab Pool Security</h6>
-                                                    <span>$30.00</span>
-                                                </div>
-                                            </a>
-                                        </div>
-                                        <div class="latest-prdouct__slider__item">
-                                            <a href="#" class="latest-product__item">
-                                                <div class="latest-product__item__pic">
-                                                    <img src="{{ asset('frontend/images/latest-product/lp-1.jpg') }}" alt="">
-                                                </div>
-                                                <div class="latest-product__item__text">
-                                                    <h6>Crab Pool Security</h6>
-                                                    <span>$30.00</span>
-                                                </div>
-                                            </a>
-                                            <a href="#" class="latest-product__item">
-                                                <div class="latest-product__item__pic">
-                                                    <img src="{{ asset('frontend/images/latest-product/lp-2.jpg') }}" alt="">
-                                                </div>
-                                                <div class="latest-product__item__text">
-                                                    <h6>Crab Pool Security</h6>
-                                                    <span>$30.00</span>
-                                                </div>
-                                            </a>
-                                            <a href="#" class="latest-product__item">
-                                                <div class="latest-product__item__pic">
-                                                    <img src="{{ asset('frontend/images/latest-product/lp-3.jpg') }}" alt="">
-                                                </div>
-                                                <div class="latest-product__item__text">
-                                                    <h6>Crab Pool Security</h6>
-                                                    <span>$30.00</span>
-                                                </div>
-                                            </a>
-                                        </div>
+                                        @forelse ($topRatedProducts->chunk(3) as $chunk)
+                                            <div class="latest-prdouct__slider__item">
+                                                @foreach ($chunk as $trProduct)
+                                                    @php $trVariant = $trProduct->variants->first(); @endphp
+                                                    <a href="{{ route('products.show', $trProduct->id) }}" class="latest-product__item">
+                                                        <div class="latest-product__item__pic">
+                                                            <img src="{{ $trProduct->image ? asset('storage/' . $trProduct->image) : asset('images/no-image.png') }}"
+                                                                width="60" height="60" class="rounded" style="object-fit:cover" alt="{{ $trProduct->name }}">
+                                                        </div>
+                                                        <div class="latest-product__item__text">
+                                                            <h6>{{ $trProduct->name }}</h6>
+                                                            @if($trProduct->display_has_discount)
+                                                                <span class="text-danger">{{ number_format($trProduct->display_final_price) }} đ</span>
+                                                                <small class="text-muted d-block"><del>{{ number_format($trProduct->display_base_price) }} đ</del> {{ $trProduct->display_discount_label }}</small>
+                                                            @else
+                                                                <span>{{ number_format($trVariant?->price ?? 0) }} đ</span>
+                                                            @endif
+                                                        </div>
+                                                    </a>
+                                                @endforeach
+                                            </div>
+                                        @empty
+                                            <div class="latest-prdouct__slider__item">
+                                                <p class="text-muted px-2 py-3">Chưa có dữ liệu</p>
+                                            </div>
+                                        @endforelse
                                     </div>
                                 </div>
                             </div>
@@ -410,54 +484,91 @@
                                 </div>
                             </div>
                         </div>
+
                         <div class="row">
-                            <div class="col-lg-4 col-md-4 col-sm-6">
-                                <div class="blog__item">
-                                    <div class="blog__item__pic">
-                                        <img src="{{ asset('frontend/images/blog/blog-1.jpg') }}" alt="">
-                                    </div>
-                                    <div class="blog__item__text">
-                                        <ul>
-                                            <li><i class="fa fa-calendar-o"></i> May 4,2019</li>
-                                            <li><i class="fa fa-comment-o"></i> 5</li>
-                                        </ul>
-                                        <h5><a href="#">Cooking tips make cooking simple</a></h5>
-                                        <p>Sed quia non numquam modi tempora indunt ut labore et dolore magnam aliquam quaerat </p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-lg-4 col-md-4 col-sm-6">
-                                <div class="blog__item">
-                                    <div class="blog__item__pic">
-                                        <img src="{{ asset('frontend/images/blog/blog-2.jpg') }}" alt="">
-                                    </div>
-                                    <div class="blog__item__text">
-                                        <ul>
-                                            <li><i class="fa fa-calendar-o"></i> May 4,2019</li>
-                                            <li><i class="fa fa-comment-o"></i> 5</li>
-                                        </ul>
-                                        <h5><a href="#">6 ways to prepare breakfast for 30</a></h5>
-                                        <p>Sed quia non numquam modi tempora indunt ut labore et dolore magnam aliquam quaerat </p>
+                            @forelse ($blogs as $blog)
+                                <div class="col-lg-4 col-md-4 col-sm-6">
+                                    <div class="blog__item">
+                                        <div class="blog__item__pic">
+                                            <img src="{{ $blog->image ? asset('storage/' . $blog->image) : asset('frontend/images/blog/blog-1.jpg') }}"
+                                                alt="{{ $blog->title }}">
+                                        </div>
+                                        <div class="blog__item__text">
+                                            <ul>
+                                                <li>
+                                                    <i class="fa fa-calendar-o"></i>
+                                                    {{ \Carbon\Carbon::parse($blog->created_at)->format('d/m/Y') }}
+                                                </li>
+                                                <li>
+                                                    <i class="fa fa-comment-o"></i> 0
+                                                </li>
+                                            </ul>
+                                            <h5>
+                                                <a href="{{ route('blogs.show', $blog->slug) }}">
+                                                    {{ $blog->title }}
+                                                </a>
+                                            </h5>
+                                            <p>{{ \Illuminate\Support\Str::limit($blog->summary, 100) }}</p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-lg-4 col-md-4 col-sm-6">
-                                <div class="blog__item">
-                                    <div class="blog__item__pic">
-                                        <img src="{{ asset('frontend/images/blog/blog-3.jpg') }}" alt="">
-                                    </div>
-                                    <div class="blog__item__text">
-                                        <ul>
-                                            <li><i class="fa fa-calendar-o"></i> May 4,2019</li>
-                                            <li><i class="fa fa-comment-o"></i> 5</li>
-                                        </ul>
-                                        <h5><a href="#">Visit the clean farm in the US</a></h5>
-                                        <p>Sed quia non numquam modi tempora indunt ut labore et dolore magnam aliquam quaerat </p>
-                                    </div>
+                            @empty
+                                <div class="col-12 text-center text-muted">
+                                    Chưa có bài viết nào.
                                 </div>
-                            </div>
+                            @endforelse
                         </div>
                     </div>
                 </section>
                 <!-- Blog Section End -->
+
+                <script>
+                    // ---- Sản phẩm nổi bật: wishlist & cart ----
+                    function homeWishlist(productId) {
+                        @auth
+                            var f = document.getElementById('wishlist-home-' + productId);
+                            if (f) f.submit();
+                        @else
+                            Swal.fire({
+                                title: 'Chưa đăng nhập',
+                                text: 'Vui lòng đăng nhập để thêm vào yêu thích',
+                                icon: 'warning',
+                                confirmButtonText: 'Đăng nhập',
+                                showCancelButton: true,
+                                cancelButtonText: 'Hủy'
+                            }).then(result => {
+                                if (result.isConfirmed) window.location.href = '{{ route("login") }}';
+                            });
+                        @endauth
+                    }
+
+                    function homeAddCart(productId, hasVariant) {
+                        if (!hasVariant) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Chưa thể thêm',
+                                text: 'Sản phẩm chưa có phiên bản, vui lòng xem trang chi tiết.',
+                                confirmButtonText: 'Xem chi tiết'
+                            }).then(result => {
+                                if (result.isConfirmed) window.location.href = '{{ url("/products") }}/' + productId;
+                            });
+                            return;
+                        }
+                        var form = document.getElementById('cart-home-' + productId);
+                        if (form) {
+                            form.submit();
+                        } else {
+                            window.location.href = '{{ url("/products") }}/' + productId;
+                        }
+                    }
+
+                    // ---- Flash messages ----
+                    @if(session('success'))
+                        Swal.fire({ icon: 'success', title: '{{ session("success") }}', timer: 2500, showConfirmButton: false });
+                    @endif
+                    @if(session('error'))
+                        Swal.fire({ icon: 'error', title: '{{ session("error") }}' });
+                    @endif
+                </script>
+
 @endsection

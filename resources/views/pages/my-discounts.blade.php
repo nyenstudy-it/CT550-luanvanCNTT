@@ -34,7 +34,7 @@
                     @endphp
 
                     <div class="col-md-6 col-lg-4 mb-4">
-                        <div class="voucher-card {{ $statusClass }}">
+                        <div class="voucher-card voucher-card-system {{ $statusClass }}">
                             <div class="voucher-header">
                                 <div class="voucher-icon">
                                     <i class="fa fa-ticket-alt"></i>
@@ -56,11 +56,19 @@
                                         Không thời hạn
                                     @endif
                                 </p>
+                                <p class="voucher-date mb-0">
+                                    <strong>Phạm vi:</strong>
+                                    @if($discount->products->isEmpty())
+                                        Toàn shop
+                                    @else
+                                        {{ $discount->products->count() }} sản phẩm
+                                    @endif
+                                </p>
                             </div>
                             <div class="voucher-footer">
                                 @if(!$used && !$expired)
                                     <a href="{{ route('pages.home') }}?discount={{ $discount->id }}"
-                                        class="btn btn-sm btn-orange w-100">Sử dụng ngay</a>
+                                        class="btn btn-sm btn-success w-100">Sử dụng ngay</a>
                                 @else
                                     <button class="btn btn-sm btn-secondary w-100" disabled>Không thể sử dụng</button>
                                 @endif
@@ -76,16 +84,31 @@
     </section>
 
     <style>
-        .voucher-card {
-            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        .voucher-card-system {
+            position: relative;
+            background: linear-gradient(135deg, #ffffff 0%, #f7fcf5 100%);
+            border: 1px solid #d9e7d1;
+            border-left: 6px solid #66a84f;
+            border-radius: 14px;
+            box-shadow: 0 12px 24px rgba(22, 58, 24, 0.12);
             overflow: hidden;
-            transition: transform 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        .voucher-card:hover {
-            transform: translateY(-3px);
+        .voucher-card-system:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 30px rgba(22, 58, 24, 0.18);
+        }
+
+        .voucher-card-system::after {
+            content: "";
+            position: absolute;
+            top: -30px;
+            right: -30px;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: rgba(102, 168, 79, 0.12);
         }
 
         .voucher-header {
@@ -93,62 +116,77 @@
             justify-content: space-between;
             align-items: center;
             padding: 15px 20px;
-            background: rgba(255, 152, 0, 0.1);
+            background: rgba(102, 168, 79, 0.08);
+            border-bottom: 1px dashed #d9e7d1;
+            position: relative;
+            z-index: 1;
         }
 
         .voucher-icon i {
             font-size: 1.5rem;
-            color: #ff9800;
+            color: #2d7a3f;
         }
 
         .voucher-code {
-            font-weight: 600;
-            font-size: 1.1rem;
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #ffffff;
+            background: linear-gradient(135deg, #2d7a3f 0%, #3f944e 100%);
+            padding: 6px 12px;
+            border-radius: 999px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 6px 12px rgba(45, 122, 63, 0.25);
         }
 
         .voucher-status {
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            color: #fff;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 600;
         }
 
-        .voucher-card.active .voucher-status {
-            background: #4caf50;
+        .voucher-card-system.active .voucher-status {
+            background: #e8f6eb;
+            color: #2d7a3f;
         }
 
-        .voucher-card.expired .voucher-status {
-            background: #f44336;
+        .voucher-card-system.expired .voucher-status {
+            background: #fdecef;
+            color: #bb2d3b;
         }
 
-        .voucher-card.used .voucher-status {
-            background: #9e9e9e;
+        .voucher-card-system.used .voucher-status {
+            background: #eceff3;
+            color: #4f5d70;
+        }
+
+        .voucher-card-system.expired {
+            border-left-color: #d9534f;
+            background: linear-gradient(135deg, #ffffff 0%, #fff6f6 100%);
+        }
+
+        .voucher-card-system.used {
+            border-left-color: #8c9aa7;
+            background: linear-gradient(135deg, #ffffff 0%, #f6f8fa 100%);
         }
 
         .voucher-body {
             padding: 15px 20px;
+            position: relative;
+            z-index: 1;
         }
 
         .voucher-value,
         .voucher-date {
             margin-bottom: 6px;
             font-size: 0.95rem;
+            color: #415048;
         }
 
         .voucher-footer {
             padding: 15px 20px;
-        }
-
-        .btn-orange {
-            background-color: #ff9800;
-            color: #fff;
-            border: none;
-            font-weight: 500;
-            transition: background 0.2s;
-        }
-
-        .btn-orange:hover {
-            background-color: #fb8c00;
+            position: relative;
+            z-index: 1;
         }
     </style>
 

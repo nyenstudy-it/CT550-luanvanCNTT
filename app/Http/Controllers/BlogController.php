@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -31,10 +32,36 @@ class BlogController extends Controller
 
 
     // Admin
-    public function adminIndex()
+    public function adminIndex(Request $request)
     {
-        $blogs = Blog::with('blocks')->latest()->paginate(10); // eager load blocks
-        return view('admin.blogs.index', compact('blogs'));
+        $query = Blog::with('blocks');
+
+        if ($request->filled('keyword')) {
+            $keyword = trim((string) $request->keyword);
+            $query->where(function ($q) use ($keyword) {
+                $q->where('title', 'like', '%' . $keyword . '%')
+                    ->orWhere('slug', 'like', '%' . $keyword . '%')
+                    ->orWhere('summary', 'like', '%' . $keyword . '%');
+            });
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $blogs = $query->latest()->paginate(10)->appends($request->query());
+
+        $summary = [
+            'total' => Blog::count(),
+            'this_month' => Blog::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count(),
+            'with_image' => Blog::whereNotNull('image')->where('image', '!=', '')->count(),
+        ];
+
+        return view('admin.blogs.index', compact('blogs', 'summary'));
     }
 
 
@@ -67,7 +94,7 @@ class BlogController extends Controller
                 foreach ($request->blocks as $index => $block) {
                     $blockData = [
                         'blog_id' => $blog->id,
-                      
+
                         'content' => $block['content'] ?? null,
                         'position' => $index,
                     ];
