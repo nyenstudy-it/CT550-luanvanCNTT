@@ -6,7 +6,6 @@ use App\Models\ImportItem;
 use Illuminate\Http\Request;
 use App\Models\Inventory;
 use App\Models\Notification;
-use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -24,6 +23,7 @@ class InventoryController extends Controller
         $lowStockThreshold = max(1, (int) $request->query('low_stock_threshold', 5));
         $expiringInDays = max(1, (int) $request->query('expiring_days', 30));
         $staleDays = max(1, (int) $request->query('stale_days', 60));
+        $promotionWindowDays = 180;
 
         $today = Carbon::today();
 
@@ -46,34 +46,105 @@ class InventoryController extends Controller
 
         $baseInventories = $query->get();
 
-        $batchStats = ImportItem::query()
+        $activeBatchItems = ImportItem::query()
+            ->with('import:id,import_date')
             ->where('remaining_quantity', '>', 0)
-            ->selectRaw('product_variant_id, MIN(created_at) as oldest_batch_at, SUM(remaining_quantity) as total_remaining_quantity')
-            ->groupBy('product_variant_id')
+            ->orderBy('expired_at')
+            ->orderBy('id')
             ->get()
-            ->keyBy('product_variant_id');
+            ->groupBy('product_variant_id');
 
         $enrichedInventories = $baseInventories->map(function (Inventory $inventory) use (
-            $batchStats,
+            $activeBatchItems,
             $today,
             $lowStockThreshold,
             $expiringInDays,
-            $staleDays
+            $staleDays,
+            $promotionWindowDays
         ) {
             $variant = $inventory->variant;
-            $expiryDate = $variant?->expired_at ? Carbon::parse($variant->expired_at)->startOfDay() : null;
             $quantity = (int) $inventory->quantity;
 
-            $batchStat = $batchStats->get($inventory->product_variant_id);
-            $oldestBatchAt = $batchStat?->oldest_batch_at ? Carbon::parse($batchStat->oldest_batch_at)->startOfDay() : null;
+            $activeBatches = $activeBatchItems
+                ->get($inventory->product_variant_id, collect())
+                ->map(function (ImportItem $batch) use ($today, $expiringInDays, $promotionWindowDays) {
+                    $expiryDate = $batch->expired_at ? Carbon::parse($batch->expired_at)->startOfDay() : null;
+                    $manufactureDate = $batch->manufacture_date ? Carbon::parse($batch->manufacture_date)->startOfDay() : null;
+                    $importedAt = $batch->import?->import_date
+                        ? Carbon::parse($batch->import->import_date)->startOfDay()
+                        : $batch->created_at?->copy()->startOfDay();
+                    $remainingQuantity = (int) $batch->remaining_quantity;
+                    $daysToExpire = $expiryDate ? $today->diffInDays($expiryDate, false) : null;
+
+                    if (!$expiryDate) {
+                        $status = 'no_expiry';
+                        $status_label = 'Không có HSD';
+                    } elseif ($expiryDate->lt($today)) {
+                        $status = 'expired';
+                        $status_label = 'Đã hết hạn';
+                    } elseif ($daysToExpire <= $expiringInDays) {
+                        $status = 'expiring_soon';
+                        $status_label = 'Sắp hết hạn';
+                    } elseif ($daysToExpire <= $promotionWindowDays) {
+                        $status = 'promotion_candidate';
+                        $status_label = 'Nên đẩy bán';
+                    } else {
+                        $status = 'safe';
+                        $status_label = 'An toàn';
+                    }
+
+                    return [
+                        'id' => $batch->id,
+                        'import_id' => $batch->import_id,
+                        'remaining_quantity' => $remainingQuantity,
+                        'quantity' => (int) $batch->quantity,
+                        'unit_price' => (float) $batch->unit_price,
+                        'manufacture_date' => $manufactureDate,
+                        'expired_at' => $expiryDate,
+                        'imported_at' => $importedAt,
+                        'days_to_expire' => $daysToExpire,
+                        'status' => $status,
+                        'status_label' => $status_label,
+                    ];
+                })
+                ->sortBy(function (array $batch) {
+                    return [
+                        $batch['expired_at']?->timestamp ?? PHP_INT_MAX,
+                        $batch['imported_at']?->timestamp ?? PHP_INT_MAX,
+                    ];
+                })
+                ->values();
+
+            $nearestExpiryBatch = $activeBatches->first(fn(array $batch) => $batch['expired_at'] !== null);
+            $oldestBatch = $activeBatches->sortBy(function (array $batch) {
+                return $batch['imported_at']?->timestamp ?? PHP_INT_MAX;
+            })->first();
+
+            $expiryDate = $nearestExpiryBatch['expired_at'] ?? null;
+            $oldestBatchAt = $oldestBatch['imported_at'] ?? null;
             $stockAgeDays = $oldestBatchAt ? $oldestBatchAt->diffInDays($today) : null;
+
+            $expiredBatchQuantity = (int) $activeBatches
+                ->where('status', 'expired')
+                ->sum('remaining_quantity');
+            $expiringBatchQuantity = (int) $activeBatches
+                ->where('status', 'expiring_soon')
+                ->sum('remaining_quantity');
+            $promotionBatchQuantity = (int) $activeBatches
+                ->where('status', 'promotion_candidate')
+                ->sum('remaining_quantity');
+            $safeBatchQuantity = (int) $activeBatches
+                ->where('status', 'safe')
+                ->sum('remaining_quantity');
+            $noExpiryBatchQuantity = (int) $activeBatches
+                ->where('status', 'no_expiry')
+                ->sum('remaining_quantity');
 
             $isOutOfStock = $quantity <= 0;
             $isLowStock = !$isOutOfStock && $quantity <= $lowStockThreshold;
-            $isExpired = $expiryDate ? $expiryDate->lt($today) : false;
-            $isExpiringSoon = $expiryDate
-                ? ($expiryDate->gte($today) && $expiryDate->lte($today->copy()->addDays($expiringInDays)))
-                : false;
+            $isExpired = $expiredBatchQuantity > 0;
+            $isExpiringSoon = $expiringBatchQuantity > 0;
+            $isPromotionCandidate = ($expiringBatchQuantity + $promotionBatchQuantity) > 0 && $quantity > 0;
             $isStale = $stockAgeDays !== null && $stockAgeDays >= $staleDays && $quantity > 0;
 
             $daysToExpire = $expiryDate ? $today->diffInDays($expiryDate, false) : null;
@@ -110,10 +181,26 @@ class InventoryController extends Controller
             $inventory->setAttribute('is_low_stock', $isLowStock);
             $inventory->setAttribute('is_expired', $isExpired);
             $inventory->setAttribute('is_expiring_soon', $isExpiringSoon);
+            $inventory->setAttribute('is_promotion_candidate', $isPromotionCandidate);
             $inventory->setAttribute('is_stale', $isStale);
             $inventory->setAttribute('risk_score', $riskScore);
             $inventory->setAttribute('alert_tags', $alerts);
-            $inventory->setAttribute('total_remaining_batch_quantity', (int) ($batchStat?->total_remaining_quantity ?? 0));
+            $inventory->setAttribute('total_remaining_batch_quantity', (int) $activeBatches->sum('remaining_quantity'));
+            $inventory->setAttribute('active_batch_count', $activeBatches->count());
+            $inventory->setAttribute('expired_batch_quantity', $expiredBatchQuantity);
+            $inventory->setAttribute('expiring_batch_quantity', $expiringBatchQuantity);
+            $inventory->setAttribute('promotion_batch_quantity', $promotionBatchQuantity);
+            $inventory->setAttribute('safe_batch_quantity', $safeBatchQuantity);
+            $inventory->setAttribute('no_expiry_batch_quantity', $noExpiryBatchQuantity);
+            $inventory->setAttribute('active_batches', $activeBatches->take(3));
+            $inventory->setAttribute('has_more_batches', $activeBatches->count() > 3);
+            $inventory->setAttribute('batch_status_breakdown', [
+                'expired' => $expiredBatchQuantity,
+                'expiring' => $expiringBatchQuantity,
+                'promotion' => $promotionBatchQuantity,
+                'safe' => $safeBatchQuantity,
+                'no_expiry' => $noExpiryBatchQuantity,
+            ]);
 
             return $inventory;
         });
@@ -126,6 +213,7 @@ class InventoryController extends Controller
             'low_stock' => $enrichedInventories->where('is_low_stock', true)->count(),
             'expired' => $enrichedInventories->where('is_expired', true)->count(),
             'expiring_soon' => $enrichedInventories->where('is_expiring_soon', true)->count(),
+            'promotion_candidates' => $enrichedInventories->where('is_promotion_candidate', true)->count(),
             'stale_stock' => $enrichedInventories->where('is_stale', true)->count(),
             'normal_stock' => $enrichedInventories->filter(function (Inventory $inventory) {
                 return empty($inventory->alert_tags);
@@ -151,6 +239,7 @@ class InventoryController extends Controller
                 return match ($expiryStatus) {
                     'expired' => $inventory->is_expired,
                     'expiring' => $inventory->is_expiring_soon,
+                    'promo' => $inventory->is_promotion_candidate,
                     'safe' => !$inventory->is_expired && !$inventory->is_expiring_soon && $inventory->expiry_date,
                     'no_expiry' => !$inventory->expiry_date,
                     default => true,
@@ -173,7 +262,20 @@ class InventoryController extends Controller
             'stock_age_desc' => $filteredInventories->sortByDesc(function (Inventory $inventory) {
                 return $inventory->stock_age_days ?? -1;
             })->values(),
-            default => $filteredInventories->sortByDesc('risk_score')->values(),
+            default => $filteredInventories
+                ->filter(fn(Inventory $inventory) => $inventory->is_promotion_candidate)
+                ->sortBy(function (Inventory $inventory) {
+                    return [
+                        $inventory->days_to_expire ?? PHP_INT_MAX,
+                        -1 * ($inventory->risk_score ?? 0),
+                    ];
+                })
+                ->concat(
+                    $filteredInventories
+                        ->reject(fn(Inventory $inventory) => $inventory->is_promotion_candidate)
+                        ->sortByDesc('risk_score')
+                )
+                ->values(),
         };
 
         $perPage = 15;
@@ -199,7 +301,8 @@ class InventoryController extends Controller
             'alertPreview',
             'lowStockThreshold',
             'expiringInDays',
-            'staleDays'
+            'staleDays',
+            'promotionWindowDays'
         ));
     }
 
@@ -228,10 +331,7 @@ class InventoryController extends Controller
 
     private function syncInventoryNotifications(Collection $inventories): void
     {
-        $recipientIds = User::query()
-            ->whereIn('role', ['admin', 'staff', 'warehouse', 'order_staff'])
-            ->pluck('id')
-            ->all();
+        $recipientIds = Notification::recipientIdsForGroups(['admin', 'warehouse']);
 
         if (empty($recipientIds)) {
             return;

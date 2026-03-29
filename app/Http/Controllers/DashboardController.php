@@ -24,11 +24,12 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+        $isCashierStaff = $user->role === 'staff' && ($user->staff?->position === 'cashier');
         $today = Carbon::today();
         [$monthStart, $monthEnd, $selectedMonth, $monthLabel] = $this->resolveMonthRange($request->input('month'));
 
         // --- Thống kê doanh số ---
-        if ($user->role === 'admin') {
+        if ($user->role === 'admin' || $isCashierStaff) {
             $paidOrdersQuery = Order::query()
                 ->whereHas('payment', function ($query) {
                     $query->where('status', 'paid');
@@ -98,28 +99,33 @@ class DashboardController extends Controller
             $netProfitEstimate = $grossProfit - $totalSalaryCost - $totalShippingCost;
 
             // --- Khách hàng top ---
-            $topCustomerByOrders = DB::table('orders')
+            $topCustomersByOrders = DB::table('orders')
                 ->join('payments', 'payments.order_id', '=', 'orders.id')
                 ->leftJoin('customers', 'customers.id', '=', 'orders.customer_id')
                 ->leftJoin('users', 'users.id', '=', 'customers.user_id')
                 ->where('payments.status', 'paid')
                 ->whereNotNull('orders.customer_id')
+                ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
                 ->selectRaw("orders.customer_id, COALESCE(MAX(users.name), MAX(orders.receiver_name), 'Khách vãng lai') as customer_name, COUNT(orders.id) as orders_count, SUM(orders.total_amount) as total_spent")
                 ->groupBy('orders.customer_id')
                 ->orderByDesc('orders_count')
                 ->orderByDesc('total_spent')
-                ->first();
+                ->limit(3)
+                ->get();
 
-            $topCustomerByValue = DB::table('orders')
+            $topCustomersByValue = DB::table('orders')
                 ->join('payments', 'payments.order_id', '=', 'orders.id')
                 ->leftJoin('customers', 'customers.id', '=', 'orders.customer_id')
                 ->leftJoin('users', 'users.id', '=', 'customers.user_id')
                 ->where('payments.status', 'paid')
                 ->whereNotNull('orders.customer_id')
+                ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
                 ->selectRaw("orders.customer_id, COALESCE(MAX(users.name), MAX(orders.receiver_name), 'Khách vãng lai') as customer_name, COUNT(orders.id) as orders_count, SUM(orders.total_amount) as total_spent")
                 ->groupBy('orders.customer_id')
                 ->orderByDesc('total_spent')
-                ->first();
+                ->orderByDesc('orders_count')
+                ->limit(3)
+                ->get();
 
             $highestValueOrder = Order::with('customer.user')
                 ->whereHas('payment', function ($query) {
@@ -409,8 +415,8 @@ class DashboardController extends Controller
                 'net_profit_estimate' => 0,
             ];
 
-            $topCustomerByOrders = null;
-            $topCustomerByValue = null;
+            $topCustomersByOrders = collect();
+            $topCustomersByValue = collect();
             $highestValueOrder = null;
 
             $topProductsWeek = collect();
@@ -452,9 +458,16 @@ class DashboardController extends Controller
             $productCountByCategory = collect();
         }
 
-        // --- Lấy thông báo admin ---
-        $notifications = Notification::orderBy('created_at', 'desc')->get();
-        $unreadCount   = $notifications->where('is_read', false)->count();
+        // --- Lấy thông báo cho dropdown của người dùng hiện tại ---
+        $notifications = Notification::query()
+            ->where('user_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->take(3)
+            ->get();
+        $unreadCount = Notification::query()
+            ->where('user_id', $user->id)
+            ->where('is_read', false)
+            ->count();
 
         // Task demo
         $tasks = [
@@ -496,8 +509,8 @@ class DashboardController extends Controller
             'notifications',
             'unreadCount',
             'financeSummary',
-            'topCustomerByOrders',
-            'topCustomerByValue',
+            'topCustomersByOrders',
+            'topCustomersByValue',
             'highestValueOrder',
             'topProductsWeek',
             'topProductsMonth',

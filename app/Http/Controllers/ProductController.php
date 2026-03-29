@@ -287,20 +287,26 @@ class ProductController extends Controller
 
     public function search(Request $request)
     {
-        $query = $request->get('query', '');
+        $query = trim((string) $request->get('query', ''));
 
         if ($query == '') {
             return response()->json([]);
         }
 
-        // Tìm sản phẩm theo tên, chỉ lấy sản phẩm active
+        // Tìm theo tên sản phẩm, mô tả hoặc tên danh mục, chỉ lấy sản phẩm active
         $products = Product::where('status', 'active')
-            ->where('name', 'LIKE', "%{$query}%")
+            ->where(function ($q) use ($query) {
+                $q->where('name', 'LIKE', "%{$query}%")
+                    ->orWhere('description', 'LIKE', "%{$query}%")
+                    ->orWhereHas('category', function ($categoryQuery) use ($query) {
+                        $categoryQuery->where('name', 'LIKE', "%{$query}%");
+                    });
+            })
             ->with(['variants' => function ($q) {
                 $q->with(['images' => function ($q2) {
                     $q2->where('is_primary', 1);
                 }]);
-            }])
+            }, 'category'])
             ->take(10)
             ->get();
 
@@ -340,7 +346,15 @@ class ProductController extends Controller
             ]);
 
         if ($request->filled('keyword')) {
-            $query->where('name', 'like', '%' . $request->keyword . '%');
+            $keyword = trim((string) $request->keyword);
+
+            $query->where(function ($q) use ($keyword) {
+                $q->where('products.name', 'like', '%' . $keyword . '%')
+                    ->orWhere('products.description', 'like', '%' . $keyword . '%')
+                    ->orWhereHas('category', function ($categoryQuery) use ($keyword) {
+                        $categoryQuery->where('name', 'like', '%' . $keyword . '%');
+                    });
+            });
         }
 
         if ($request->filled('category_id')) {

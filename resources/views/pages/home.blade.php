@@ -283,7 +283,7 @@
 
                                                         <div class="featured__item__pic set-bg" data-setbg="{{ $product->image
         ? asset('storage/' . $product->image)
-        : asset('images/no-image.png') }}">
+        : asset('frontend/images/product/product-1.jpg') }}">
                                                             <ul class="featured__item__pic__hover">
                                                                 <li>
                                                                     <a href="javascript:void(0)"
@@ -293,7 +293,6 @@
                                                                         <i class="fa fa-heart"></i>
                                                                     </a>
                                                                 </li>
-                                                                <li><a href="{{ route('products.show', $product->id) }}"><i class="fa fa-retweet"></i></a></li>
                                                                 <li>
                                                                     <a href="{{ route('products.show', $product->id) }}"
                                                                         title="Xem chi tiết sản phẩm">
@@ -379,7 +378,7 @@
                                                                             <div class="latest-product__item__pic">
                                                                                 <img src="{{ $product->image
             ? asset('storage/' . $product->image)
-            : asset('images/no-image.png') }}" width="60" height="60" class="rounded"
+            : asset('frontend/images/product/product-1.jpg') }}" width="60" height="60" class="rounded"
                                                                                     style="object-fit: cover" alt="{{ $product->name }}">
                                                                             </div>
 
@@ -413,7 +412,7 @@
                                                     @php $bsVariant = $bsProduct->variants->first(); @endphp
                                                     <a href="{{ route('products.show', $bsProduct->id) }}" class="latest-product__item">
                                                         <div class="latest-product__item__pic">
-                                                            <img src="{{ $bsProduct->image ? asset('storage/' . $bsProduct->image) : asset('images/no-image.png') }}"
+                                                            <img src="{{ $bsProduct->image ? asset('storage/' . $bsProduct->image) : asset('frontend/images/product/product-1.jpg') }}"
                                                                 width="60" height="60" class="rounded" style="object-fit:cover" alt="{{ $bsProduct->name }}">
                                                         </div>
                                                         <div class="latest-product__item__text">
@@ -446,7 +445,7 @@
                                                     @php $trVariant = $trProduct->variants->first(); @endphp
                                                     <a href="{{ route('products.show', $trProduct->id) }}" class="latest-product__item">
                                                         <div class="latest-product__item__pic">
-                                                            <img src="{{ $trProduct->image ? asset('storage/' . $trProduct->image) : asset('images/no-image.png') }}"
+                                                            <img src="{{ $trProduct->image ? asset('storage/' . $trProduct->image) : asset('frontend/images/product/product-1.jpg') }}"
                                                                 width="60" height="60" class="rounded" style="object-fit:cover" alt="{{ $trProduct->name }}">
                                                         </div>
                                                         <div class="latest-product__item__text">
@@ -485,7 +484,7 @@
                                 <div class="col-lg-4 col-md-6 col-sm-6 mb-3">
                                     <div class="latest-product__item border rounded p-2 h-100">
                                         <a href="{{ route('products.show', $item->id) }}" class="latest-product__item__pic">
-                                            <img src="{{ $item->image ? asset('storage/' . $item->image) : asset('images/no-image.png') }}"
+                                            <img src="{{ $item->image ? asset('storage/' . $item->image) : asset('frontend/images/product/product-1.jpg') }}"
                                                 width="75" height="75" class="rounded" style="object-fit:cover" alt="{{ $item->name }}">
                                         </a>
                                         <div class="latest-product__item__text">

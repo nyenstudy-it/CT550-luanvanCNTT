@@ -111,8 +111,10 @@
                             @foreach($firstItems as $item)
                                 @php
                                     $product = $item->variant?->product;
-                                    $imgModel = $item->variant?->images?->first() ?? $product?->images?->first();
-                                    $imgSrc = $imgModel ? asset('storage/' . $imgModel->image_path) : asset('img/no-image.png');
+                                    $variantImagePath = $item->variant?->images?->first()?->image_path;
+                                    $productImagePath = $product?->images?->first()?->image_path ?? $product?->image;
+                                    $imgPath = $variantImagePath ?: $productImagePath;
+                                    $imgSrc = $imgPath ? asset('storage/' . $imgPath) : asset('frontend/images/product/product-1.jpg');
                                     $productName = $product?->name ?? 'Sản phẩm';
                                     $variantInfo = collect([
                                         $item->variant?->size ?? null,

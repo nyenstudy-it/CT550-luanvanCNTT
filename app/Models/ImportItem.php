@@ -10,6 +10,8 @@ class ImportItem extends Model
     protected $fillable = [
         'import_id',
         'product_variant_id',
+        'manufacture_date',
+        'expired_at',
         'quantity',
         'remaining_quantity',
         'unit_price',

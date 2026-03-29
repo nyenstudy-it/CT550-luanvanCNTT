@@ -16,6 +16,7 @@
             $canOrders = $canPosition('cashier', 'order_staff');
             $canContent = $canPosition('order_staff');
             $canBlogs = $canPosition('cashier');
+            $canChat = $isAdmin || $isStaff;
             $homeRoute = $canReports
                 ? route('admin.dashboard')
                 : ($canWarehouse
@@ -58,10 +59,12 @@
         <div class="navbar-nav w-100">
 
             {{-- DASHBOARD --}}
-            <a href="{{ route('admin.dashboard') }}"
-                class="nav-item nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-                <i class="fa fa-tachometer-alt me-2"></i>Thống kê
-            </a>
+            @if($canReports)
+                <a href="{{ route('admin.dashboard') }}"
+                    class="nav-item nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
+                    <i class="fa fa-tachometer-alt me-2"></i>Thống kê
+                </a>
+            @endif
 
             @if($canReports)
                 <a href="{{ route('admin.revenue.stats') }}"

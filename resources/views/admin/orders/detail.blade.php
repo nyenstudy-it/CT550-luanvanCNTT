@@ -384,6 +384,7 @@
                                             @php
                                                 $variantImage = $item->variant->images->first();
                                                 $productImage = $item->variant->product->images->first();
+                                                $fallbackProductImagePath = $item->variant->product->image;
                                             @endphp
 
                                             @if($variantImage)
@@ -394,6 +395,16 @@
                                             @elseif($productImage)
 
                                                 <img src="{{ asset('storage/' . $productImage->image_path) }}" width="60"
+                                                    height="60" class="rounded border" style="object-fit:cover">
+
+                                            @elseif($fallbackProductImagePath)
+
+                                                <img src="{{ asset('storage/' . $fallbackProductImagePath) }}" width="60"
+                                                    height="60" class="rounded border" style="object-fit:cover">
+
+                                            @else
+
+                                                <img src="{{ asset('frontend/images/product/product-1.jpg') }}" width="60"
                                                     height="60" class="rounded border" style="object-fit:cover">
 
                                             @endif

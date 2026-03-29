@@ -106,7 +106,7 @@
 
             $image = !empty($item['image'])
                 ? asset('storage/' . $item['image'])
-                : asset('images/no-image.png');
+                : asset('frontend/images/product/product-1.jpg');
                                                                                     @endphp
 
                                                                                     <tr>

@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Services\ProductPricingService;
+use App\Models\Notification;
 
 class ReviewController extends Controller
 {
@@ -122,6 +123,14 @@ class ReviewController extends Controller
             'rating' => $request->input('rating'),
             'content' => $request->input('content'),
             'status' => 'pending'
+        ]);
+
+        $reviewRecipients = Notification::recipientIdsForGroups(['admin', 'order_staff']);
+        Notification::createForRecipients($reviewRecipients, [
+            'type' => 'new_review',
+            'title' => 'Có đánh giá mới',
+            'content' => 'Sản phẩm #' . $request->input('product_id') . ' có đánh giá mới cần xử lý.',
+            'related_id' => $review->id,
         ]);
 
         // Trả về trang trước (sản phẩm) thay vì chuyển sang danh sách đơn

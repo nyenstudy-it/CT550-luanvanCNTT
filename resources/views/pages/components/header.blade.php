@@ -134,10 +134,15 @@
                                     </a>
 
                                     <ul class="customer-notification-dropdown">
-                                        @forelse($notifications ?? [] as $noti)
+                                        @php
+                                            $customerNotifications = collect($notifications ?? [])->filter();
+                                        @endphp
+                                        @forelse($customerNotifications as $noti)
                                             <li>
                                                 <a href="{{ route('customer.notifications.read', $noti->id) }}"
-                                                    class="dropdown-item {{ !$noti->is_read ? 'unread' : '' }}">
+                                                    class="dropdown-item {{ !$noti->is_read ? 'unread' : '' }} {{ $noti->type === 'chat_staff_reply' ? 'js-open-store-chat' : '' }}"
+                                                    data-notification-type="{{ $noti->type }}"
+                                                    data-read-url="{{ route('customer.notifications.read', $noti->id) }}">
 
                                                     <h6 class="fw-normal mb-1">{{ $noti->title }}</h6>
                                                     <small class="text-muted d-block">{{ $noti->display_content }}</small>
@@ -177,6 +182,8 @@
     document.addEventListener('DOMContentLoaded', function () {
         const bell = document.querySelector('.customer-notification-toggle');
         const dropdown = document.querySelector('.customer-notification-dropdown');
+        const storeChatLinks = document.querySelectorAll('.js-open-store-chat');
+        const storeChatToggle = document.getElementById('store-chatbox-toggle');
 
         if (bell && dropdown) {
             bell.addEventListener('click', function (e) {
@@ -190,6 +197,29 @@
                 }
             });
         }
+
+        storeChatLinks.forEach(function (link) {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+
+                const readUrl = this.dataset.readUrl;
+                if (readUrl) {
+                    fetch(readUrl, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        credentials: 'same-origin',
+                    }).catch(function () {
+                        // Ignore silently, popup still opens.
+                    });
+                }
+
+                dropdown.classList.remove('show');
+                if (storeChatToggle) {
+                    storeChatToggle.click();
+                }
+            });
+        });
     });
 
 </script>

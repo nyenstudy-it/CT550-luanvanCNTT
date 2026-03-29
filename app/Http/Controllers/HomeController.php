@@ -70,22 +70,31 @@ class HomeController extends Controller
             ->addSelect([
                 'total_sold' => DB::table('order_items')
                     ->join('product_variants', 'product_variants.id', '=', 'order_items.product_variant_id')
+                    ->join('orders', 'orders.id', '=', 'order_items.order_id')
+                    ->join('payments', 'payments.order_id', '=', 'orders.id')
+                    ->where('payments.status', 'paid')
                     ->whereColumn('product_variants.product_id', 'products.id')
                     ->selectRaw('COALESCE(SUM(order_items.quantity), 0)'),
             ])
             ->orderByDesc('total_sold')
+            ->take(20)
+            ->get()
+            ->filter(fn($product) => (int) ($product->total_sold ?? 0) > 0)
             ->take(6)
-            ->get();
+            ->values();
 
         $topRatedProducts = Product::where('status', 'active')
             ->with('variants')
+            ->whereHas('approvedReviews')
             ->withAvg('approvedReviews as avg_rating', 'rating')
             ->orderByDesc('avg_rating')
+            ->orderByDesc('id')
             ->take(6)
             ->get();
 
         $bestSellerTopRatedProducts = Product::where('status', 'active')
             ->with('variants')
+            ->whereHas('approvedReviews')
             ->withAvg('approvedReviews as avg_rating', 'rating')
             ->addSelect([
                 'total_sold' => DB::table('order_items')
@@ -98,8 +107,13 @@ class HomeController extends Controller
             ])
             ->orderByDesc('total_sold')
             ->orderByDesc('avg_rating')
+            ->take(30)
+            ->get()
+            ->filter(function ($product) {
+                return (int) ($product->total_sold ?? 0) > 0 && (float) ($product->avg_rating ?? 0) > 0;
+            })
             ->take(6)
-            ->get();
+            ->values();
 
         $savedDiscountCodes = collect(session('cart_saved_discount_codes', []))
             ->filter()

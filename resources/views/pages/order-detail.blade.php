@@ -119,12 +119,12 @@
 
                                     <span
                                         class="payment-status 
-                                                                                                                                                                                                    @if(strtolower($method) == 'cod') 
-                                                                                                                                                                                                        status-cod 
-                                                                                                                                                                                                    @else 
-                                                                                                                                                                                                        status-{{ $status }} 
-                                                                                                                                                                                                    @endif
-                                                                                                                                                                                                ">
+                                                                                                                                                                                                                            @if(strtolower($method) == 'cod') 
+                                                                                                                                                                                                                                status-cod 
+                                                                                                                                                                                                                            @else 
+                                                                                                                                                                                                                                status-{{ $status }} 
+                                                                                                                                                                                                                            @endif
+                                                                                                                                                                                                                        ">
                                         @if(strtolower($method) == 'cod')
                                             @if($order->payment->status == 'paid')
                                                 Đã thanh toán
@@ -250,39 +250,6 @@
 
                         </div>
 
-                        @if(in_array($order->status, ['completed', 'refund_requested', 'refunded']))
-                            <div class="order-card mb-4 return-policy-card">
-                                <h5 class="mb-3">Chính sách hoàn trả sau khi đã nhận hàng</h5>
-
-                                <ul class="return-policy-list">
-                                    <li>Đơn hàng chỉ được gửi yêu cầu hoàn tiền sau khi đã ở trạng thái hoàn thành.</li>
-                                    <li>Yêu cầu hoàn tiền cần có lý do; bạn có thể bổ sung mô tả và hình ảnh để đối soát nhanh hơn.</li>
-                                    <li>Yêu cầu sẽ chuyển sang trạng thái đang xử lý hoàn tiền và chờ quản trị viên duyệt.</li>
-                                    <li>Nếu được duyệt, đơn sẽ chuyển sang trạng thái đã hoàn tiền.</li>
-                                    <li>Nếu bị từ chối, đơn sẽ quay về trạng thái trước đó theo kết quả xử lý của cửa hàng.</li>
-                                </ul>
-
-                                @if(
-                                    $order->status == 'completed'
-                                    && $order->payment
-                                    && $order->payment->status == 'paid'
-                                    && !$order->payment->refund_status
-                                )
-                                    <div class="alert alert-success mt-3 mb-0">
-                                        Đơn hàng của bạn hiện đủ điều kiện để gửi yêu cầu hoàn tiền nếu phát sinh vấn đề.
-                                    </div>
-                                @elseif($order->status == 'refund_requested')
-                                    <div class="alert alert-warning mt-3 mb-0">
-                                        Bạn đã gửi yêu cầu hoàn tiền. Cửa hàng đang kiểm tra và phản hồi sớm.
-                                    </div>
-                                @elseif($order->status == 'refunded')
-                                    <div class="alert alert-info mt-3 mb-0">
-                                        Yêu cầu hoàn tiền đã hoàn tất cho đơn hàng này.
-                                    </div>
-                                @endif
-                            </div>
-                        @endif
-
                         @if(in_array($order->status, ['confirmed']))
                             <div class="order-card mb-4">
 
@@ -386,7 +353,7 @@
                                 {{-- Đặt hàng --}}
                                 <div
                                     class="timeline-item 
-                                                                                                                                                                                    {{ in_array($order->status, ['pending', 'confirmed', 'shipping', 'completed', 'cancelled', 'refund_requested', 'refunded']) ? 'active' : '' }}">
+                                                                                                                                                                                                            {{ in_array($order->status, ['pending', 'confirmed', 'shipping', 'completed', 'cancelled', 'refund_requested', 'refunded']) ? 'active' : '' }}">
                                     <div class="timeline-dot"></div>
                                     <p>Đặt hàng</p>
                                 </div>
@@ -394,7 +361,7 @@
                                 {{-- Xác nhận --}}
                                 <div
                                     class="timeline-item 
-                                                                                                                                                                                    {{ in_array($order->status, ['confirmed', 'shipping', 'completed', 'cancelled', 'refund_requested', 'refunded']) ? 'active' : '' }}">
+                                                                                                                                                                                                            {{ in_array($order->status, ['confirmed', 'shipping', 'completed', 'cancelled', 'refund_requested', 'refunded']) ? 'active' : '' }}">
                                     <div class="timeline-dot"></div>
                                     <p>Xác nhận</p>
                                 </div>
@@ -402,7 +369,7 @@
                                 {{-- Đang giao --}}
                                 <div
                                     class="timeline-item 
-                                                                                                                                                                                    {{ in_array($order->status, ['shipping', 'completed', 'refund_requested', 'refunded']) ? 'active' : '' }}">
+                                                                                                                                                                                                            {{ in_array($order->status, ['shipping', 'completed', 'refund_requested', 'refunded']) ? 'active' : '' }}">
                                     <div class="timeline-dot"></div>
                                     <p>Đang giao</p>
                                 </div>
@@ -410,7 +377,7 @@
                                 {{-- Step cuối --}}
                                 <div
                                     class="timeline-item 
-                                                                                                                                                                                    {{ in_array($order->status, ['completed', 'cancelled', 'refund_requested', 'refunded']) ? 'active' : '' }}">
+                                                                                                                                                                                                            {{ in_array($order->status, ['completed', 'cancelled', 'refund_requested', 'refunded']) ? 'active' : '' }}">
                                     <div class="timeline-dot"></div>
 
                                     <p>
@@ -523,11 +490,13 @@
                         @foreach($order->items as $item)
                                         @php
                                             $product = $item->variant->product;
-                                            $image = $item->variant->images->first() ?? $product->images->first();
+                                            $variantImagePath = $item->variant?->images?->first()?->image_path;
+                                            $productImagePath = $product?->images?->first()?->image_path ?? $product?->image;
+                                            $displayImagePath = $variantImagePath ?: $productImagePath;
                                         @endphp
                                         <div class="order-product">
 
-                                            <img src="{{ $image ? asset('storage/' . $image->image_path) : asset('img/no-image.png') }}"
+                                            <img src="{{ $displayImagePath ? asset('storage/' . $displayImagePath) : asset('frontend/images/product/product-1.jpg') }}"
                                                 width="70">
 
                                             <div class="product-info">
@@ -636,7 +605,48 @@
                                 && $order->payment->status == 'paid'
                                 && !$order->payment->refund_status
                             )
-                            <button class="btn btn-warning" onclick="showRefundModal()">Yêu cầu hoàn tiền</button>
+                            <button class="btn btn-warning" onclick="showRefundPolicyModal()">Yêu cầu hoàn tiền</button>
+
+                            <div id="refundPolicyModal" class="refund-modal-overlay" style="display:none;">
+                                <div class="refund-modal-card">
+                                    <button type="button" class="refund-modal-close" onclick="closeRefundPolicyModal()"
+                                        aria-label="Đóng">&times;</button>
+
+                                    <h5 class="refund-modal-title">Chính sách hoàn trả</h5>
+                                    <p class="refund-modal-subtitle">Vui lòng đọc kỹ chính sách trước khi tiếp tục gửi yêu cầu
+                                        hoàn tiền.</p>
+
+                                    <div class="return-policy-card rounded p-3 mb-3">
+                                        <h6 class="mb-2">Chính sách hoàn trả sau khi đã nhận hàng</h6>
+
+                                        <ul class="return-policy-list mb-3">
+                                            <li>Đơn hàng chỉ được gửi yêu cầu hoàn tiền sau khi đã ở trạng thái hoàn thành.</li>
+                                            <li>Yêu cầu hoàn tiền cần có lý do; bạn có thể bổ sung mô tả và hình ảnh để đối soát
+                                                nhanh hơn.</li>
+                                            <li>Yêu cầu sẽ chuyển sang trạng thái đang xử lý hoàn tiền và chờ quản trị viên
+                                                duyệt.</li>
+                                            <li>Nếu được duyệt, đơn sẽ chuyển sang trạng thái đã hoàn tiền.</li>
+                                            <li>Nếu bị từ chối, đơn sẽ quay về trạng thái trước đó theo kết quả xử lý của cửa
+                                                hàng.</li>
+                                        </ul>
+
+                                        <div class="form-check mb-0">
+                                            <input class="form-check-input" type="checkbox" value="1" id="refund_policy_confirm"
+                                                required>
+                                            <label class="form-check-label" for="refund_policy_confirm">
+                                                Tôi đã đọc và đồng ý với chính sách hoàn trả.
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="refund-actions">
+                                        <button type="button" class="btn btn-outline-secondary"
+                                            onclick="closeRefundPolicyModal()">Hủy</button>
+                                        <button type="button" class="btn btn-warning" onclick="continueToRefundForm()">Tiếp
+                                            tục</button>
+                                    </div>
+                                </div>
+                            </div>
 
                             <!-- Refund Modal -->
                             <div id="refundModal" class="refund-modal-overlay" style="display:none;">
@@ -741,15 +751,47 @@
                             </style>
 
                             <script>
-                                function showRefundModal() {
-                                    document.getElementById('refundModal').style.display = 'block';
+                                function showRefundPolicyModal() {
+                                    document.getElementById('refundPolicyModal').style.display = 'flex';
                                 }
+
+                                function closeRefundPolicyModal() {
+                                    const policyModal = document.getElementById('refundPolicyModal');
+                                    const policyConfirm = document.getElementById('refund_policy_confirm');
+                                    policyModal.style.display = 'none';
+                                    if (policyConfirm) {
+                                        policyConfirm.checked = false;
+                                    }
+                                }
+
+                                function showRefundModal() {
+                                    document.getElementById('refundModal').style.display = 'flex';
+                                }
+
                                 function closeRefundModal() {
                                     document.getElementById('refundModal').style.display = 'none';
                                 }
 
+                                function continueToRefundForm() {
+                                    const policyConfirm = document.getElementById('refund_policy_confirm');
+
+                                    if (!policyConfirm || !policyConfirm.checked) {
+                                        policyConfirm.reportValidity();
+                                        return;
+                                    }
+
+                                    closeRefundPolicyModal();
+                                    document.getElementById('refundModal').style.display = 'flex';
+                                }
+
                                 document.addEventListener('click', function (e) {
+                                    const policyModal = document.getElementById('refundPolicyModal');
                                     const modal = document.getElementById('refundModal');
+
+                                    if (policyModal && policyModal.style.display !== 'none' && e.target === policyModal) {
+                                        closeRefundPolicyModal();
+                                    }
+
                                     if (!modal || modal.style.display === 'none') return;
                                     if (e.target === modal) {
                                         closeRefundModal();
@@ -758,6 +800,7 @@
 
                                 document.addEventListener('keydown', function (e) {
                                     if (e.key === 'Escape') {
+                                        closeRefundPolicyModal();
                                         closeRefundModal();
                                     }
                                 });

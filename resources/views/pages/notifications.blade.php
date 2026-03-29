@@ -25,7 +25,15 @@
 
     <!-- Notification List -->
     <div class="container py-4">
-        <h3 class="mb-4">Thông báo của tôi</h3>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+            <h3 class="mb-0">Thông báo của tôi</h3>
+            <form method="POST" action="{{ route('customer.notifications.markAllRead') }}">
+                @csrf
+                <button type="submit" class="btn btn-sm btn-outline-primary" {{ $unreadCount > 0 ? '' : 'disabled' }}>
+                    Đọc tất cả
+                </button>
+            </form>
+        </div>
 
         <div class="list-group">
             @forelse($notifications as $noti)
@@ -34,7 +42,7 @@
                     <h6 class="fw-bold mb-1">{{ $noti->title }}</h6>
 
                     {{-- Nội dung --}}
-                    <p class="mb-1 text-muted">{{ $noti->content }}</p>
+                    <p class="mb-1 text-muted">{{ $noti->display_content }}</p>
 
                     {{-- Thời gian --}}
                     <small class="text-muted">{{ $noti->created_at->diffForHumans() }}</small>

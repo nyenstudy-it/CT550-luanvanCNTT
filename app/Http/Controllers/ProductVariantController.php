@@ -35,8 +35,6 @@ class ProductVariantController extends Controller
             'color'            => 'nullable|string|max:100',
             'size'             => 'nullable|string|max:100',
             'price'            => 'required|numeric|min:0',
-            'manufacture_date' => 'nullable|date',
-            'expired_at'       => 'nullable|date|after_or_equal:manufacture_date',
             'images.*'         => 'nullable|image|max:2048',
         ]);
 
@@ -73,10 +71,10 @@ class ProductVariantController extends Controller
                 $path = $file->store('variants', 'public');
 
                 ProductImage::create([
-                    'product_id'         => null,          
+                    'product_id'         => null,
                     'product_variant_id' => $variant->id,
                     'image_path'         => $path,
-                    'is_primary'         => $index === 0,   
+                    'is_primary'         => $index === 0,
                 ]);
             }
         }
@@ -168,7 +166,7 @@ class ProductVariantController extends Controller
             ->route('admin.products.variants.index', $variant->product_id)
             ->with('success', 'Cập nhật biến thể thành công');
     }
-    
+
     public function destroy($id)
     {
         $variant = ProductVariant::with('images')->findOrFail($id);

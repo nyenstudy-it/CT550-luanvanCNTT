@@ -55,17 +55,6 @@
                     <input type="number" name="price" class="form-control" min="0" required value="{{ old('price') }}">
                 </div>
 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label>Ngày sản xuất</label>
-                        <input type="date" name="manufacture_date" class="form-control"
-                            value="{{ old('manufacture_date') }}">
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label>Hạn sử dụng</label>
-                        <input type="date" name="expired_at" class="form-control" value="{{ old('expired_at') }}">
-                    </div>
-                </div>
                 <div class="mb-3">
                     <label>Ảnh biến thể</label>
                     <input type="file" name="images[]" class="form-control" multiple accept="image/*">

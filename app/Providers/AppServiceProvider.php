@@ -32,19 +32,18 @@ class AppServiceProvider extends ServiceProvider
 
             if (Auth::check()) {
                 $user = Auth::user();
+                $query = Notification::query()
+                    ->where('user_id', $user->id)
+                    ->orderBy('created_at', 'desc');
 
-                if ($user->role === 'customer') {
-                    $notifications = Notification::where('user_id', $user->id)
-                        ->orderBy('created_at', 'desc')
-                        ->get(); // lấy tất cả notifications của customer
-                    $unreadCount = $notifications->where('is_read', false)->count();
-                } elseif (in_array($user->role, ['admin', 'staff', 'order_staff', 'warehouse'])) {
-                    $notifications = Notification::where('user_id', $user->id)
-                        ->orderBy('created_at', 'desc')
-                        ->take(5)
-                        ->get(); // admin/staff: chỉ lấy thông báo của chính user
-                    $unreadCount = $notifications->where('is_read', false)->count();
-                }
+                $notifications = $user->role === 'customer'
+                    ? (clone $query)->get()
+                    : (clone $query)->take(3)->get();
+
+                $unreadCount = Notification::query()
+                    ->where('user_id', $user->id)
+                    ->where('is_read', false)
+                    ->count();
             }
 
             $view->with(compact('notifications', 'unreadCount'));

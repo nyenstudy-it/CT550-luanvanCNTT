@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Order;
+use App\Models\User;
 
 class Notification extends Model
 {
@@ -32,6 +33,13 @@ class Notification extends Model
         $content = trim((string) $this->content);
 
         return match ($this->type) {
+            'new_order' => 'Có đơn hàng mới cần xử lý',
+            'new_import' => 'Có phiếu nhập kho mới',
+            'new_review' => 'Có đánh giá mới từ khách hàng',
+            'attendance_check_in' => 'Nhân viên vừa chấm công vào ca',
+            'cashier_stats_update' => 'Dữ liệu thống kê thu ngân vừa được cập nhật',
+            'chat_customer_message' => 'Khách hàng vừa gửi tin nhắn mới',
+            'chat_staff_reply' => 'Cửa hàng vừa phản hồi tin nhắn của bạn',
             'order_success' => 'Đặt hàng thành công',
             'order_cancel' => 'Đơn hàng đã bị huỷ',
             'order_completed' => 'Đơn hàng đã giao thành công',
@@ -111,9 +119,122 @@ class Notification extends Model
                 : route('customer.notifications');
         }
 
+        if (in_array($this->type, ['inventory_out_of_stock', 'inventory_low_stock', 'inventory_expired', 'inventory_expiring_soon', 'inventory_stale_stock'])) {
+            return in_array($user->role, ['admin', 'staff', 'order_staff', 'warehouse'])
+                ? route('admin.inventories.list')
+                : route('customer.notifications');
+        }
+
+        if ($this->type === 'new_import') {
+            return in_array($user->role, ['admin', 'staff', 'order_staff', 'warehouse'])
+                ? route('admin.imports.list')
+                : route('customer.notifications');
+        }
+
+        if ($this->type === 'new_review') {
+            return in_array($user->role, ['admin', 'staff', 'order_staff', 'warehouse'])
+                ? route('admin.reviews')
+                : route('customer.notifications');
+        }
+
+        if ($this->type === 'attendance_check_in') {
+            return in_array($user->role, ['admin', 'staff', 'order_staff', 'warehouse'])
+                ? route('admin.attendances.index')
+                : route('customer.notifications');
+        }
+
+        if ($this->type === 'cashier_stats_update') {
+            return in_array($user->role, ['admin', 'staff', 'order_staff', 'warehouse'])
+                ? route('admin.dashboard')
+                : route('customer.notifications');
+        }
+
+        if ($this->type === 'chat_customer_message') {
+            return in_array($user->role, ['admin', 'staff', 'order_staff', 'warehouse'])
+                ? route('admin.dashboard', ['open_admin_chat' => 1, 'customer' => $this->related_id])
+                : route('customer.notifications');
+        }
+
+        if ($this->type === 'chat_staff_reply') {
+            return $user->role === 'customer'
+                ? route('pages.trangchu', ['open_store_chat' => 1])
+                : route('admin.dashboard', ['open_admin_chat' => 1]);
+        }
+
         // DEFAULT
         return in_array($user->role, ['admin', 'staff', 'order_staff', 'warehouse'])
             ? route('admin.notifications')
             : route('customer.notifications');
+    }
+
+    public static function recipientIdsForGroups(array $groups): array
+    {
+        $groups = array_values(array_unique(array_filter($groups)));
+
+        if (empty($groups)) {
+            return [];
+        }
+
+        $ids = [];
+
+        if (in_array('admin', $groups, true)) {
+            $ids = array_merge($ids, User::query()->where('role', 'admin')->pluck('id')->all());
+        }
+
+        $staffPositionGroups = array_values(array_intersect($groups, ['cashier', 'warehouse', 'order_staff']));
+        if (!empty($staffPositionGroups)) {
+            $ids = array_merge(
+                $ids,
+                User::query()
+                    ->where('role', 'staff')
+                    ->whereHas('staff', function ($query) use ($staffPositionGroups) {
+                        $query->whereIn('position', $staffPositionGroups);
+                    })
+                    ->pluck('id')
+                    ->all()
+            );
+
+            // Backward-compatible support if some environments still store role by position.
+            $ids = array_merge(
+                $ids,
+                User::query()
+                    ->whereIn('role', $staffPositionGroups)
+                    ->pluck('id')
+                    ->all()
+            );
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    public static function createForRecipients(array $recipientIds, array $payload): void
+    {
+        $recipientIds = array_values(array_unique(array_filter($recipientIds)));
+
+        if (empty($recipientIds)) {
+            return;
+        }
+
+        foreach ($recipientIds as $recipientId) {
+            $notification = static::firstOrNew([
+                'user_id' => $recipientId,
+                'type' => $payload['type'],
+                'related_id' => $payload['related_id'] ?? null,
+            ]);
+
+            $oldTitle = $notification->title;
+            $oldContent = $notification->content;
+
+            $notification->title = $payload['title'];
+            $notification->content = $payload['content'] ?? null;
+
+            if (!$notification->exists) {
+                $notification->is_read = false;
+            } elseif ($oldTitle !== $notification->title || $oldContent !== $notification->content) {
+                $notification->is_read = false;
+            }
+
+            $notification->save();
+        }
     }
 }

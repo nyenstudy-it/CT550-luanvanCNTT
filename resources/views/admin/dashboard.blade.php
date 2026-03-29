@@ -39,7 +39,7 @@
                 <form method="GET" action="{{ route('admin.dashboard') }}" class="d-flex align-items-center gap-2">
                     <label for="month" class="mb-0 small text-muted">Chọn tháng</label>
                     <input id="month" name="month" type="month" class="form-control form-control-sm"
-                           value="{{ $selectedMonth }}">
+                        value="{{ $selectedMonth }}">
                     <button type="submit" class="btn btn-sm btn-primary">Xem</button>
                 </form>
             </div>
@@ -56,7 +56,8 @@
                     </div>
                 </div>
                 <div class="col-sm-6 col-xl-3">
-                    <div class="bg-light rounded d-flex align-items-center justify-content-between p-4 h-100 border-start border-4 border-info">
+                    <div
+                        class="bg-light rounded d-flex align-items-center justify-content-between p-4 h-100 border-start border-4 border-info">
                         <i class="fa fa-calendar-week fa-3x text-info"></i>
                         <div class="ms-3">
                             <p class="mb-2">Doanh thu tuần này</p>
@@ -65,7 +66,8 @@
                     </div>
                 </div>
                 <div class="col-sm-6 col-xl-3">
-                    <div class="bg-light rounded d-flex align-items-center justify-content-between p-4 h-100 border-start border-4 border-success">
+                    <div
+                        class="bg-light rounded d-flex align-items-center justify-content-between p-4 h-100 border-start border-4 border-success">
                         <i class="fa fa-calendar-alt fa-3x text-success"></i>
                         <div class="ms-3">
                             <p class="mb-2">Doanh thu tháng đã chọn</p>
@@ -74,7 +76,8 @@
                     </div>
                 </div>
                 <div class="col-sm-6 col-xl-3">
-                    <div class="bg-light rounded d-flex align-items-center justify-content-between p-4 h-100 border-start border-4 border-warning">
+                    <div
+                        class="bg-light rounded d-flex align-items-center justify-content-between p-4 h-100 border-start border-4 border-warning">
                         <i class="fa fa-redo-alt fa-3x text-warning"></i>
                         <div class="ms-3">
                             <p class="mb-2">Tỷ lệ khách quay lại</p>
@@ -123,7 +126,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Account Stats -->
             <div class="row g-4 mt-1">
                 <div class="col-sm-6 col-xl-4">
@@ -167,6 +169,73 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Top Customer Stats -->
+            <div class="row g-4 mt-1">
+                <div class="col-lg-6">
+                    <div class="bg-light rounded p-4 h-100 border-start border-4 border-primary">
+                        <h6 class="mb-3">Top 3 người đặt nhiều đơn nhất</h6>
+                        <div class="table-responsive">
+                            <table class="table text-start align-middle table-bordered table-hover mb-0">
+                                <thead>
+                                    <tr class="text-dark">
+                                        <th>#</th>
+                                        <th>Khách hàng</th>
+                                        <th>Số đơn</th>
+                                        <th>Tổng chi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($topCustomersByOrders as $index => $customer)
+                                        <tr>
+                                            <td>{{ $index + 1 }}</td>
+                                            <td>{{ $customer->customer_name }}</td>
+                                            <td>{{ number_format($customer->orders_count) }}</td>
+                                            <td>{{ number_format($customer->total_spent, 0, ',', '.') }} ₫</td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="4">Chưa có dữ liệu trong tháng đã chọn</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="bg-light rounded p-4 h-100 border-start border-4 border-success">
+                        <h6 class="mb-3">Top 3 người có giá trị đơn cao nhất</h6>
+                        <div class="table-responsive">
+                            <table class="table text-start align-middle table-bordered table-hover mb-0">
+                                <thead>
+                                    <tr class="text-dark">
+                                        <th>#</th>
+                                        <th>Khách hàng</th>
+                                        <th>Tổng chi</th>
+                                        <th>Số đơn</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($topCustomersByValue as $index => $customer)
+                                        <tr>
+                                            <td>{{ $index + 1 }}</td>
+                                            <td>{{ $customer->customer_name }}</td>
+                                            <td>{{ number_format($customer->total_spent, 0, ',', '.') }} ₫</td>
+                                            <td>{{ number_format($customer->orders_count) }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="4">Chưa có dữ liệu trong tháng đã chọn</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
 
             <!-- Top Products & Promotions Table -->
             <div class="row g-4 mt-1">
@@ -350,7 +419,8 @@
                     <div class="bg-light rounded p-4 h-100">
                         <div class="d-flex align-items-center justify-content-between mb-3">
                             <h6 class="mb-0">Tóm tắt đơn hàng trong tháng</h6>
-                            <span class="badge {{ $cancelOrRefundRate >= 20 ? 'bg-danger' : ($cancelOrRefundRate >= 10 ? 'bg-warning text-dark' : 'bg-success') }}">
+                            <span
+                                class="badge {{ $cancelOrRefundRate >= 20 ? 'bg-danger' : ($cancelOrRefundRate >= 10 ? 'bg-warning text-dark' : 'bg-success') }}">
                                 Hủy/hoàn: {{ number_format($cancelOrRefundRate, 2) }}%
                             </span>
                         </div>

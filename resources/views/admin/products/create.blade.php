@@ -84,24 +84,6 @@
                             </div>
                         </div>
 
-                        <div class="row mb-3">
-                            <label class="col-sm-2 col-form-label">Ngày SX</label>
-                            <div class="col-sm-4">
-                                <input type="date"
-                                       name="manufacture_date"
-                                       class="form-control"
-                                       value="{{ old('manufacture_date') }}">
-                            </div>
-
-                            <label class="col-sm-2 col-form-label">Hạn sử dụng</label>
-                            <div class="col-sm-4">
-                                <input type="date"
-                                       name="expiry_date"
-                                       class="form-control"
-                                       value="{{ old('expiry_date') }}">
-                            </div>
-                        </div>
-
                         <div class="row mb-4">
                             <label class="col-sm-2 col-form-label">Bảo quản</label>
                             <div class="col-sm-10">

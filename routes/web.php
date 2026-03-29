@@ -29,6 +29,8 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\AdminReviewController;
+use App\Http\Controllers\AiChatController;
+use App\Http\Controllers\CustomerChatController;
 use Illuminate\Support\Facades\Route;
 use Termwind\Components\Raw;
 
@@ -57,6 +59,7 @@ Route::get('/blogs', [BlogController::class, 'index'])->name('blogs.index');
 Route::get('/blogs/{slug}', [BlogController::class, 'show'])->name('blogs.show');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::post('/contact', [ContactController::class, 'send'])->name('contact.send');
+Route::post('/ai/chatbox', [AiChatController::class, 'chat'])->name('ai.chatbox');
 
 
 // quên mk
@@ -128,11 +131,19 @@ Route::middleware(['auth', 'role:customer'])->group(function () {
     Route::get('/notifications/read/{id}', [NotificationController::class, 'read'])->name('customer.notifications.read');
     Route::post('/notifications/mark-as-read/{id}', [NotificationController::class, 'markAsRead'])
         ->name('customer.notifications.markAsRead');
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])
+        ->name('customer.notifications.markAllRead');
+    Route::post('/notifications/mark-chat-read', [NotificationController::class, 'markChatNotificationsAsRead'])
+        ->name('customer.notifications.markChatRead');
 
     Route::get('product/{product}/review/{order?}', [ReviewController::class, 'reviewForm'])->name('reviews.form');
     Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
     Route::post('/reviews/{review}/like', [\App\Http\Controllers\ReviewLikeController::class, 'toggle'])->name('reviews.like');
-    // Route reply của khách đã bị xóa — chỉ admin mới được phép reply (giống Shopee)
+
+    // Chat với cửa hàng
+    Route::get('/chat', [CustomerChatController::class, 'getMessages'])->name('customer.chat');
+    Route::post('/chat/send', [CustomerChatController::class, 'sendMessage'])->name('customer.chat.send');
+    Route::get('/chat/unread-count', [CustomerChatController::class, 'unreadCount'])->name('customer.chat.unreadCount');
 });
 
 //Đăng ký ADMIN/STAFF (chỉ admin)
@@ -168,26 +179,16 @@ Route::middleware(['auth', 'role:admin'])
         Route::post('/staff/{id}/unlock', [AdminController::class, 'staffUnlock'])
             ->name('admin.staff.unlock');
 
-        Route::get(
-            '/attendances/pending',
-            [AttendanceController::class, 'pending']
-        )->name('admin.attendances.pending');
-        Route::post(
-            '/attendances/{attendance}/approve-late',
-            [AttendanceController::class, 'approveLate']
-        )->name('admin.attendances.approveLate');
-        Route::post(
-            '/attendances/{attendance}/reject-late',
-            [AttendanceController::class, 'rejectLate']
-        )->name('admin.attendances.rejectLate');
-        Route::post(
-            '/attendances/{attendance}/approve-early',
-            [AttendanceController::class, 'approveEarly']
-        )->name('admin.attendances.approveEarly');
-        Route::post(
-            '/attendances/{attendance}/reject-early',
-            [AttendanceController::class, 'rejectEarly']
-        )->name('admin.attendances.rejectEarly');
+        Route::get('/attendances/pending',[AttendanceController::class, 'pending']
+            )->name('admin.attendances.pending');
+        Route::post('/attendances/{attendance}/approve-late',[AttendanceController::class, 'approveLate']
+            )->name('admin.attendances.approveLate');
+        Route::post('/attendances/{attendance}/reject-late',[AttendanceController::class, 'rejectLate']
+            )->name('admin.attendances.rejectLate');
+        Route::post('/attendances/{attendance}/approve-early',[AttendanceController::class, 'approveEarly']
+            )->name('admin.attendances.approveEarly');
+        Route::post('/attendances/{attendance}/reject-early',[AttendanceController::class, 'rejectEarly']
+            )->name('admin.attendances.rejectEarly');
         Route::get('/attendances', [AttendanceController::class, 'index'])
             ->name('admin.attendances.index');
         Route::get('/attendances/create', [AttendanceController::class, 'create'])
@@ -200,14 +201,10 @@ Route::middleware(['auth', 'role:admin'])
             ->name('admin.attendances.update');
         Route::delete('/attendances/{attendance}', [AttendanceController::class, 'destroy'])
             ->name('admin.attendances.destroy');
-        Route::get(
-            '/salaries',
-            [SalaryController::class, 'index']
-        )->name('admin.salaries.index');
-        Route::get(
-            '/salaries/calculate/{staffId}/{month}/{year}',
-            [SalaryController::class, 'calculateMonthly']
-        )->name('admin.salaries.calculate');
+        Route::get('/salaries',[SalaryController::class, 'index']
+            )->name('admin.salaries.index');
+        Route::get('/salaries/calculate/{staffId}/{month}/{year}',[SalaryController::class, 'calculateMonthly']
+            )->name('admin.salaries.calculate');
     });
 
 //  ADMIN + TẤT CẢ STAFF (dashboard, profile, thông báo)
@@ -222,6 +219,8 @@ Route::middleware(['auth', 'role:admin,staff'])
 
         Route::get('/notifications', [NotificationController::class, 'adminIndex'])->name('admin.notifications');
         Route::get('/notifications/read/{id}', [NotificationController::class, 'read'])->name('admin.notifications.read');
+        Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])
+            ->name('admin.notifications.markAllRead');
     });
 
 // ADMIN + THU NGÂN (cashier) Doanh thu
@@ -337,6 +336,15 @@ Route::middleware(['auth', 'can.position:order_staff'])
         Route::get('/discounts/{discount}/edit', [DiscountController::class, 'edit'])->name('admin.discounts.edit');
         Route::post('/discounts/{discount}', [DiscountController::class, 'update'])->name('admin.discounts.update');
         Route::delete('/discounts/{discount}', [DiscountController::class, 'destroy'])->name('admin.discounts.destroy');
+    });
+
+// ADMIN + TẤT CẢ STAFF: Chat với khách hàng
+Route::middleware(['auth', 'role:admin,staff'])
+    ->prefix('admin')
+    ->group(function () {
+        Route::get('/chats', [CustomerChatController::class, 'getAllConversations'])->name('admin.chats.list');
+        Route::get('/chats/{customerId}', [CustomerChatController::class, 'getConversation'])->name('admin.chats.conversation');
+        Route::post('/chats/{customerId}/reply', [CustomerChatController::class, 'replyMessage'])->name('admin.chats.reply');
     });
 
 // ADMIN + THU NGÂN (cashier) Blog

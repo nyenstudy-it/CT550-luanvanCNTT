@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Notification;
-use App\Models\User;
 
 class PaymentController extends Controller
 {
@@ -311,24 +310,20 @@ class PaymentController extends Controller
             ]);
         }
 
-        $admins = User::where('role', 'admin')->get();
+        $newOrderRecipients = Notification::recipientIdsForGroups(['admin', 'order_staff']);
+        Notification::createForRecipients($newOrderRecipients, [
+            'type' => 'new_order',
+            'title' => 'Có đơn hàng mới',
+            'content' => 'Đơn #' . $order->id . ' vừa được tạo',
+            'related_id' => $order->id,
+        ]);
 
-        foreach ($admins as $admin) {
-            $existsAdmin = Notification::where('type', 'new_order')
-                ->where('related_id', $order->id)
-                ->where('user_id', $admin->id)
-                ->exists();
-
-            if (!$existsAdmin) {
-                Notification::create([
-                    'user_id' => $admin->id,
-                    'type' => 'new_order',
-                    'title' => 'Có đơn hàng mới',
-                    'content' => 'Đơn #' . $order->id . ' vừa được tạo',
-                    'related_id' => $order->id,
-                    'is_read' => false,
-                ]);
-            }
-        }
+        $cashierRecipients = Notification::recipientIdsForGroups(['admin', 'cashier']);
+        Notification::createForRecipients($cashierRecipients, [
+            'type' => 'cashier_stats_update',
+            'title' => 'Cập nhật dữ liệu thống kê',
+            'content' => 'Đơn #' . $order->id . ' vừa phát sinh và đã cập nhật số liệu bán hàng.',
+            'related_id' => $order->id,
+        ]);
     }
 }

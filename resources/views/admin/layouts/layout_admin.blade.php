@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="utf-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>DASHBOARD- SEN HỒNG OCOP</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <meta content="" name="keywords">
@@ -149,6 +150,9 @@
 </head>
 
 <body>
+    @php
+        $adminCanChat = auth()->check() && in_array(auth()->user()->role, ['admin', 'staff'], true);
+    @endphp
     <div class="container-xxl position-relative bg-white d-flex p-0">
         <!-- Spinner Start -->
         <div id="spinner"
@@ -179,6 +183,13 @@
         </div>
         <!-- Back to Top -->
         <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"><i class="bi bi-arrow-up"></i></a>
+
+        @if($adminCanChat)
+            <button type="button" class="admin-chat-float-btn js-open-admin-chat" data-customer-id=""
+                title="Mở chat khách hàng" aria-label="Mở chat khách hàng">
+                <i class="fa fa-comments"></i>
+            </button>
+        @endif
     </div>
 
     <!-- JavaScript Libraries -->
@@ -202,6 +213,46 @@
             document.querySelectorAll('.alert').forEach(el => el.remove());
         }, 5000);
     </script>
+
+    <style>
+        .admin-chat-float-btn {
+            position: fixed;
+            right: 22px;
+            bottom: 92px;
+            width: 50px;
+            height: 50px;
+            border: none;
+            border-radius: 999px;
+            background: #0d6efd;
+            color: #fff;
+            box-shadow: 0 8px 22px rgba(13, 110, 253, 0.38);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1040;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .admin-chat-float-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 26px rgba(13, 110, 253, 0.44);
+        }
+
+        .admin-chat-float-btn i {
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        @media (max-width: 767.98px) {
+            .admin-chat-float-btn {
+                right: 14px;
+                bottom: 86px;
+                width: 46px;
+                height: 46px;
+            }
+        }
+    </style>
 
 </body>
 

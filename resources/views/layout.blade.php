@@ -7,6 +7,7 @@
     <meta name="keywords" content="Ogani, unica, creative, html">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>SEN HỒNG OCOP</title>
 
     <!-- Google Font -->
@@ -20,9 +21,20 @@
     <link rel="stylesheet" href="{{ asset('frontend/css/owl.carousel.min.css') }}" type="text/css">
     <link rel="stylesheet" href="{{ asset('frontend/css/slicknav.min.css') }}" type="text/css">
     <link rel="stylesheet" href="{{ asset('frontend/css/style.css') }}" type="text/css">
+    <link rel="stylesheet" href="{{ asset('frontend/css/chatbox.css') }}" type="text/css">
 </head>
 
 <body>
+    @php
+        $storeChatUnreadCount = 0;
+        if (auth()->check() && auth()->user()->role === 'customer') {
+            $storeChatUnreadCount = \App\Models\CustomerMessage::query()
+                ->where('customer_id', auth()->id())
+                ->where('sender_type', '!=', 'customer')
+                ->where('is_read', false)
+                ->count();
+        }
+    @endphp
     <!-- Page Preloder -->
     <div id="preloder">
         <div class="loader"></div>
@@ -132,32 +144,109 @@
 
     @yield('scripts')
 
-@if(session('order_success'))
+    @if(session('order_success'))
 
-    <script>
+        <script>
 
-        document.addEventListener("DOMContentLoaded", function () {
+            document.addEventListener("DOMContentLoaded", function () {
 
-            Swal.fire({
-                icon: 'success',
-                title: 'Đặt hàng thành công!',
-                html: `
-                Cảm ơn bạn đã mua hàng tại <b>SEN HỒNG OCOP</b><br>
-                Mã đơn hàng: <b>#{{ session('order_success') }}</b>
-            `,
-                confirmButtonText: 'Xem đơn hàng',
-                confirmButtonColor: '#28a745'
-            }).then(() => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Đặt hàng thành công!',
+                    html: `
+                                    Cảm ơn bạn đã mua hàng tại <b>SEN HỒNG OCOP</b><br>
+                                    Mã đơn hàng: <b>#{{ session('order_success') }}</b>
+                                `,
+                    confirmButtonText: 'Xem đơn hàng',
+                    confirmButtonColor: '#28a745'
+                }).then(() => {
 
-                window.location.href = "{{ route('orders.detail', session('order_success')) }}";
+                    window.location.href = "{{ route('orders.detail', session('order_success')) }}";
+
+                });
 
             });
 
-        });
+        </script>
 
+    @endif
+
+    <div id="ai-chatbox" class="ai-chatbox">
+        @auth
+            @if(auth()->user()->role === 'customer')
+                <button id="store-chatbox-toggle" class="ai-chatbox__store-link" type="button" aria-label="Chat với cửa hàng"
+                    title="Chat với cửa hàng">
+                    <i class="fa fa-comments"></i>
+                    <span id="store-chatbox-badge"
+                        class="ai-chatbox__store-badge {{ $storeChatUnreadCount > 0 ? '' : 'd-none' }}">{{ $storeChatUnreadCount }}</span>
+                </button>
+            @endif
+        @endauth
+
+        <button id="ai-chatbox-toggle" class="ai-chatbox__toggle" type="button" aria-label="Mở trợ lý AI">
+            Tư vấn AI
+        </button>
+
+        <section id="ai-chatbox-panel" class="ai-chatbox__panel" hidden>
+            <header class="ai-chatbox__header">
+                <h3>Trợ lý sản phẩm</h3>
+                <button id="ai-chatbox-close" class="ai-chatbox__close" type="button" aria-label="Đóng">x</button>
+            </header>
+
+            <div id="ai-chatbox-messages" class="ai-chatbox__messages">
+                <div class="ai-chatbox__message ai-chatbox__message--assistant">
+                    Xin chào, mình có thể gợi ý sản phẩm theo nhu cầu và ngân sách của bạn.
+                </div>
+            </div>
+
+            <div id="ai-chatbox-suggestions" class="ai-chatbox__suggestions"></div>
+
+            <form id="ai-chatbox-form" class="ai-chatbox__form">
+                <textarea id="ai-chatbox-input" rows="2" placeholder="Nhập nhu cầu của bạn..." required></textarea>
+                <button type="submit">Gửi</button>
+            </form>
+        </section>
+
+        @auth
+            @if(auth()->user()->role === 'customer')
+                <section id="store-chatbox-panel" class="store-chatbox__panel" hidden>
+                    <header class="store-chatbox__header">
+                        <h3>Chat với cửa hàng</h3>
+                        <button id="store-chatbox-close" class="store-chatbox__close" type="button" aria-label="Đóng">x</button>
+                    </header>
+
+                    <div id="store-chatbox-messages" class="store-chatbox__messages">
+                        <div class="store-chatbox__message store-chatbox__message--staff">
+                            Xin chào, cửa hàng có thể hỗ trợ gì cho bạn?
+                        </div>
+                    </div>
+
+                    <form id="store-chatbox-form" class="store-chatbox__form">
+                        <textarea id="store-chatbox-input" rows="2" placeholder="Nhập câu hỏi của bạn..." required></textarea>
+                        <button type="submit">Gửi</button>
+                    </form>
+                </section>
+            @endif
+        @endauth
+    </div>
+
+    <script>
+        window.chatboxConfig = {
+            endpoint: "{{ route('ai.chatbox') }}",
+            csrfToken: "{{ csrf_token() }}",
+            storeFetchEndpoint: "{{ auth()->check() && auth()->user()->role === 'customer' ? route('customer.chat') : '' }}",
+            storeSendEndpoint: "{{ auth()->check() && auth()->user()->role === 'customer' ? route('customer.chat.send') : '' }}",
+            storeUnreadEndpoint: "{{ auth()->check() && auth()->user()->role === 'customer' ? route('customer.chat.unreadCount') : '' }}",
+            markChatNotificationsEndpoint: "{{ auth()->check() && auth()->user()->role === 'customer' ? route('customer.notifications.markChatRead') : '' }}",
+            openStoreChatOnLoad: {{ request()->boolean('open_store_chat') ? 'true' : 'false' }},
+            suggestedQuestions: [
+                "Gợi ý sản phẩm làm quà OCOP dưới 500.000đ",
+                "Mình cần sản phẩm tốt cho sức khỏe cho người lớn tuổi",
+                "Có sản phẩm nào đang bán chạy và còn hàng không?"
+            ]
+        };
     </script>
-
-@endif
+    <script src="{{ asset('frontend/js/chatbox.js') }}"></script>
 
 </body>
 

@@ -76,7 +76,7 @@
                     <div class="product__details__pic">
                         <div class="product__details__pic__item">
                             <img id="mainImage"
-                                src="{{ $product->image ? asset('storage/' . $product->image) : asset('images/no-image.png') }}"
+                                src="{{ $product->image ? asset('storage/' . $product->image) : asset('frontend/images/product/product-1.jpg') }}"
                                 alt="{{ $product->name }}"
                                 style="width:100%; height:420px; object-fit:cover; border-radius:6px; transition: opacity .2s;">
                         </div>

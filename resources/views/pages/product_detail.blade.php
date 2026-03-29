@@ -57,6 +57,31 @@
             color: #8d8d8d;
             display: block;
         }
+
+        .keep-line-breaks {
+            white-space: pre-line;
+        }
+
+        .product-detail-note {
+            margin: 18px 0 22px;
+            padding: 14px 16px;
+            border: 1px solid #ebebeb;
+            border-radius: 8px;
+            background: #fafcf7;
+        }
+
+        .product-detail-note__title {
+            margin-bottom: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            color: #1c1c1c;
+        }
+
+        .product-detail-note__content {
+            margin: 0;
+            color: #555;
+            line-height: 1.7;
+        }
     </style>
 
     <section class="breadcrumb-section set-bg" data-setbg="{{ asset('frontend/images/breadcrumb.jpg') }}">
@@ -84,7 +109,7 @@
                     <div class="product__details__pic">
                         <div class="product__details__pic__item">
                             <img id="mainImage"
-                                src="{{ $product->image ? asset('storage/' . $product->image) : asset('images/no-image.png') }}"
+                                src="{{ $product->image ? asset('storage/' . $product->image) : asset('frontend/images/product/product-1.jpg') }}"
                                 alt="{{ $product->name }}"
                                 style="width:100%; height:420px; object-fit:cover; border-radius:6px;">
                         </div>
@@ -137,7 +162,7 @@
                             @endif
                         </div>
 
-                        <p>{{ $product->description ?? 'Chưa có mô tả.' }}</p>
+                        <p class="keep-line-breaks">{{ $product->description ?? 'Chưa có mô tả.' }}</p>
 
                         {{-- Variant selection --}}
                         <div class="product__details__option mb-3">
@@ -263,7 +288,14 @@
                             {{-- Description --}}
                             <div class="tab-pane active" id="tabs-1" role="tabpanel">
                                 <div class="product__details__tab__desc">
-                                    <p>{{ $product->description }}</p>
+                                    <p class="keep-line-breaks">{{ $product->description }}</p>
+
+                                    @if(!empty($product->usage_instructions))
+                                        <div class="product-detail-note">
+                                            <div class="product-detail-note__title">Hướng dẫn sử dụng</div>
+                                            <p class="product-detail-note__content keep-line-breaks">{{ $product->usage_instructions }}</p>
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
 
@@ -292,7 +324,7 @@
                                                 </div>
                                             </div>
 
-                                            <p class="mb-1">{{ $review->content }}</p>
+                                            <p class="mb-1 keep-line-breaks">{{ $review->content }}</p>
 
                                             {{-- Replies --}}
                                             <div class="review-replies ps-3">
@@ -308,7 +340,7 @@
                                                             </div>
                                                             <div></div>
                                                         </div>
-                                                        <p class="mb-0">{{ $rep->content }}</p>
+                                                        <p class="mb-0 keep-line-breaks">{{ $rep->content }}</p>
                                                     </div>
                                                 @endforeach
                                             </div>
@@ -394,7 +426,7 @@
                                 <div class="item">
                                     <a href="{{ route('products.show', $recentProduct->id) }}" class="recently-viewed-card">
                                         <img class="recently-viewed-card__image"
-                                            src="{{ $recentImage ? asset('storage/' . $recentImage) : asset('images/no-image.png') }}"
+                                            src="{{ $recentImage ? asset('storage/' . $recentImage) : asset('frontend/images/product/product-1.jpg') }}"
                                             alt="{{ $recentProduct->name }}">
 
                                         <div class="recently-viewed-card__body">
@@ -649,6 +681,14 @@
             if (value > max) quantityInput.value = max;
             if (value < 1) quantityInput.value = 1;
         });
+
+        if (variantBtns.length > 0) {
+            const defaultVariantBtn = Array.from(variantBtns).find((btn) => {
+                return parseInt(btn.dataset.stock || '0', 10) > 0;
+            }) || variantBtns[0];
+
+            defaultVariantBtn.click();
+        }
 
         const reviewForm = document.querySelector('.review-form');
         if (reviewForm) {

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Attendance;
 use App\Models\User;
 use App\Models\Staff;
+use App\Models\Notification;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -291,6 +292,15 @@ class AttendanceController extends Controller
             'check_in_verification_method' => $accessResult['method'],
         ]);
 
+        $adminRecipients = Notification::recipientIdsForGroups(['admin']);
+        $shiftLabel = $attendance->shift === 'morning' ? 'ca sáng' : 'ca chiều';
+        Notification::createForRecipients($adminRecipients, [
+            'type' => 'attendance_check_in',
+            'title' => 'Nhân viên vừa chấm công',
+            'content' => $user->name . ' đã check-in ' . $shiftLabel . ' ngày ' . $attendance->work_date . '.',
+            'related_id' => $attendance->id,
+        ]);
+
         return back()->with('success', 'Check-in thành công');
     }
 
@@ -441,7 +451,7 @@ class AttendanceController extends Controller
     {
         abort_unless(Auth::user()->role === 'admin', 403);
 
-        $attendances = Attendance::with('staff')
+        $attendances = Attendance::with('staff.user')
             ->where(function ($q) {
                 $q->where('late_status', 'pending')
                     ->orWhere('early_leave_status', 'pending');

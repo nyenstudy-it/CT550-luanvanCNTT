@@ -7,6 +7,7 @@ use App\Models\Supplier;
 use App\Models\CategoryProduct;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
+use App\Models\Inventory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Product extends Model
@@ -84,5 +85,26 @@ class Product extends Model
     public function variant()
     {
         return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+    }
+
+    public function getInventoryTotalAttribute(): int
+    {
+        if ($this->relationLoaded('variants')) {
+            $total = 0;
+
+            foreach ($this->variants as $variant) {
+                $total += (int) ($variant->inventory->quantity ?? 0);
+            }
+
+            return $total;
+        }
+
+        return (int) Inventory::query()
+            ->whereIn('product_variant_id', function ($query) {
+                $query->select('id')
+                    ->from('product_variants')
+                    ->where('product_id', $this->id);
+            })
+            ->sum('quantity');
     }
 }

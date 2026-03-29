@@ -48,7 +48,7 @@
                                 $hasDiscount = (bool) ($product->display_has_discount ?? false);
                                 $image = $product->image
                                     ? asset('storage/' . $product->image)
-                                    : asset('images/no-image.png');
+                                    : asset('frontend/images/product/product-1.jpg');
                                 $ocop = $product->ocop_star ?? 0;
                             @endphp
 

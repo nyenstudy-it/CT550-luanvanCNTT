@@ -78,7 +78,7 @@ class AdminOrderController extends Controller
         $order = Order::findOrFail($id);
 
         $request->validate([
-            'status' => 'required'
+            'status' => 'required|in:pending,confirmed,shipping,completed'
         ]);
         // Chặn thay đổi nếu đơn đã hoàn thành, đã hủy, hoặc đã hoàn tiền
         if (
@@ -90,22 +90,17 @@ class AdminOrderController extends Controller
 
         $user = Auth::user();
         $oldStatus = $order->status;
+        $staffPosition = $user->role === 'staff' ? ($user->staff?->position ?? null) : null;
+        $isOrderOperator = $user->role === 'staff' && in_array($staffPosition, ['cashier', 'order_staff'], true);
 
         if ($user->role == 'admin') {
             $order->status = $request->status;
-        } elseif ($user->role == 'order_staff') {
+        } elseif ($isOrderOperator) {
 
             if (in_array($request->status, ['confirmed', 'shipping', 'completed'])) {
                 $order->status = $request->status;
             } else {
                 return back()->with('error', 'Bạn không có quyền đổi trạng thái này');
-            }
-        } elseif ($user->role == 'warehouse') {
-
-            if ($request->status == 'pending') {
-                $order->status = $request->status;
-            } else {
-                return back()->with('error', 'Kho chỉ được chuyển sang trạng thái chuẩn bị');
             }
         } else {
 
@@ -145,6 +140,8 @@ class AdminOrderController extends Controller
                     'is_read' => false,
                 ]);
             }
+
+            $this->notifyCashierStats($order, 'Đơn #' . $order->id . ' chuyển sang trạng thái ' . $historyMessage . '.');
         }
 
         return back()->with('success', 'Cập nhật trạng thái thành công');
@@ -220,6 +217,8 @@ class AdminOrderController extends Controller
                 ]);
             }
 
+            $this->notifyCashierStats($order, 'Đơn #' . $order->id . ' đã bị hủy và số liệu thu ngân đã cập nhật.');
+
             DB::commit();
 
             return back()->with('success', 'Đã hủy đơn hàng');
@@ -291,6 +290,8 @@ class AdminOrderController extends Controller
                 ]);
             }
 
+            $this->notifyCashierStats($order, 'Đơn #' . $order->id . ' đã hoàn tiền, số liệu doanh thu đã cập nhật.');
+
             DB::commit();
 
             return back()->with('success', 'Đã hoàn tiền');
@@ -342,6 +343,8 @@ class AdminOrderController extends Controller
                     'is_read' => false,
                 ]);
             }
+
+            $this->notifyCashierStats($order, 'Yêu cầu hoàn tiền của đơn #' . $order->id . ' đã bị từ chối, số liệu thu ngân đã cập nhật.');
 
             DB::commit();
 
@@ -401,5 +404,17 @@ class AdminOrderController extends Controller
             'refunded' => 'Đơn hàng đã được hoàn tiền',
             default => 'Trạng thái đơn hàng đã được cập nhật',
         };
+    }
+
+    private function notifyCashierStats(Order $order, string $message): void
+    {
+        $recipientIds = Notification::recipientIdsForGroups(['admin', 'cashier']);
+
+        Notification::createForRecipients($recipientIds, [
+            'type' => 'cashier_stats_update',
+            'title' => 'Cập nhật dữ liệu thống kê',
+            'content' => $message,
+            'related_id' => $order->id,
+        ]);
     }
 }

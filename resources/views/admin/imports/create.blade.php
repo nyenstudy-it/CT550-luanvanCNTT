@@ -51,64 +51,91 @@
 
                 <h6>Danh sách sản phẩm nhập</h6>
 
-                <table class="table table-bordered align-middle" id="itemsTable">
-                    <thead>
-                        <tr>
-                            <th>Sản phẩm</th>
-                            <th>Biến thể</th>
-                            <th>Tồn hiện tại</th>
-                            <th>Giá bán hiện tại</th>
-                            <th>Số lượng</th>
-                            <th>Giá nhập</th>
-                            <th>Thành tiền</th>
-                            <th width="80"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>
-                                <input type="text" class="form-control search-input product-search mb-2"
-                                    placeholder="Tìm nhanh sản phẩm...">
-                                <select name="items[0][product_id]" class="form-select product-select" required>
-                                    <option value="">-- Chọn sản phẩm --</option>
-                                </select>
-                            </td>
-                            <td>
-                                <input type="text" class="form-control search-input variant-search mb-2"
-                                    placeholder="Tìm nhanh biến thể..." disabled>
-                                <select name="items[0][product_variant_id]" class="form-select variant-select" required>
-                                    <option value="">-- Chọn biến thể --</option>
-                                </select>
-                            </td>
-                            <td>
-                                <div class="meta-box stock-display">0</div>
-                            </td>
-                            <td>
-                                <div class="meta-box sale-price-display">0 đ</div>
-                            </td>
-                            <td>
-                                <input type="number" name="items[0][quantity]" class="form-control quantity-input" min="1"
-                                    required>
-                            </td>
-                            <td>
-                                <input type="number" name="items[0][unit_price]" class="form-control unit-price-input"
-                                    min="0" required>
-                                <div class="price-helper mt-2">
-                                    <button type="button" class="btn btn-link btn-sm p-0 latest-price-btn d-none">Dùng giá nhập gần
-                                        nhất</button>
-                                    <div class="latest-price-display text-muted small">Chưa có lịch sử nhập</div>
-                                    <div class="price-warning text-danger small d-none">Giá nhập đang cao hơn giá bán hiện tại.</div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="meta-box row-total-display">0 đ</div>
-                            </td>
-                            <td>
-                                <button type="button" class="btn btn-danger btn-sm remove-row">X</button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="table-responsive import-items-wrapper">
+                    <table class="table table-bordered align-middle import-items-table" id="itemsTable">
+                        <colgroup>
+                            <col class="col-product">
+                            <col class="col-variant">
+                            <col class="col-stock">
+                            <col class="col-sale-price">
+                            <col class="col-date">
+                            <col class="col-date">
+                            <col class="col-qty">
+                            <col class="col-unit-price">
+                            <col class="col-row-total">
+                            <col class="col-action">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>Sản phẩm</th>
+                                <th>Biến thể</th>
+                                <th>Tồn hiện tại</th>
+                                <th>Giá bán hiện tại</th>
+                                <th>NSX (tùy chọn)</th>
+                                <th>HSD (tùy chọn)</th>
+                                <th>Số lượng</th>
+                                <th>Giá nhập</th>
+                                <th>Thành tiền</th>
+                                <th width="80"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <input type="text" class="form-control search-input product-search mb-2"
+                                        placeholder="Tìm nhanh sản phẩm...">
+                                    <select name="items[0][product_id]" class="form-select product-select" required>
+                                        <option value="">-- Chọn sản phẩm --</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control search-input variant-search mb-2"
+                                        placeholder="Tìm nhanh biến thể..." disabled>
+                                    <select name="items[0][product_variant_id]" class="form-select variant-select" required>
+                                        <option value="">-- Chọn biến thể --</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <div class="meta-box stock-display">0</div>
+                                </td>
+                                <td>
+                                    <div class="meta-box sale-price-display">0 đ</div>
+                                </td>
+                                <td>
+                                    <input type="date" name="items[0][manufacture_date]" class="form-control">
+                                </td>
+                                <td>
+                                    <input type="date" name="items[0][expired_at]" class="form-control">
+                                </td>
+                                <td>
+                                    <input type="number" name="items[0][quantity]" class="form-control quantity-input"
+                                        min="1" required>
+                                </td>
+                                <td>
+                                    <input type="number" name="items[0][unit_price]" class="form-control unit-price-input"
+                                        min="0" required>
+                                    <div class="price-helper mt-2">
+                                        <button type="button" class="btn btn-link btn-sm p-0 latest-price-btn d-none">Dùng
+                                            giá
+                                            nhập gần
+                                            nhất</button>
+                                        {{-- <div class="latest-price-display text-muted small">Chưa có lịch sử nhập</div>
+                                        --}}
+                                        <div class="price-warning text-danger small d-none">Giá nhập đang cao hơn giá bán
+                                            hiện
+                                            tại.</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="meta-box row-total-display">0 đ</div>
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-danger btn-sm remove-row">X</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
                 <button type="button" class="btn btn-secondary btn-sm mb-3" id="addRow">
                     + Thêm dòng
@@ -219,6 +246,92 @@
             border-color: #dc3545;
             box-shadow: 0 0 0 0.15rem rgba(220, 53, 69, 0.12);
         }
+
+        .import-items-wrapper {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            background: #fff;
+            overflow: auto;
+        }
+
+        .import-items-table {
+            min-width: 1320px;
+            margin-bottom: 0;
+        }
+
+        .import-items-table thead th {
+            background: #f3f6fa;
+            color: #374151;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+            border-bottom: 2px solid #d9e2ec;
+            vertical-align: middle;
+            text-align: center;
+        }
+
+        .import-items-table tbody td {
+            background: #fff;
+            vertical-align: top;
+            padding: 12px 10px;
+        }
+
+        .import-items-table tbody tr:nth-child(even) td {
+            background: #fcfdff;
+        }
+
+        .import-items-table .meta-box {
+            min-height: 42px;
+            font-size: 13px;
+        }
+
+        .import-items-table .form-control,
+        .import-items-table .form-select {
+            min-height: 38px;
+            font-size: 14px;
+        }
+
+        .import-items-table .col-product {
+            width: 260px;
+        }
+
+        .import-items-table .col-variant {
+            width: 250px;
+        }
+
+        .import-items-table .col-stock {
+            width: 110px;
+        }
+
+        .import-items-table .col-sale-price {
+            width: 145px;
+        }
+
+        .import-items-table .col-date {
+            width: 140px;
+        }
+
+        .import-items-table .col-qty {
+            width: 100px;
+        }
+
+        .import-items-table .col-unit-price {
+            width: 210px;
+        }
+
+        .import-items-table .col-row-total {
+            width: 145px;
+        }
+
+        .import-items-table .col-action {
+            width: 78px;
+        }
+
+        .import-items-table .remove-row {
+            width: 100%;
+        }
     </style>
 
     <script>
@@ -254,12 +367,12 @@
 
             supplierProductsGrid.className = 'supplier-products-grid';
             supplierProductsGrid.innerHTML = products.map(product => `
-                    <div class="product-mini-card">
-                        <h6>${escapeHtml(product.name)}</h6>
-                        <div class="product-mini-meta"><span>Biến thể</span><strong>${product.variant_count}</strong></div>
-                        <div class="product-mini-meta"><span>Tồn hiện tại</span><strong>${product.total_stock}</strong></div>
-                    </div>
-                `).join('');
+                                <div class="product-mini-card">
+                                    <h6>${escapeHtml(product.name)}</h6>
+                                    <div class="product-mini-meta"><span>Biến thể</span><strong>${product.variant_count}</strong></div>
+                                    <div class="product-mini-meta"><span>Tồn hiện tại</span><strong>${product.total_stock}</strong></div>
+                                </div>
+                            `).join('');
             supplierProductCount.textContent = `${products.length} sản phẩm`;
         }
 
@@ -484,42 +597,48 @@
             const row = table.insertRow();
 
             row.innerHTML = `
-                <td>
-                    <input type="text" class="form-control search-input product-search mb-2" placeholder="Tìm nhanh sản phẩm...">
-                    <select name="items[${index}][product_id]" class="form-select product-select" required>
-                        <option value="">-- Chọn sản phẩm --</option>
-                    </select>
-                </td>
-                <td>
-                    <input type="text" class="form-control search-input variant-search mb-2" placeholder="Tìm nhanh biến thể..." disabled>
-                    <select name="items[${index}][product_variant_id]" class="form-select variant-select" required>
-                        <option value="">-- Chọn biến thể --</option>
-                    </select>
-                </td>
-                <td>
-                    <div class="meta-box stock-display">0</div>
-                </td>
-                <td>
-                    <div class="meta-box sale-price-display">0 đ</div>
-                </td>
-                <td>
-                    <input type="number" name="items[${index}][quantity]" class="form-control quantity-input" min="1" required>
-                </td>
-                <td>
-                    <input type="number" name="items[${index}][unit_price]" class="form-control unit-price-input" min="0" required>
-                    <div class="price-helper mt-2">
-                        <button type="button" class="btn btn-link btn-sm p-0 latest-price-btn d-none">Dùng giá nhập gần nhất</button>
-                        <div class="latest-price-display text-muted small">Chưa có lịch sử nhập</div>
-                        <div class="price-warning text-danger small d-none">Giá nhập đang cao hơn giá bán hiện tại.</div>
-                    </div>
-                </td>
-                <td>
-                    <div class="meta-box row-total-display">0 đ</div>
-                </td>
-                <td>
-                    <button type="button" class="btn btn-danger btn-sm remove-row">X</button>
-                </td>
-            `;
+                            <td>
+                                <input type="text" class="form-control search-input product-search mb-2" placeholder="Tìm nhanh sản phẩm...">
+                                <select name="items[${index}][product_id]" class="form-select product-select" required>
+                                    <option value="">-- Chọn sản phẩm --</option>
+                                </select>
+                            </td>
+                            <td>
+                                <input type="text" class="form-control search-input variant-search mb-2" placeholder="Tìm nhanh biến thể..." disabled>
+                                <select name="items[${index}][product_variant_id]" class="form-select variant-select" required>
+                                    <option value="">-- Chọn biến thể --</option>
+                                </select>
+                            </td>
+                            <td>
+                                <div class="meta-box stock-display">0</div>
+                            </td>
+                            <td>
+                                <div class="meta-box sale-price-display">0 đ</div>
+                            </td>
+                            <td>
+                                <input type="date" name="items[${index}][manufacture_date]" class="form-control">
+                            </td>
+                            <td>
+                                <input type="date" name="items[${index}][expired_at]" class="form-control">
+                            </td>
+                            <td>
+                                <input type="number" name="items[${index}][quantity]" class="form-control quantity-input" min="1" required>
+                            </td>
+                            <td>
+                                <input type="number" name="items[${index}][unit_price]" class="form-control unit-price-input" min="0" required>
+                                <div class="price-helper mt-2">
+                                    <button type="button" class="btn btn-link btn-sm p-0 latest-price-btn d-none">Dùng giá nhập gần nhất</button>
+                                    <div class="latest-price-display text-muted small">Chưa có lịch sử nhập</div>
+                                    <div class="price-warning text-danger small d-none">Giá nhập đang cao hơn giá bán hiện tại.</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="meta-box row-total-display">0 đ</div>
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-danger btn-sm remove-row">X</button>
+                            </td>
+                        `;
 
             // nếu đã chọn nhà phân phối thì load lại sản phẩm cho dòng mới
             if (currentProducts.length > 0) {

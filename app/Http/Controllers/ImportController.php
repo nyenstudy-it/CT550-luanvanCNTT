@@ -9,6 +9,7 @@ use App\Models\Inventory;
 use App\Models\Supplier;
 use App\Models\Product;
 use App\Models\Staff;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -65,6 +66,8 @@ class ImportController extends Controller
             'import_date' => 'required|date',
             'items' => 'required|array|min:1',
             'items.*.product_variant_id' => 'required|exists:product_variants,id',
+            'items.*.manufacture_date' => 'nullable|date',
+            'items.*.expired_at' => 'nullable|date',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_price' => 'required|numeric|min:0',
         ]);
@@ -76,8 +79,7 @@ class ImportController extends Controller
         }
 
         try {
-
-            DB::transaction(function () use ($request, $staff) {
+            $createdImportId = DB::transaction(function () use ($request, $staff) {
 
                 $import = Import::create([
                     'supplier_id' => $request->supplier_id,
@@ -89,6 +91,12 @@ class ImportController extends Controller
                 $total = 0;
 
                 foreach ($request->items as $item) {
+                    $manufactureDate = !empty($item['manufacture_date']) ? $item['manufacture_date'] : null;
+                    $expiredAt = !empty($item['expired_at']) ? $item['expired_at'] : null;
+
+                    if ($manufactureDate && $expiredAt && strtotime($expiredAt) < strtotime($manufactureDate)) {
+                        throw new \Exception('Hạn sử dụng phải lớn hơn hoặc bằng ngày sản xuất cho từng biến thể nhập.');
+                    }
 
                     $variant = ProductVariant::with('product')
                         ->findOrFail($item['product_variant_id']);
@@ -101,9 +109,16 @@ class ImportController extends Controller
                     ImportItem::create([
                         'import_id' => $import->id,
                         'product_variant_id' => $variant->id,
+                        'manufacture_date' => $manufactureDate,
+                        'expired_at' => $expiredAt,
                         'quantity' => $item['quantity'],
                         'remaining_quantity' => $item['quantity'], // FIFO
                         'unit_price' => $item['unit_price'],
+                    ]);
+
+                    $variant->update([
+                        'manufacture_date' => $manufactureDate,
+                        'expired_at' => $expiredAt,
                     ]);
 
                     // 🔥 CẬP NHẬT TỔNG TỒN
@@ -120,7 +135,22 @@ class ImportController extends Controller
                 $import->update([
                     'total_amount' => $total
                 ]);
+
+                return $import->id;
             });
+
+            $import = Import::with('supplier')->find($createdImportId);
+
+            if ($import) {
+                $recipientIds = Notification::recipientIdsForGroups(['admin', 'warehouse']);
+
+                Notification::createForRecipients($recipientIds, [
+                    'type' => 'new_import',
+                    'title' => 'Có phiếu nhập kho mới',
+                    'content' => 'Phiếu nhập #' . $import->id . ' từ nhà cung cấp ' . ($import->supplier->name ?? 'không xác định') . ' vừa được tạo.',
+                    'related_id' => $import->id,
+                ]);
+            }
 
             return redirect()
                 ->route('admin.imports.list')

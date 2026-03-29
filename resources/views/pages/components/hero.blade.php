@@ -29,12 +29,19 @@
                 <div class="hero__search">
                     <div class="hero__search__form" style="position: relative;">
                         <form action="{{ route('products.index') }}">
-                            <input type="text" id="search-input" placeholder="Bạn cần tìm gì?" autocomplete="off">
+                            <input type="text" id="search-input" name="keyword" placeholder="Bạn cần tìm gì?"
+                                autocomplete="off">
+                            <button type="button" id="voice-search-btn" class="voice-search-btn"
+                                title="Tìm kiếm bằng giọng nói">
+                                <i class="fa fa-microphone"></i>
+                            </button>
                             <button type="submit" class="site-btn">TÌM</button>
                         </form>
 
                         <!-- Dropdown gợi ý -->
                         <div id="search-results" class="search-results"></div>
+                        <!-- Trạng thái voice -->
+                        <div id="voice-status"></div>
                     </div>
 
                     <div class="hero__search__phone">
@@ -99,6 +106,13 @@
             border-bottom: 1px solid #f1f1f1;
         }
 
+        .search-item:visited,
+        .search-item:hover,
+        .search-item:focus {
+            color: #333;
+            text-decoration: none;
+        }
+
         .search-item:last-child {
             border-bottom: none;
         }
@@ -106,6 +120,14 @@
         /* Hover */
         .search-item:hover {
             background-color: #f1f1f1;
+        }
+
+        .search-item:hover .info .name {
+            color: #333;
+        }
+
+        .search-item:hover .info .price {
+            color: #777;
         }
 
         /* Ảnh sản phẩm */
@@ -132,6 +154,75 @@
             font-size: 13px;
             color: #777;
         }
+
+        /* Voice search button */
+        .hero__search__form form .voice-search-btn {
+            position: absolute;
+            right: 105px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            border: 1px solid #e7e7e7;
+            border-radius: 50%;
+            cursor: pointer;
+            color: #aaa;
+            font-size: 16px;
+            padding: 0;
+            z-index: 12;
+            transition: color 0.2s;
+            line-height: 1;
+        }
+
+        .hero__search__form form .voice-search-btn:hover {
+            color: #7fad39;
+        }
+
+        .hero__search__form form .voice-search-btn.listening {
+            color: #e53935;
+            animation: pulse-mic 1s infinite;
+        }
+
+        .hero__search__form form input {
+            padding-right: 150px;
+        }
+
+        .hero__search__form form .site-btn {
+            z-index: 11;
+        }
+
+        @keyframes pulse-mic {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        /* Thông báo trạng thái giọng nói */
+        #voice-status {
+            position: absolute;
+            top: calc(100% + 4px);
+            right: 0;
+            background: #333;
+            color: #fff;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 4px;
+            display: none;
+            white-space: nowrap;
+            z-index: 1001;
+        }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -139,6 +230,11 @@
             const results = document.getElementById('search-results');
             let timer;
 
+            if (!input || !results) {
+                return;
+            }
+
+            // ---- Live search khi gõ ----
             input.addEventListener('keyup', function () {
                 clearTimeout(timer);
                 const query = this.value.trim();
@@ -150,32 +246,7 @@
                 }
 
                 timer = setTimeout(() => {
-                    fetch(`/search-products?query=${encodeURIComponent(query)}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.length === 0) {
-                                results.innerHTML = '<div class="p-2 text-muted">Không có sản phẩm nào</div>';
-                                results.style.display = 'block';
-                                return;
-                            }
-
-                            results.innerHTML = data.map(p => `
-                        <a href="/products/${p.id}" class="search-item">
-                            <img src="${p.image ?? '/images/no-image.png'}" alt="${p.name}">
-                            <div class="info">
-                                <div class="name">${p.name}</div>
-                                <div class="price">
-                                    ${p.has_discount
-                                    ? `<span style="color:#d32f2f;font-weight:600;">${Number(p.final_price).toLocaleString()}₫</span> <small style="color:#777;"><del>${Number(p.price).toLocaleString()}₫</del></small>`
-                                    : `${Number(p.price).toLocaleString()}₫`
-                                }
-                                </div>
-                            </div>
-                        </a>
-                    `).join('');
-
-                            results.style.display = 'block';
-                        });
+                    fetchSuggestions(query);
                 }, 300);
             });
 
@@ -185,6 +256,139 @@
                     results.style.display = 'none';
                 }
             });
+
+            // ---- Hàm gọi API gợi ý ----
+            function fetchSuggestions(query) {
+                fetch(`/search-products?query=${encodeURIComponent(query)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.length === 0) {
+                            results.innerHTML = '<div class="p-2 text-muted">Không có sản phẩm nào</div>';
+                            results.style.display = 'block';
+                            return;
+                        }
+
+                        results.innerHTML = data.map(p => `
+                            <a href="/products/${p.id}" class="search-item">
+                                <img src="${p.image ?? '/frontend/images/product/product-1.jpg'}" alt="${p.name}">
+                                <div class="info">
+                                    <div class="name">${p.name}</div>
+                                    <div class="price">
+                                        ${p.has_discount
+                                ? `<span style="color:#d32f2f;font-weight:600;">${Number(p.final_price).toLocaleString()}₫</span> <small style="color:#777;"><del>${Number(p.price).toLocaleString()}₫</del></small>`
+                                : `${Number(p.price).toLocaleString()}₫`
+                            }
+                                    </div>
+                                </div>
+                            </a>
+                        `).join('');
+
+                        results.style.display = 'block';
+                    });
+            }
+
+            // ---- Voice Search ----
+            const voiceBtn = document.getElementById('voice-search-btn');
+            const voiceStatus = document.getElementById('voice-status');
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const isSecureVoiceContext = location.protocol === 'https:' ||
+                location.hostname === 'localhost' ||
+                location.hostname === '127.0.0.1';
+
+            if (!SpeechRecognition || !voiceBtn || !voiceStatus) {
+                // Ẩn nút nếu trình duyệt không hỗ trợ
+                if (voiceBtn) voiceBtn.style.display = 'none';
+            } else if (!isSecureVoiceContext) {
+                voiceBtn.addEventListener('click', function () {
+                    voiceStatus.textContent = 'Voice search chỉ hoạt động trên HTTPS hoặc localhost.';
+                    voiceStatus.style.display = 'block';
+                    setTimeout(() => {
+                        voiceStatus.style.display = 'none';
+                    }, 3500);
+                });
+            } else {
+                const recognition = new SpeechRecognition();
+                recognition.lang = 'vi-VN';
+                recognition.continuous = false;
+                recognition.interimResults = true;
+                let isListening = false;
+                let finalTranscript = '';
+
+                voiceBtn.addEventListener('click', function () {
+                    if (isListening) {
+                        recognition.stop();
+                        return;
+                    }
+                    try {
+                        recognition.start();
+                    } catch (error) {
+                        showStatus('Không thể khởi động microphone. Vui lòng thử lại.', 3000);
+                    }
+                });
+
+                recognition.addEventListener('start', function () {
+                    isListening = true;
+                    finalTranscript = input.value ? `${input.value.trim()} ` : '';
+                    voiceBtn.classList.add('listening');
+                    voiceBtn.querySelector('i').className = 'fa fa-microphone';
+                    showStatus('Đang nghe…');
+                });
+
+                recognition.addEventListener('result', function (e) {
+                    let interimTranscript = '';
+
+                    for (let i = e.resultIndex; i < e.results.length; i++) {
+                        const chunk = e.results[i][0].transcript;
+                        if (e.results[i].isFinal) {
+                            finalTranscript += `${chunk} `;
+                        } else {
+                            interimTranscript += chunk;
+                        }
+                    }
+
+                    const liveText = `${finalTranscript}${interimTranscript}`.replace(/\s+/g, ' ').trim();
+                    input.value = liveText;
+
+                    if (liveText.length > 0) {
+                        fetchSuggestions(liveText);
+                    }
+                });
+
+                recognition.addEventListener('end', function () {
+                    isListening = false;
+                    voiceBtn.classList.remove('listening');
+                    hideStatus();
+
+                    const query = input.value.trim();
+                    if (query.length > 0) {
+                        fetchSuggestions(query);
+                    }
+                });
+
+                recognition.addEventListener('error', function (e) {
+                    isListening = false;
+                    voiceBtn.classList.remove('listening');
+                    const messages = {
+                        'not-allowed': 'Vui lòng cấp quyền microphone.',
+                        'no-speech': 'Không nghe thấy giọng nói.',
+                        'network': 'Lỗi mạng, không thể nhận diện giọng.',
+                    };
+                    showStatus(messages[e.error] || 'Lỗi nhận diện giọng nói.', 3000);
+                });
+
+                function showStatus(msg, duration) {
+                    voiceStatus.textContent = msg;
+                    voiceStatus.style.display = 'block';
+                    if (duration) {
+                        setTimeout(() => { voiceStatus.style.display = 'none'; }, duration);
+                    }
+                }
+
+                function hideStatus() {
+                    voiceStatus.style.display = 'none';
+                }
+            }
         });
     </script>
 
