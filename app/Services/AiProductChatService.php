@@ -33,8 +33,7 @@ class AiProductChatService
         'mot',
         'nhieu',
         'loai',
-        'san',
-        'pham',
+        // REMOVED: 'san', 'pham' - important for product names
         'hang',
         'tot',
         'gia',
@@ -81,6 +80,32 @@ class AiProductChatService
             'filters' => $filters,
             'suggested_questions' => $suggestedQuestions,
         ];
+    }
+
+    /**
+     * Detect if user asked for exact product name match
+     * Example: "Trà oolong premium" → match with product "Trà oolong premium"
+     */
+    private function hasExactProductNameMatch(string $message, Product $product): bool
+    {
+        $normalizedMessage = $this->normalizeText($message);
+        $normalizedProductName = $this->normalizeText($product->name);
+
+        // Exact full match
+        if ($normalizedMessage === $normalizedProductName) {
+            return true;
+        }
+
+        // Check if message contains full product name as substring
+        if (str_contains($normalizedMessage, $normalizedProductName)) {
+            return true;
+        }
+
+        // Check if normalized message exactly matches or closely matches (within 80% similarity)
+        $similarity = 0;
+        similar_text($normalizedMessage, $normalizedProductName, $similarity);
+
+        return $similarity >= 80;
     }
 
     private function extractFilters(string $message): array
@@ -143,10 +168,11 @@ class AiProductChatService
         if (!empty($filters['category']) && $this->isSpecificCategory((string) $filters['category'])) {
             $rawCategory = trim((string) $filters['category']);
             $category = $this->normalizeText($rawCategory);
-            $query->whereHas('category', function ($builder) use ($category, $rawCategory) {
-                $builder->whereRaw('LOWER(name) LIKE ?', ['%' . $category . '%'])
-                    ->orWhere('name', 'like', '%' . $category . '%')
-                    ->orWhere('name', 'like', '%' . $rawCategory . '%');
+            $escapedCategory = addcslashes($category, '\\%_');
+            $escapedRawCategory = addcslashes($rawCategory, '\\%_');
+            $query->whereHas('category', function ($builder) use ($escapedCategory, $escapedRawCategory) {
+                $builder->where('name', 'like', '%' . $escapedCategory . '%')
+                    ->orWhere('name', 'like', '%' . $escapedRawCategory . '%');
             });
             $hasCategoryConstraint = true;
         }
@@ -667,11 +693,38 @@ class AiProductChatService
         return array_values(array_filter($parts));
     }
 
+    /**
+     * Normalize Vietnamese text to ASCII for comparison
+     * This is used for token matching
+     */
     private function normalizeText(string $text): string
     {
         $text = mb_strtolower(trim($text));
         $ascii = Str::ascii($text);
         return preg_replace('/\s+/u', ' ', $ascii) ?? $ascii;
+    }
+
+    /**
+     * Preserve Vietnamese diacritics for exact matching
+     * Useful for detecting exact product names without losing Vietnamese marks
+     */
+    private function normalizeTextPreserveVietnamese(string $text): string
+    {
+        return mb_strtolower(trim($text));
+    }
+
+    /**
+     * Check if message contains exact Vietnamese product name (with diacritics)
+     */
+    private function containsVietnameseProductName(string $message, string $productName): bool
+    {
+        $msgNorm = $this->normalizeTextPreserveVietnamese($message);
+        $prodNorm = $this->normalizeTextPreserveVietnamese($productName);
+
+        // Exact match or substring match
+        return str_contains($msgNorm, $prodNorm) ||
+            str_contains($message, $productName) ||
+            similar_text($msgNorm, $prodNorm) / max(mb_strlen($msgNorm), mb_strlen($prodNorm)) >= 0.85;
     }
 
     private function analyzeProductRelevance(Product $product, array $tokens, array $filters, ?float $price, int $stock): array
@@ -694,6 +747,16 @@ class AiProductChatService
         $score = 0;
         $matchedTokens = [];
         $reasons = [];
+
+        // BONUS: Check for exact product name match (highest priority)
+        $hasExactNameMatch = false;
+        $fullProductName = $this->normalizeText((string) $product->name);
+        foreach ($tokens as $token) {
+            if ($this->containsWholeWord($fullProductName, $token)) {
+                $hasExactNameMatch = true;
+                break;
+            }
+        }
 
         foreach ($tokens as $token) {
             if ($token === '') {
@@ -756,6 +819,12 @@ class AiProductChatService
             $score -= 14;
         }
 
+        // BONUS: Exact product name match gets extreme priority
+        if ($hasExactNameMatch) {
+            $score += 50; // Very high boost for exact name match
+            $reasons = array_merge(['🎯 Khớp chính xác tên sản phẩm!'], $reasons);
+        }
+
         return [
             'score' => $score,
             'matched_token_count' => count(array_unique($matchedTokens)),
@@ -775,24 +844,62 @@ class AiProductChatService
     private function buildSuggestedQuestions(array $filters, array $products): array
     {
         $category = $filters['category'] ?? null;
+        $priceMin = $filters['price_min'] ?? null;
         $priceMax = $filters['price_max'] ?? null;
+        $keywords = $filters['keywords'] ?? [];
+        $needs = $filters['needs'] ?? [];
+
         $categoryText = $category ? (string) $category : 'sản phẩm OCOP';
 
-        $priceText = $priceMax
-            ? number_format((float) $priceMax, 0, ',', '.') . 'đ'
-            : '500.000đ';
-
-        $questions = [
-            'Có ' . $categoryText . ' nào phù hợp để làm quà biếu không?',
-            'Gợi ý giúp mình ' . $categoryText . ' dưới ' . $priceText . '.',
-            'Sản phẩm nào cùng loại đang còn hàng và được chọn mua nhiều?',
-        ];
-
-        if (!empty($products)) {
-            $firstName = (string) ($products[0]['name'] ?? 'sản phẩm này');
-            $questions[2] = 'So sánh ' . $firstName . ' với 2 lựa chọn tương tự giúp mình.';
+        // Xây dựng mô tả khoảng giá từ price_min và price_max
+        $priceRangeText = '';
+        if ($priceMin && $priceMax) {
+            $priceRangeText = 'từ ' . number_format((float) $priceMin, 0, ',', '.') . 'đ đến ' . number_format((float) $priceMax, 0, ',', '.') . 'đ';
+        } elseif ($priceMin) {
+            $priceRangeText = 'từ ' . number_format((float) $priceMin, 0, ',', '.') . 'đ trở lên';
+        } elseif ($priceMax) {
+            $priceRangeText = 'dưới ' . number_format((float) $priceMax, 0, ',', '.') . 'đ';
         }
 
-        return array_slice(array_values(array_unique($questions)), 0, 3);
+        $questions = [];
+
+        // Q1: Gợi ý lấy làm quà biếu (hoặc phù hợp với category)
+        if (!empty($categoryText)) {
+            $questions[] = 'Có ' . $categoryText . ' nào phù hợp để làm quà biếu không?';
+        }
+
+        // Q2: Gợi ý theo khoảng giá hoặc danh mục
+        if (!empty($priceRangeText)) {
+            $questions[] = 'Gợi ý giúp mình ' . $categoryText . ' ' . $priceRangeText . '.';
+        } elseif (!empty($categoryText)) {
+            $questions[] = 'Gợi ý những ' . $categoryText . ' được mua nhiều nhất.';
+        }
+
+        // Q3: Gợi ý thông minh dựa trên kết quả tìm kiếm
+        if (count($products) > 1) {
+            // Nhiều sản phẩm: gợi ý so sánh
+            $firstName = (string) ($products[0]['name'] ?? 'sản phẩm này');
+            $questions[] = 'So sánh ' . $firstName . ' với những lựa chọn khác giúp mình.';
+        } elseif (count($products) === 1) {
+            // Chỉ 1 sản phẩm: gợi ý tìm thêm hoặc lọc khác
+            if (!empty($keywords)) {
+                $keywordText = implode(', ', array_slice($keywords, 0, 2));
+                $questions[] = 'Có sản phẩm ' . $keywordText . ' khác không?';
+            } else {
+                $questions[] = 'Có ' . $categoryText . ' tương tự nào khác không?';
+            }
+        } else {
+            // Không tìm thấy: gợi ý làm rõ nhu cầu
+            if (!empty($needs)) {
+                $needText = (string) ($needs[0] ?? 'sức khỏe');
+                $questions[] = 'Bạn tìm sản phẩm để ' . $needText . ' phải không? Có thể tôi giúp gì thêm?';
+            } else {
+                $questions[] = 'Bạn có thể mô tả thêm nhu cầu hoặc tìm kiếm khác không?';
+            }
+        }
+
+        // Lọc bỏ trùng lặp và trả về 3 câu hỏi hàng đầu
+        $unique = array_unique(array_filter($questions));
+        return array_values(array_slice($unique, 0, 3));
     }
 }

@@ -20,7 +20,8 @@ class DiscountController extends Controller
         $query = Discount::with('products:id,name');
 
         if ($request->filled('code')) {
-            $query->where('code', 'like', '%' . $request->code . '%');
+            $escaped = addcslashes($request->code, '\\%_');
+            $query->where('code', 'like', '%' . $escaped . '%');
         }
 
         if ($request->filled('type')) {
@@ -35,6 +36,10 @@ class DiscountController extends Controller
             if ($request->scope === 'all') {
                 $query->whereDoesntHave('products');
             }
+        }
+
+        if ($request->filled('audience')) {
+            $query->where('audience', $request->audience);
         }
 
         if ($request->filled('status')) {
@@ -94,6 +99,8 @@ class DiscountController extends Controller
             'code' => 'required|string|max:50|unique:discounts,code',
             'type' => ['required', Rule::in(['percent', 'fixed'])],
             'value' => 'required|numeric|min:0',
+            'max_discount' => 'nullable|numeric|min:0',
+            'audience' => ['required', Rule::in(array_keys(Discount::audienceOptions()))],
             'usage_limit' => 'nullable|integer|min:1',
             'min_order_value' => 'nullable|numeric|min:0',
             'start_at' => 'nullable|date',
@@ -107,6 +114,8 @@ class DiscountController extends Controller
             'code' => $request->code,
             'type' => $request->type,
             'value' => $request->value,
+            'max_discount' => $request->type === 'percent' ? $request->max_discount : null,
+            'audience' => $request->audience,
             'usage_limit' => $request->usage_limit,
             'min_order_value' => $request->min_order_value,
             'start_at' => $request->start_at,
@@ -135,6 +144,8 @@ class DiscountController extends Controller
             'code' => ['required', 'string', 'max:50', Rule::unique('discounts', 'code')->ignore($discount->id)],
             'type' => ['required', Rule::in(['percent', 'fixed'])],
             'value' => 'required|numeric|min:0',
+            'max_discount' => 'nullable|numeric|min:0',
+            'audience' => ['required', Rule::in(array_keys(Discount::audienceOptions()))],
             'usage_limit' => 'nullable|integer|min:1',
             'min_order_value' => 'nullable|numeric|min:0',
             'start_at' => 'nullable|date',
@@ -149,6 +160,8 @@ class DiscountController extends Controller
             'code' => $request->code,
             'type' => $request->type,
             'value' => $request->value,
+            'max_discount' => $request->type === 'percent' ? $request->max_discount : null,
+            'audience' => $request->audience,
             'usage_limit' => $request->usage_limit,
             'used_count' => $request->used_count ?? $discount->used_count,
             'min_order_value' => $request->min_order_value,
@@ -177,6 +190,11 @@ class DiscountController extends Controller
     public function customerIndex()
     {
         $customerId = Auth::id();
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        $completedOrdersCount = $user
+            ? $user->orders()->where('status', 'completed')->count()
+            : null;
 
         $now = Carbon::now();
 
@@ -186,7 +204,9 @@ class DiscountController extends Controller
         }])
             ->whereDoesntHave('products')
             ->orderByDesc('id')
-            ->get();
+            ->get()
+            ->filter(fn(Discount $discount) => $discount->isEligibleForCompletedOrdersCount($completedOrdersCount))
+            ->values();
 
         return view('pages.my-discounts', compact('discounts', 'now'));
     }

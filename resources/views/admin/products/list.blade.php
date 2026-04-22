@@ -39,7 +39,7 @@
                         </div>
 
                         <div class="col-md-2">
-                            <label class="form-label">Nhà cung cấp</label>
+                            <label class="form-label">Nhà phân phối</label>
                             <select name="supplier_id" class="form-select">
                                 <option value="">-- Tất cả --</option>
                                 @foreach($suppliers as $supplier)
@@ -94,7 +94,7 @@
                                     <th width="80">Ảnh</th>
                                     <th>Tên sản phẩm</th>
                                     <th>Danh mục</th>
-                                    <th>Nhà cung cấp</th>
+                                    <th>Nhà phân phối</th>
                                     <th>Giá</th>
                                     {{-- <th>OCOP</th> --}}
                                     <th>Trạng thái</th>

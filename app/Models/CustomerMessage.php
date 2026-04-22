@@ -21,21 +21,23 @@ class CustomerMessage extends Model
         'updated_at' => 'datetime',
     ];
 
-    // Khách hàng gửi tin nhắn
+    protected $hidden = [
+        'updated_at',
+        'product_id',
+    ];
+
     public function customer()
     {
         return $this->belongsTo(User::class, 'customer_id');
     }
 
-    // Nhân viên trả lời
     public function staff()
     {
-        return $this->belongsTo(User::class, 'staff_id');
+        return $this->belongsTo(User::class, 'staff_id')->select(['id', 'name']);
     }
 
-    // Sản phẩm được hỏi
     public function product()
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Product::class)->select(['id', 'name']);
     }
 }

@@ -14,9 +14,12 @@ use App\Models\OrderCancellation;
 use App\Models\Notification;
 use App\Models\Review;
 use App\Models\User;
+use App\Services\OrderEmailService;
 
 class OrderController extends Controller
 {
+    public function __construct(private OrderEmailService $orderEmailService) {}
+
     public function myOrders(Request $request)
     {
         $customer = Auth::user()->customer;
@@ -26,11 +29,12 @@ class OrderController extends Controller
             'items.variant.images',
             'items.variant.product.images',
         ])
-            ->where('customer_id', $customer->id)
+            ->where('customer_id', $customer->user_id)
             ->latest();
 
         $reviewedProductIds = Review::query()
-            ->where('customer_id', $customer->id)
+            ->where('customer_id', $customer->user_id)
+            ->whereIn('status', ['pending', 'approved'])
             ->pluck('product_id')
             ->unique()
             ->values()
@@ -88,9 +92,10 @@ class OrderController extends Controller
             'items.variant.product.images',
             'cancellation',
             'returns.images',
-            'payment'
+            'payment',
+            'customer'
         ])
-            ->where('customer_id', $customer->id)
+            ->where('customer_id', $customer->user_id)
             ->findOrFail($id);
 
         $orderHistoryNotifications = Notification::where('user_id', $customer->user_id)
@@ -118,8 +123,9 @@ class OrderController extends Controller
         ]);
 
         $order = Order::with(['items', 'payment'])
-            ->where('customer_id', $customer->id)
+            ->where('customer_id', $customer->user_id)
             ->findOrFail($id);
+        $oldStatus = (string) $order->status;
 
         if (!in_array($order->status, ['pending'])) {
             return back()->with('error', 'Không thể huỷ đơn này');
@@ -134,56 +140,91 @@ class OrderController extends Controller
                 && in_array(strtolower($order->payment->method), ['momo', 'vnpay']);
 
             if (!$isPaidOnline) {
-                // Trả lại số lượng tồn kho theo batch
                 foreach ($order->items as $item) {
-                    $batches = is_string($item->batch_details)
+                    $batchDetails = is_string($item->batch_details)
                         ? json_decode($item->batch_details, true) ?? []
                         : $item->batch_details;
 
-                    if (!is_array($batches)) continue;
+                    if (!$batchDetails) continue;
+
+                    // Hỗ trợ dữ liệu `batch_details` ở cả định dạng mới và cũ:
+                    // - Mới: mảng các phần tử `{ batch_id: ImportItem.id, quantity, ... }`
+                    // - Cũ: object đơn `{ import_id: Import.id, ... }`
+
+                    $batches = [];
+                    if (is_array($batchDetails)) {
+                        if (isset($batchDetails[0]) && is_array($batchDetails[0])) {
+                            $batches = $batchDetails;
+                        } elseif (isset($batchDetails['batch_id']) || isset($batchDetails['import_id'])) {
+                            $batches = [$batchDetails];
+                        }
+                    }
 
                     foreach ($batches as $batch) {
-                        if (!isset($batch['batch_id'], $batch['quantity'])) continue;
+                        // Hỗ trợ cả `batch_id` (mới) và `import_id` (cũ)
+                        $batchId = $batch['batch_id'] ?? null;
+                        $importId = $batch['import_id'] ?? null;
+                        $quantity = $batch['quantity'] ?? $item->quantity ?? null;
 
-                        $importItem = ImportItem::find($batch['batch_id']);
+                        if (!$quantity) continue;
+
+                        $importItem = null;
+
+                        if ($batchId) {
+                            $importItem = ImportItem::find($batchId);
+                        } elseif ($importId) {
+                            $importItem = ImportItem::where('import_id', $importId)
+                                ->where('product_variant_id', $item->product_variant_id)
+                                ->first();
+                        }
+
                         if ($importItem) {
-                            $importItem->increment('remaining_quantity', $batch['quantity']);
+                            $importItem->increment('remaining_quantity', $quantity);
                             Inventory::where('product_variant_id', $importItem->product_variant_id)
-                                ->increment('quantity', $batch['quantity']);
+                                ->increment('quantity', $quantity);
                         }
                     }
                 }
 
                 $order->update(['status' => 'cancelled']);
-                $exists = Notification::where('type', 'order_cancel')
-                    ->where('related_id', $order->id)
-                    ->where('user_id', $order->customer->user_id)
-                    ->exists();
 
-                if (!$exists) {
-                    Notification::create([
-                        'user_id' => $order->customer->user_id,
+                Notification::firstOrCreate(
+                    [
                         'type' => 'order_cancel',
+                        'related_id' => $order->id,
+                        'user_id' => $order->customer->user_id
+                    ],
+                    [
                         'title' => 'Đơn hàng bị hủy',
                         'content' => 'Đơn #' . $order->id . ' đã bị bạn hủy',
-                        'related_id' => $order->id,
                         'is_read' => false,
-                    ]);
-                }
+                    ]
+                );
             } else {
                 $order->update([
                     'previous_status' => $order->status,
                     'status' => 'refund_requested'
                 ]);
 
-                Notification::create([
-                    'user_id' => Auth::id(),
-                    'type' => 'refund_request',
-                    'title' => 'Yêu cầu hoàn tiền',
-                    'content' => 'Đơn #' . $order->id . ' yêu cầu hoàn tiền',
-                    'related_id' => $order->id,
-                    'is_read' => false,
+                Notification::firstOrCreate(
+                    [
+                        'type' => 'refund_request',
+                        'related_id' => $order->id,
+                        'user_id' => $order->customer->user_id,
+                    ],
+                    [
+                        'title' => 'Yêu cầu hoàn hàng',
+                        'content' => 'Đơn #' . $order->id . ' yêu cầu hoàn hàng',
+                        'is_read' => false,
+                    ]
+                );
 
+                $recipientIds = Notification::recipientIdsForGroups(['admin', 'order_staff', 'warehouse', 'cashier']);
+                Notification::createForRecipients($recipientIds, [
+                    'type' => 'refund_request',
+                    'title' => 'Có yêu cầu hoàn hàng mới',
+                    'content' => 'Đơn #' . $order->id . ' đã hủy thanh toán online và cần xử lý hoàn hàng.',
+                    'related_id' => $order->id,
                 ]);
             }
 
@@ -197,10 +238,16 @@ class OrderController extends Controller
 
             DB::commit();
 
+            $this->orderEmailService->sendOrderStatusChangedEmail(
+                (int) $order->id,
+                $oldStatus,
+                (string) $order->status
+            );
+
             return redirect()
                 ->route('orders.my')
                 ->with('success', $isPaidOnline
-                    ? 'Đơn hàng đã được hủy, chờ xử lý hoàn tiền'
+                    ? 'Đơn hàng đã được hủy, chờ xử lý hoàn hàng'
                     : 'Đã huỷ đơn hàng');
         } catch (\Exception $e) {
 
@@ -212,52 +259,55 @@ class OrderController extends Controller
 
     public function success($id)
     {
-        $customer = Auth::user()->customer;
-        $order = Order::where('customer_id', $customer->id)->findOrFail($id);
-        $exists = Notification::where('type', 'order_success')
-            ->where('related_id', $order->id)
-            ->where('user_id', $order->customer->user_id)
-            ->exists();
+        try {
+            $customer = Auth::user()->customer;
 
-        if (!$exists) {
-            Notification::create([
-                'user_id' => $order->customer->user_id,
-                'type' => 'order_success',
-                'title' => 'Đặt hàng thành công',
-                'content' => 'Đơn #' . $order->id . ' đã được tạo',
+            $order = Order::where('customer_id', $customer->user_id)->findOrFail($id);
+
+            Notification::firstOrCreate(
+                [
+                    'type' => 'order_success',
+                    'related_id' => $order->id,
+                    'user_id' => $order->customer->user_id
+                ],
+                [
+                    'title' => 'Đặt hàng thành công',
+                    'content' => 'Đơn #' . $order->id . ' đã được tạo',
+                    'is_read' => false,
+                ]
+            );
+
+            $newOrderRecipients = Notification::recipientIdsForGroups(['admin', 'order_staff']);
+            Notification::createForRecipients($newOrderRecipients, [
+                'type' => 'new_order',
+                'title' => 'Có đơn hàng mới',
+                'content' => 'Đơn #' . $order->id . ' vừa được tạo',
                 'related_id' => $order->id,
-                'is_read' => false,
-
             ]);
+
+            $cashierRecipients = Notification::recipientIdsForGroups(['admin', 'cashier']);
+            Notification::createForRecipients($cashierRecipients, [
+                'type' => 'cashier_stats_update',
+                'title' => 'Cập nhật dữ liệu thống kê',
+                'content' => 'Đơn #' . $order->id . ' vừa phát sinh và đã cập nhật số liệu bán hàng.',
+                'related_id' => $order->id,
+            ]);
+
+            return redirect()->route('orders.detail', $order->id)
+                ->with('order_success', $order->id)
+                ->with('success', 'Đặt hàng thành công');
+        } catch (\Exception $e) {
+            throw $e;
         }
-
-        $newOrderRecipients = Notification::recipientIdsForGroups(['admin', 'order_staff']);
-        Notification::createForRecipients($newOrderRecipients, [
-            'type' => 'new_order',
-            'title' => 'Có đơn hàng mới',
-            'content' => 'Đơn #' . $order->id . ' vừa được tạo',
-            'related_id' => $order->id,
-        ]);
-
-        $cashierRecipients = Notification::recipientIdsForGroups(['admin', 'cashier']);
-        Notification::createForRecipients($cashierRecipients, [
-            'type' => 'cashier_stats_update',
-            'title' => 'Cập nhật dữ liệu thống kê',
-            'content' => 'Đơn #' . $order->id . ' vừa phát sinh và đã cập nhật số liệu bán hàng.',
-            'related_id' => $order->id,
-        ]);
-
-
-        return redirect()->route('pages.home')
-            ->with('order_success', $order->id);
     }
 
     public function confirmReceived($id)
     {
         $customer = Auth::user()->customer;
 
-        $order = Order::where('customer_id', $customer->id)
+        $order = Order::where('customer_id', $customer->user_id)
             ->findOrFail($id);
+        $oldStatus = (string) $order->status;
 
         if ($order->status == 'shipping') {
 
@@ -273,41 +323,40 @@ class OrderController extends Controller
                 'received_at' => now(),
                 'previous_status' => null
             ]);
-            $exists = Notification::where('type', 'order_completed')
-                ->where('related_id', $order->id)
-                ->where('user_id', $order->customer->user_id)
-                ->exists();
-
-            if (!$exists) {
-                Notification::create([
-                    'user_id' => $order->customer->user_id,
+            Notification::firstOrCreate(
+                [
                     'type' => 'order_completed',
+                    'related_id' => $order->id,
+                    'user_id' => $order->customer->user_id
+                ],
+                [
                     'title' => 'Đơn hoàn thành',
                     'content' => 'Đơn #' . $order->id . ' đã được nhận',
-                    'related_id' => $order->id,
                     'is_read' => false,
-
-                ]);
-            }
+                ]
+            );
 
             $admins = User::where('role', 'admin')->get();
             foreach ($admins as $admin) {
-                $existsAdmin = Notification::where('type', 'order_completed')
-                    ->where('related_id', $order->id)
-                    ->where('user_id', $admin->id)
-                    ->exists();
-
-                if (!$existsAdmin) {
-                    Notification::create([
-                        'user_id' => $admin->id,
+                Notification::firstOrCreate(
+                    [
                         'type' => 'order_completed',
+                        'related_id' => $order->id,
+                        'user_id' => $admin->id
+                    ],
+                    [
                         'title' => 'Khách đã nhận hàng',
                         'content' => 'Khách đã xác nhận nhận đơn #' . $order->id,
-                        'related_id' => $order->id,
                         'is_read' => false,
-                    ]);
-                }
+                    ]
+                );
             }
+
+            $this->orderEmailService->sendOrderStatusChangedEmail(
+                (int) $order->id,
+                $oldStatus,
+                (string) $order->status
+            );
         }
 
         return back()->with('success', 'Cảm ơn bạn đã xác nhận nhận hàng!');
@@ -317,11 +366,13 @@ class OrderController extends Controller
     {
         $customer = Auth::user()->customer;
 
-        $order = Order::where('customer_id', $customer->id)
+        $order = Order::where('customer_id', $customer->user_id)
             ->findOrFail($id);
+        $oldStatus = (string) $order->status;
 
         $request->validate([
-            'reason' => 'required|string|max:255',
+            // Keep allowed return reason codes in-sync with frontend modal and model mappings
+            'reason' => 'required|string|in:wrong_product,product_defect,other,defective,changed_mind,change_mind',
             'description' => 'nullable|string',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
@@ -352,46 +403,81 @@ class OrderController extends Controller
                 'status' => 'refund_requested'
             ]);
 
-            $exists = Notification::where('type', 'refund_request')
-                ->where('related_id', $order->id)
-                ->where('user_id', $order->customer->user_id)
-                ->exists();
-
-            if (!$exists) {
-                Notification::create([
-                    'user_id' => $order->customer->user_id,
+            Notification::firstOrCreate(
+                [
                     'type' => 'refund_request',
-                    'title' => 'Yêu cầu hoàn tiền',
-                    'content' => 'Đơn #' . $order->id . ' yêu cầu hoàn tiền',
                     'related_id' => $order->id,
+                    'user_id' => $order->customer->user_id
+                ],
+                [
+                    'title' => 'Yêu cầu hoàn hàng',
+                    'content' => 'Đơn #' . $order->id . ' yêu cầu hoàn hàng',
                     'is_read' => false,
-                ]);
-            }
+                ]
+            );
 
             $admins = User::where('role', 'admin')->get();
             foreach ($admins as $admin) {
-                $existsAdmin = Notification::where('type', 'refund_request')
-                    ->where('related_id', $order->id)
-                    ->where('user_id', $admin->id)
-                    ->exists();
-
-                if (!$existsAdmin) {
-                    Notification::create([
-                        'user_id' => $admin->id,
+                Notification::firstOrCreate(
+                    [
                         'type' => 'refund_request',
-                        'title' => 'Có yêu cầu hoàn trả hàng',
-                        'content' => 'Khách gửi yêu cầu hoàn trả/hoàn tiền cho đơn #' . $order->id,
                         'related_id' => $order->id,
+                        'user_id' => $admin->id
+                    ],
+                    [
+                        'title' => 'Có yêu cầu hoàn trả hàng',
+                        'content' => 'Khách gửi yêu cầu hoàn hàng cho đơn #' . $order->id,
                         'is_read' => false,
-                    ]);
-                }
+                    ]
+                );
             }
 
             DB::commit();
-            return back()->with('success', 'Đã gửi yêu cầu hoàn tiền');
+
+            $this->orderEmailService->sendOrderStatusChangedEmail(
+                (int) $order->id,
+                $oldStatus,
+                (string) $order->status
+            );
+
+            return back()->with('success', 'Đã gửi yêu cầu hoàn hàng');
         } catch (\Exception $e) {
             DB::rollback();
             return back()->with('error', $e->getMessage());
+        }
+    }
+
+    // Khách xác nhận đã gửi hàng hoàn cho shipper.
+    public function markReturnGivenToShipper(Request $request, $returnId)
+    {
+        $return = \App\Models\OrderReturn::findOrFail($returnId);
+        $order = $return->order;
+
+        // Verify this is the customer's order
+        if ($order->customer_id !== Auth::user()->customer->user_id) {
+            return back()->with('error', 'Không có quyền truy cập');
+        }
+
+        if ($return->status !== 'approved') {
+            return back()->with('error', 'Trạng thái không hợp lệ');
+        }
+
+        try {
+            $return->update([
+                'status' => 'given_to_shipper'
+            ]);
+
+            $recipientIds = Notification::recipientIdsForGroups(['admin', 'warehouse', 'order_staff']);
+            Notification::createForRecipients($recipientIds, [
+                'type' => 'return_shipped',
+                'title' => 'Khách hàng đã gửi hàng hoàn',
+                'content' => 'Đơn #' . $order->id . ' - Khách hàng đã giao hàng cho shipper, chờ nhận hàng.',
+                'related_id' => $order->id,
+            ]);
+
+            return back()->with('success', 'Đã xác nhận, chúng tôi sẽ theo dõi đơn hoàn của bạn');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Lỗi: ' . $e->getMessage());
         }
     }
 }

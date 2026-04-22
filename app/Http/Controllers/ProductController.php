@@ -30,7 +30,7 @@ class ProductController extends Controller
         ])->withCount('variants');
 
         if ($request->filled('name')) {
-            $query->where('name', 'like', '%' . $request->name . '%');
+            $query->where('name', 'like', '%' . addcslashes($request->name, '\\%_') . '%');
         }
 
         if ($request->filled('category_id')) {
@@ -199,6 +199,13 @@ class ProductController extends Controller
             'variants.inventory',
             'variants.images',
             'variants.primaryImage',
+            'variants.importItems' => function ($query) {
+                $query->where('remaining_quantity', '>', 0)
+                    ->orderByRaw('CASE WHEN expired_at IS NULL THEN 1 ELSE 0 END')
+                    ->orderBy('expired_at')
+                    ->orderBy('manufacture_date')
+                    ->orderBy('id');
+            },
             'category',
             'supplier',
             // eager-load approved reviews + reviewer user and replies/likes counts
@@ -216,6 +223,12 @@ class ProductController extends Controller
 
         $firstVariantPrice = (float) ($product->variants->first()?->price ?? 0);
         $productPricing = $this->productPricingService->pricingForProduct($product, $firstVariantPrice);
+
+        $product->variants->each(function ($variant) {
+            $activeBatch = $variant->importItems->first();
+            $variant->display_manufacture_date = $activeBatch?->manufacture_date ?? $variant->manufacture_date;
+            $variant->display_expired_at = $activeBatch?->expired_at ?? $variant->expired_at;
+        });
 
         $variantPricing = $product->variants->mapWithKeys(function ($variant) use ($product) {
             $pricing = $this->productPricingService->pricingForProduct($product, (float) $variant->price);
@@ -347,12 +360,13 @@ class ProductController extends Controller
 
         if ($request->filled('keyword')) {
             $keyword = trim((string) $request->keyword);
+            $escaped = addcslashes($keyword, '\\%_');
 
-            $query->where(function ($q) use ($keyword) {
-                $q->where('products.name', 'like', '%' . $keyword . '%')
-                    ->orWhere('products.description', 'like', '%' . $keyword . '%')
-                    ->orWhereHas('category', function ($categoryQuery) use ($keyword) {
-                        $categoryQuery->where('name', 'like', '%' . $keyword . '%');
+            $query->where(function ($q) use ($escaped) {
+                $q->where('products.name', 'like', '%' . $escaped . '%')
+                    ->orWhere('products.description', 'like', '%' . $escaped . '%')
+                    ->orWhereHas('category', function ($categoryQuery) use ($escaped) {
+                        $categoryQuery->where('name', 'like', '%' . $escaped . '%');
                     });
             });
         }
@@ -402,16 +416,18 @@ class ProductController extends Controller
             $query->orderByDesc('products.id');
         }
 
-        $products = $query->paginate(12)->withQueryString();
+        $products = $query->paginate(9)->withQueryString();
         $products->setCollection($this->productPricingService->enrichProducts($products->getCollection()));
 
         $categories = CategoryProduct::all();
         $suppliers  = Supplier::all();
+        $keyword = $request->keyword ?? null;
 
         return view('pages.all-products', compact(
             'products',
             'categories',
-            'suppliers'
+            'suppliers',
+            'keyword'
         ));
     }
 }

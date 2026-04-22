@@ -55,8 +55,6 @@
     <div class="col-12 col-xl-7">
         <div class="attendance-form-section h-100">
             <div class="attendance-form-title">Thông tin ca làm</div>
-            <div class="attendance-form-note">Chọn nhân viên, ngày làm và khung giờ dự kiến để hệ thống theo dõi chấm
-                công.</div>
 
             <div class="row g-3">
                 <div class="col-12">
@@ -120,8 +118,6 @@
     <div class="col-12 col-xl-5">
         <div class="attendance-form-section h-100">
             <div class="attendance-form-title">Khung giờ gợi ý</div>
-            <div class="attendance-form-note">Đổi ca làm để hệ thống tự điền giờ mặc định, sau đó có thể tinh chỉnh lại
-                nếu cần.</div>
 
             <div class="attendance-shift-card mb-3">
                 <div class="fw-semibold mb-1">Ca sáng</div>

@@ -5,8 +5,6 @@
     <div class="bg-light rounded p-4">
         <div class="mb-4">
             <h5 class="mb-1">Phân ca làm việc cho nhân viên</h5>
-            <small class="text-muted">Thiết lập lịch làm việc trực quan hơn để tránh trùng ca và dễ theo dõi chấm
-                công.</small>
         </div>
 
         @if ($errors->any())

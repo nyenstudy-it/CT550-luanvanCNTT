@@ -16,6 +16,8 @@ class AIORequest
 
     private $notifyUrl;
     private $returnUrl;
+    private $ipnUrl;
+    private $redirectUrl;
     private $requestType;
 
     /**
@@ -209,4 +211,35 @@ class AIORequest
         $this->requestType = $requestType;
     }
 
+    /**
+     * @return mixed
+     */
+    public function getIpnUrl()
+    {
+        return $this->ipnUrl;
+    }
+
+    /**
+     * @param mixed $ipnUrl
+     */
+    public function setIpnUrl($ipnUrl): void
+    {
+        $this->ipnUrl = $ipnUrl;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getRedirectUrl()
+    {
+        return $this->redirectUrl;
+    }
+
+    /**
+     * @param mixed $redirectUrl
+     */
+    public function setRedirectUrl($redirectUrl): void
+    {
+        $this->redirectUrl = $redirectUrl;
+    }
 }

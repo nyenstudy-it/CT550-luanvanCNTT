@@ -3,12 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\ImportItem;
+use App\Models\InventoryWriteoff;
 use Illuminate\Http\Request;
 use App\Models\Inventory;
 use App\Models\Notification;
 use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class InventoryController extends Controller
 {
@@ -22,12 +26,12 @@ class InventoryController extends Controller
 
         $lowStockThreshold = max(1, (int) $request->query('low_stock_threshold', 5));
         $expiringInDays = max(1, (int) $request->query('expiring_days', 30));
-        $staleDays = max(1, (int) $request->query('stale_days', 60));
+        $defaultStaleDays = 90;
         $promotionWindowDays = 180;
 
         $today = Carbon::today();
 
-        $query = Inventory::with(['variant.product']);
+        $query = Inventory::with(['variant.product.category']);
 
         if ($keyword !== '') {
             $query->where(function ($builder) use ($keyword) {
@@ -59,11 +63,12 @@ class InventoryController extends Controller
             $today,
             $lowStockThreshold,
             $expiringInDays,
-            $staleDays,
+            $defaultStaleDays,
             $promotionWindowDays
         ) {
             $variant = $inventory->variant;
             $quantity = (int) $inventory->quantity;
+            $staleThresholdDays = $this->resolveStaleThresholdDays($variant?->product?->category?->name, $defaultStaleDays);
 
             $activeBatches = $activeBatchItems
                 ->get($inventory->product_variant_id, collect())
@@ -145,7 +150,7 @@ class InventoryController extends Controller
             $isExpired = $expiredBatchQuantity > 0;
             $isExpiringSoon = $expiringBatchQuantity > 0;
             $isPromotionCandidate = ($expiringBatchQuantity + $promotionBatchQuantity) > 0 && $quantity > 0;
-            $isStale = $stockAgeDays !== null && $stockAgeDays >= $staleDays && $quantity > 0;
+            $isStale = $stockAgeDays !== null && $stockAgeDays > $staleThresholdDays && $quantity > 0;
 
             $daysToExpire = $expiryDate ? $today->diffInDays($expiryDate, false) : null;
 
@@ -183,6 +188,7 @@ class InventoryController extends Controller
             $inventory->setAttribute('is_expiring_soon', $isExpiringSoon);
             $inventory->setAttribute('is_promotion_candidate', $isPromotionCandidate);
             $inventory->setAttribute('is_stale', $isStale);
+            $inventory->setAttribute('stale_threshold_days', $staleThresholdDays);
             $inventory->setAttribute('risk_score', $riskScore);
             $inventory->setAttribute('alert_tags', $alerts);
             $inventory->setAttribute('total_remaining_batch_quantity', (int) $activeBatches->sum('remaining_quantity'));
@@ -301,9 +307,175 @@ class InventoryController extends Controller
             'alertPreview',
             'lowStockThreshold',
             'expiringInDays',
-            'staleDays',
             'promotionWindowDays'
         ));
+    }
+
+    private function resolveStaleThresholdDays(?string $categoryName, int $fallbackDays = 90): int
+    {
+        $normalizedCategory = $this->normalizeCategoryName($categoryName);
+
+        if (
+            str_contains($normalizedCategory, 'my pham thien nhien')
+            || str_contains($normalizedCategory, 'do thu cong my nghe')
+            || str_contains($normalizedCategory, 'thu cong my nghe')
+        ) {
+            return 365;
+        }
+
+        if (str_contains($normalizedCategory, 'tinh dau thien nhien')) {
+            return 180;
+        }
+
+        return $fallbackDays;
+    }
+
+    private function normalizeCategoryName(?string $categoryName): string
+    {
+        $value = trim((string) $categoryName);
+
+        if ($value === '') {
+            return '';
+        }
+
+        $value = mb_strtolower($value, 'UTF-8');
+
+        $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
+        if ($ascii !== false) {
+            $value = $ascii;
+        }
+
+        $value = preg_replace('/[^a-z0-9\s]/', ' ', $value) ?? $value;
+        $value = preg_replace('/\s+/', ' ', $value) ?? $value;
+
+        return trim($value);
+    }
+
+    public function writeoffExpired(int $variantId)
+    {
+        $today = Carbon::today();
+
+        $expiredBatches = ImportItem::where('product_variant_id', $variantId)
+            ->where('remaining_quantity', '>', 0)
+            ->whereNotNull('expired_at')
+            ->whereDate('expired_at', '<', $today)
+            ->get();
+
+        if ($expiredBatches->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không tìm thấy lô hàng hết hạn còn tồn kho.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($expiredBatches, $variantId) {
+            $totalWrittenOff = 0;
+
+            foreach ($expiredBatches as $batch) {
+                $qty = (int) $batch->remaining_quantity;
+                $cost = (float) $batch->unit_price;
+
+                $writeoffData = [
+                    'product_variant_id' => $variantId,
+                    'import_item_id'     => $batch->id,
+                    'quantity_written_off' => $qty,
+                    'unit_cost'          => $cost,
+                    'total_cost'         => $qty * $cost,
+                    'reason'             => 'expired',
+                    'written_off_by'     => Auth::id(),
+                ];
+                if (Schema::hasColumns('inventory_writeoffs', ['discovered_by', 'discovered_at'])) {
+                    $writeoffData['discovered_by'] = Auth::id();
+                    $writeoffData['discovered_at'] = now();
+                }
+                InventoryWriteoff::create($writeoffData);
+
+                $batch->update(['remaining_quantity' => 0]);
+                $totalWrittenOff += $qty;
+            }
+
+            $inventory = Inventory::where('product_variant_id', $variantId)->first();
+            if ($inventory) {
+                $newQty = max(0, $inventory->quantity - $totalWrittenOff);
+                $inventory->update(['quantity' => $newQty]);
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã xuất kho ' . $expiredBatches->count() . ' lô hàng hết hạn.',
+        ]);
+    }
+
+    /**
+     * ƯU TIÊN 1: Writeoff trực tiếp hàng lỗi từ inventory
+     * POST /admin/inventories/{variantId}/writeoff-direct
+     */
+    public function writeoffDirect(Request $request, int $variantId)
+    {
+        $validated = $request->validate([
+            'quantity' => 'required|integer|min:1',
+            'reason' => 'required|in:damaged,broken_packaging,water_damage,manufacturing_flaw,color_fading,contaminated,stock_adjustment,other',
+            'note' => 'nullable|string|max:255',
+        ]);
+
+        $inventory = Inventory::where('product_variant_id', $variantId)->firstOrFail();
+
+        if ((int) $inventory->quantity < (int) $validated['quantity']) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Số lượng hủy vượt quá tồn kho hiện tại (' . $inventory->quantity . ').',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($validated, $variantId, $inventory) {
+            $quantity = (int) $validated['quantity'];
+            $totalWrittenOff = 0;
+
+            // FIFO: Take from earliest batches
+            $remainingQty = $quantity;
+            $batches = ImportItem::where('product_variant_id', $variantId)
+                ->where('remaining_quantity', '>', 0)
+                ->orderBy('id', 'asc')
+                ->get();
+
+            foreach ($batches as $batch) {
+                if ($remainingQty <= 0) break;
+
+                $qtyToWriteoff = min($remainingQty, (int) $batch->remaining_quantity);
+                $cost = (float) $batch->unit_price;
+                $totalCost = $qtyToWriteoff * $cost;
+
+                $writeoffData = [
+                    'product_variant_id' => $variantId,
+                    'import_item_id'     => $batch->id,
+                    'quantity_written_off' => $qtyToWriteoff,
+                    'unit_cost'          => $cost,
+                    'total_cost'         => $totalCost,
+                    'reason'             => $validated['reason'],
+                    'note'               => $validated['note'],
+                    'written_off_by'     => Auth::id(),
+                ];
+                if (Schema::hasColumns('inventory_writeoffs', ['discovered_by', 'discovered_at'])) {
+                    $writeoffData['discovered_by'] = Auth::id();
+                    $writeoffData['discovered_at'] = now();
+                }
+                InventoryWriteoff::create($writeoffData);
+
+                $batch->update(['remaining_quantity' => (int) $batch->remaining_quantity - $qtyToWriteoff]);
+                $totalWrittenOff += $qtyToWriteoff;
+                $remainingQty -= $qtyToWriteoff;
+            }
+
+            // Update main inventory
+            $newQty = max(0, (int) $inventory->quantity - $totalWrittenOff);
+            $inventory->update(['quantity' => $newQty]);
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã hủy ' . $validated['quantity'] . ' sản phẩm lỗi thành công.',
+        ]);
     }
 
     public function batchPopup(int $variantId)

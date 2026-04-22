@@ -26,13 +26,23 @@
         </div>
     </section>
 
+    @if(!empty($keyword))
+        <section class="product spad" style="padding-top: 20px; padding-bottom: 0;">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <p style="font-size: 16px; color: #555; margin: 0;">
+                            Đây là kết quả tìm kiếm cho "<strong>{{ $keyword }}</strong>" - Tìm thấy
+                            <strong>{{ $products->total() }}</strong> sản phẩm
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    @endif
+
     <section class="product spad">
         <div class="container">
-
-            {{-- THÔNG BÁO --}}
-            @if(session('success'))
-                <div class="alert alert-success auto-dismiss">{{ session('success') }}</div>
-            @endif
 
             <div class="row">
 
@@ -139,17 +149,23 @@
                                     <!-- ẢNH -->
                                     <div class="product__item__pic">
                                         <a href="{{ route('products.show', $product->id) }}">
-                                            <img src="{{ $image }}" alt="{{ $product->name }}">
+                                            <img src="{{ $image }}" alt="{{ $product->name }}"
+                                                onerror="this.src='{{ asset('frontend/images/product/product-1.jpg') }}';">
                                         </a>
 
-                                        <form action="{{ route('wishlist.toggle', $product->id) }}" method="POST"
-                                            class="wishlist-btn">
+                                        {{-- Hidden form for wishlist --}}
+                                        <form id="wishlist-all-{{ $product->id }}"
+                                            action="{{ route('wishlist.toggle', $product->id) }}" method="POST" class="d-none">
                                             @csrf
-                                            <button type="submit">
-                                                <i class="fa fa-heart {{ $product->is_favorited ? 'text-danger' : '' }}"></i>
-                                            </button>
-
                                         </form>
+
+                                        <a href="javascript:void(0)" onclick="allProductsWishlist({{ $product->id }});"
+                                            style="position: absolute; top: 10px; right: 10px; font-size: 20px; {{ $product->is_favorited ? 'color:#e74c3c;' : 'color:#333;' }} z-index: 10; background: rgba(255, 255, 255, 0.9); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;"
+                                            title="{{ $product->is_favorited ? 'Bỏ yêu thích' : 'Thêm yêu thích' }}"
+                                            onmouseover="this.style.background='rgba(255, 255, 255, 1)'; this.style.transform='scale(1.1)';"
+                                            onmouseout="this.style.background='rgba(255, 255, 255, 0.9)'; this.style.transform='scale(1)';">
+                                            <i class="fa fa-heart"></i>
+                                        </a>
 
                                     </div>
 
@@ -190,11 +206,13 @@
 
                                         <!-- GIÁ -->
                                         @if($hasDiscount)
-                                            <h5 class="text-danger mb-0">{{ number_format($finalPrice) }}₫</h5>
-                                            <small class="text-muted"><del>{{ number_format($basePrice) }}₫</del>
+                                            <h5 class="text-danger mb-0">{{ number_format((int) max(0, $finalPrice ?? 0), 0) }}đ
+                                            </h5>
+                                            <small
+                                                class="text-muted"><del>{{ number_format((int) max(0, $basePrice ?? 0), 0) }}đ</del>
                                                 {{ $product->display_discount_label }}</small>
                                         @else
-                                            <h5>{{ number_format($price) }}₫</h5>
+                                            <h5>{{ number_format((int) max(0, $price ?? 0), 0) }}đ</h5>
                                         @endif
 
                                         <!-- 🔥 MUA NGAY -->
@@ -218,10 +236,11 @@
 
                     </div>
 
-                    <!-- PAGINATION -->
-                    <div class="mt-4">
-                        {{ $products->appends(request()->query())->links() }}
-                    </div>
+                    @if($products->hasPages())
+                        <div class="shop__pagination__footer mt-4 pt-3 border-top">
+                            {{ $products->appends(request()->query())->links() }}
+                        </div>
+                    @endif
 
                 </div>
 
@@ -236,6 +255,94 @@
                 el.remove();
             });
         }, 3000);
+
+        // Define popup function to support additional options
+        function popup(icon, title, text, additionalOptions) {
+            if (window.ocopPopup && typeof window.ocopPopup.fire === 'function') {
+                return window.ocopPopup.fire(Object.assign({
+                    icon: icon,
+                    title: title,
+                    text: text,
+                    confirmButtonColor: '#7fad39'
+                }, additionalOptions || {}));
+            }
+
+            if (typeof Swal !== 'undefined') {
+                return Swal.fire(Object.assign({
+                    icon: icon,
+                    title: title,
+                    text: text,
+                    confirmButtonColor: '#7fad39'
+                }, additionalOptions || {}));
+            }
+
+            return Promise.resolve({ isConfirmed: false, isDismissed: true });
+        }
+
+        // ================= WISHLIST AJAX (POPUP VERSION) =================
+        function allProductsWishlist(productId) {
+            @auth
+                                                                const wishlistForm = document.getElementById('wishlist-all-' + productId);
+                if (!wishlistForm) return;
+
+                const formData = new FormData(wishlistForm);
+                fetch('{{ route("wishlist.toggle", ":id") }}'.replace(':id', productId), {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network error');
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Find the product item and update the heart icon color
+                            const allWishlistLinks = document.querySelectorAll(`[onclick*="allProductsWishlist(${productId})"]`);
+                            allWishlistLinks.forEach(link => {
+                                if (data.isAddedToWishlist) {
+                                    link.style.color = '#e74c3c';
+                                } else {
+                                    link.style.color = 'inherit';
+                                }
+                            });
+
+                            // Show popup using centralized system
+                            const message = data.isAddedToWishlist
+                                ? 'Thêm vào yêu thích'
+                                : 'Xoá khỏi yêu thích';
+                            popup('success', 'Thành công', message, {
+                                confirmButtonText: 'Đóng'
+                            });
+                        } else {
+                            popup('error', 'Lỗi', data.message || 'Có lỗi xảy ra', {
+                                confirmButtonText: 'Đóng'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        const errorMsg = error.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
+                        popup('error', 'Lỗi', errorMsg, {
+                            confirmButtonText: 'Đóng'
+                        });
+                        console.error("Error:", error);
+                    });
+            @endauth
+            @guest
+                popup('warning', 'Bạn chưa đăng nhập', 'Hãy đăng nhập để thêm sản phẩm vào yêu thích.', {
+                    confirmButtonText: 'Đăng nhập',
+                    cancelButtonText: 'Để sau',
+                    showCancelButton: true
+                }).then(result => {
+                    if (result.isConfirmed) {
+                        window.location.href = '{{ route("login") }}';
+                    }
+                });
+            @endguest
+                                }
     </script>
 
 @endsection

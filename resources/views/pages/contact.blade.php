@@ -52,10 +52,6 @@
                 <div class="col-lg-6 mb-4">
                     <h4 class="mb-4">Gửi liên hệ</h4>
 
-                    @if(session('success'))
-                        <div class="alert alert-success text-center">{{ session('success') }}</div>
-                    @endif
-
                     <form action="{{ route('contact.send') }}" method="POST">
                         @csrf
                         <div class="mb-3">

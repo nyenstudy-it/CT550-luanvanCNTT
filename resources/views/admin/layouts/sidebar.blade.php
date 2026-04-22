@@ -85,11 +85,16 @@
                         <a href="{{ route('admin.attendances.index') }}" class="dropdown-item">Phân ca</a>
                     </div>
                 </div>
-
-                <a href="{{ route('admin.salaries.index') }}"
-                    class="nav-item nav-link {{ request()->routeIs('admin.salaries.*') ? 'active' : '' }}">
-                    <i class="fa fa-money-bill-wave me-2"></i>Bảng lương
-                </a>
+                <div class="nav-item dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="fa fa-money-bill-wave me-2"></i>Bảng lương
+                    </a>
+                    <div class="dropdown-menu bg-transparent border-0">
+                        <a href="{{ route('admin.salaries.index') }}" class="dropdown-item">
+                            <i></i>Bảng lương nhân viên
+                        </a>
+                    </div>
+                </div>
             @endif
 
             {{-- STAFF ONLY: Chấm công --}}
@@ -203,6 +208,14 @@
                         {{-- <a href="{{ route('admin.blogs.create') }}" class="dropdown-item">Thêm blog</a> --}}
                     </div>
                 </div>
+            @endif
+
+            {{-- CONTACTS: Admin/Staff can access contacts --}}
+            @if($canChat)
+                <a href="{{ route('admin.contacts.index') }}"
+                    class="nav-item nav-link {{ request()->routeIs('admin.contacts.*') ? 'active' : '' }}">
+                    <i class="fa fa-envelope me-2"></i>Liên hệ
+                </a>
             @endif
 
         </div>

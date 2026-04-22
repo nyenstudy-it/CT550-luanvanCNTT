@@ -7,16 +7,26 @@ use App\Models\Attendance;
 use App\Models\User;
 use App\Models\Staff;
 use App\Models\Notification;
+use App\Models\Order;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\IpUtils;
+use App\Models\AllowedNetwork;
+use Illuminate\Support\Facades\Cache;
 
 class AttendanceController extends Controller
 {
     public function index(Request $request)
     {
         abort_unless(Auth::user()->role === 'admin', 403);
+
+        try {
+            $this->recordAdminNetwork($request->ip());
+        } catch (\Exception $e) {
+            //
+        }
 
         $query = Attendance::with('staff.user');
         if ($request->from_date) {
@@ -35,14 +45,16 @@ class AttendanceController extends Controller
         }
 
         $attendances = $query
-            ->orderBy('work_date', 'asc')
-            ->orderByRaw("FIELD(shift, 'morning', 'afternoon')")
-            ->get();
+            ->orderBy('work_date', 'desc')
+            ->orderByRaw("FIELD(shift, 'afternoon', 'morning')")
+            ->paginate(10);
 
         if ($request->status) {
-            $attendances = $attendances->filter(function ($item) use ($request) {
-                return $item->computed_status === $request->status;
-            });
+            $attendances->setCollection(
+                $attendances->getCollection()->filter(function ($item) use ($request) {
+                    return $item->computed_status === $request->status;
+                })
+            );
         }
 
         $calendarEvents = $attendances->map(function ($a) {
@@ -73,37 +85,155 @@ class AttendanceController extends Controller
 
         $staffs = Staff::with('user')->get();
 
+        $today = Carbon::today();
+        $startOfWeek = $today->copy()->startOfWeek();
+        $endOfWeek = $today->copy()->endOfWeek();
+
+        $thisWeekSalary = Attendance::whereDate('work_date', '>=', $startOfWeek)
+            ->whereDate('work_date', '<=', $endOfWeek)
+            ->sum('salary_amount');
+
+        $thisWeekMinutes = Attendance::whereDate('work_date', '>=', $startOfWeek)
+            ->whereDate('work_date', '<=', $endOfWeek)
+            ->sum('worked_minutes');
+        $thisWeekHours = $thisWeekMinutes ? round($thisWeekMinutes / 60, 2) : 0;
+
+        $thisWeekRevenue = Order::where('status', 'completed')
+            ->whereBetween('created_at', [$startOfWeek->startOfDay(), $endOfWeek->endOfDay()])
+            ->sum('total_amount');
+
+        $weeklyStats = [];
+        for ($i = 3; $i >= 0; $i--) {
+            $weekStart = $today->copy()->subWeeks($i)->startOfWeek();
+            $weekEnd = $today->copy()->subWeeks($i)->endOfWeek();
+
+            $weeklySalary = Attendance::whereDate('work_date', '>=', $weekStart)
+                ->whereDate('work_date', '<=', $weekEnd)
+                ->sum('salary_amount');
+
+            $weeklyMinutes = Attendance::whereDate('work_date', '>=', $weekStart)
+                ->whereDate('work_date', '<=', $weekEnd)
+                ->sum('worked_minutes');
+            $weeklyHours = $weeklyMinutes ? round($weeklyMinutes / 60, 2) : 0;
+
+            $weeklyRevenue = Order::where('status', 'completed')
+                ->whereBetween('created_at', [$weekStart->startOfDay(), $weekEnd->endOfDay()])
+                ->sum('total_amount');
+
+            $weeklyStats[] = [
+                'week' => $weekStart->format('d/m') . ' - ' . $weekEnd->format('d/m'),
+                'salary' => $weeklySalary,
+                'hours' => $weeklyHours,
+                'revenue' => $weeklyRevenue,
+                'shifts' => Attendance::whereDate('work_date', '>=', $weekStart)
+                    ->whereDate('work_date', '<=', $weekEnd)
+                    ->count(),
+            ];
+        }
+
+        $allCalendarEvents = Attendance::whereDate('work_date', '>=', '2026-03-05')
+            ->whereDate('work_date', '<=', Carbon::now()->toDateString())
+            ->with('staff.user')
+            ->orderBy('work_date')
+            ->orderBy('shift')
+            ->get()
+            ->map(function ($a) {
+                $shiftLabel = $a->shift === 'morning' ? 'Ca sáng' : 'Ca chiều';
+                return [
+                    'title' => $a->staff->user->name . ' - ' . $shiftLabel,
+                    'start' => $a->work_date . 'T' . $a->expected_check_in,
+                    'end'   => $a->work_date . 'T' . $a->expected_check_out,
+                    'extendedProps' => [
+                        'name' => $a->staff->user->name,
+                        'date' => $a->work_date,
+                        'shift' => $shiftLabel,
+                    ],
+                ];
+            });
+
         return view('admin.attendances.index', compact(
             'attendances',
             'calendarEvents',
-            'staffs'
+            'allCalendarEvents',
+            'staffs',
+            'thisWeekSalary',
+            'thisWeekHours',
+            'thisWeekRevenue',
+            'weeklyStats'
         ));
     }
 
-    public function staffIndex()
+    /**
+     * Record current admin IP into cache so staff on same public IP can check in.
+     * Cache key: 'attendance.admin_ips' => array of IP strings
+     */
+    private function recordAdminNetwork(string $ip): void
+    {
+        if (!Auth::check() || Auth::user()->role !== 'admin') {
+            return;
+        }
+
+        $key = 'attendance.admin_ips';
+        $ips = Cache::get($key, []);
+        if (!in_array($ip, $ips, true)) {
+            $ips[] = $ip;
+            Cache::put($key, array_values($ips), 600);
+        } else {
+            Cache::put($key, array_values($ips), 600);
+        }
+    }
+
+    /**
+     * Load allowed networks from DB with caching. Falls back to empty array.
+     */
+    private function getAllowedNetworks(): array
+    {
+        return Cache::remember('attendance.allowed_networks', 300, function () {
+            return AllowedNetwork::pluck('cidr')->toArray();
+        });
+    }
+
+    public function staffIndex(Request $request)
     {
         $user = Auth::user();
 
-        $attendances = Attendance::where('staff_id', $user->id)
-            ->orderBy('work_date', 'asc')
+        // Get month/year from request or use current
+        $month = $request->input('month', Carbon::now()->month);
+        $year = $request->input('year', Carbon::now()->year);
+
+        $query = Attendance::where('staff_id', $user->id)
+            ->whereMonth('work_date', $month)
+            ->whereYear('work_date', $year);
+
+        $attendances = $query
+            ->orderByRaw("CASE 
+                WHEN check_in IS NULL THEN 1 
+                ELSE 0 
+            END DESC")
+            ->orderBy('work_date', 'desc')
             ->orderByRaw("FIELD(shift, 'morning', 'afternoon')")
             ->paginate(10);
 
+        // Calculate totals for selected month
         $totalWorkedMinutes = Attendance::where('staff_id', $user->id)
+            ->whereMonth('work_date', $month)
+            ->whereYear('work_date', $year)
             ->sum('worked_minutes');
 
         $totalSalary = Attendance::where('staff_id', $user->id)
+            ->whereMonth('work_date', $month)
+            ->whereYear('work_date', $year)
             ->sum('salary_amount');
 
+        $serverNow = Carbon::now('Asia/Ho_Chi_Minh');
 
-        return view('admin.attendances.staff_attendances', compact('attendances', 'totalWorkedMinutes', 'totalSalary'));
+        return view('admin.attendances.staff_attendances', compact('attendances', 'totalWorkedMinutes', 'totalSalary', 'month', 'year', 'serverNow'));
     }
 
     public function create()
     {
         abort_unless(Auth::user()->role === 'admin', 403);
 
-        // Lấy đúng Staff + user
         $staffs = Staff::whereHas('user')
             ->with('user')
             ->get();
@@ -146,6 +276,16 @@ class AttendanceController extends Controller
             'shift' => 'required|in:morning,afternoon',
             'expected_check_in' => 'required',
             'expected_check_out' => 'required',
+        ], [
+            'staff_id.required' => 'Vui lòng chọn nhân viên.',
+            'staff_id.exists' => 'Nhân viên được chọn không hợp lệ.',
+            'staff_id.unique' => 'Nhân viên này đã được phân ca trong ngày và ca đã chọn.',
+            'work_date.required' => 'Vui lòng chọn ngày làm việc.',
+            'work_date.date' => 'Ngày làm việc không đúng định dạng.',
+            'shift.required' => 'Vui lòng chọn ca làm việc.',
+            'shift.in' => 'Ca làm việc không hợp lệ.',
+            'expected_check_in.required' => 'Vui lòng nhập giờ vào dự kiến.',
+            'expected_check_out.required' => 'Vui lòng nhập giờ ra dự kiến.',
         ]);
 
         Attendance::create($request->only([
@@ -198,6 +338,15 @@ class AttendanceController extends Controller
             'shift' => 'required|in:morning,afternoon',
             'expected_check_in' => 'required',
             'expected_check_out' => 'required',
+        ], [
+            'staff_id.required' => 'Vui lòng chọn nhân viên.',
+            'staff_id.exists' => 'Nhân viên được chọn không hợp lệ.',
+            'work_date.required' => 'Vui lòng chọn ngày làm việc.',
+            'work_date.date' => 'Ngày làm việc không đúng định dạng.',
+            'shift.required' => 'Vui lòng chọn ca làm việc.',
+            'shift.in' => 'Ca làm việc không hợp lệ.',
+            'expected_check_in.required' => 'Vui lòng nhập giờ vào dự kiến.',
+            'expected_check_out.required' => 'Vui lòng nhập giờ ra dự kiến.',
         ]);
 
         $attendance = Attendance::findOrFail($id);
@@ -245,63 +394,81 @@ class AttendanceController extends Controller
         }
 
         if ($attendance->work_date !== $now->toDateString()) {
-            return back()->with('error', 'Chưa tới ngày làm việc');
+            return response()->json(['status' => 'error', 'message' => 'Chưa tới ngày làm việc'], 400);
         }
 
-        if ($attendance->check_in) {
-            return back()->with('error', 'Bạn đã check-in');
+        DB::beginTransaction();
+        try {
+            $attendance = Attendance::lockForUpdate()
+                ->where('id', $attendance->id)
+                ->where('staff_id', $user->id)
+                ->where('work_date', $now->toDateString())
+                ->firstOrFail();
+
+            if ($attendance->check_in) {
+                DB::rollBack();
+                return response()->json(['status' => 'error', 'message' => 'Bạn đã check-in'], 400);
+            }
+
+            // IP-only policy: chấp nhận nếu IP client nằm trong danh sách mạng cho phép
+            $allowedNetworks = $this->getAllowedNetworks();
+            $clientIp = $request->ip();
+            $allowed = $this->isAllowedNetwork($clientIp, $allowedNetworks);
+            if (!$allowed) {
+                return response()->json(['status' => 'error', 'message' => 'Chấm công chỉ hợp lệ khi kết nối Wi-Fi công ty. Vui lòng chuyển sang mạng Wi-Fi công ty để chấm công.'], 400);
+            }
+
+            $expectedStart = Carbon::parse(
+                $attendance->work_date . ' ' . $attendance->expected_check_in,
+                'Asia/Ho_Chi_Minh'
+            );
+
+            $lateMinutes = $expectedStart->diffInMinutes($now, false);
+
+            if ($lateMinutes < 0) {
+                return response()->json(['status' => 'error', 'message' => 'Chưa tới giờ làm'], 400);
+            }
+
+            if ($lateMinutes > 120) {
+                return response()->json(['status' => 'error', 'message' => 'Trễ quá 2 tiếng'], 400);
+            }
+
+            $isLate = $lateMinutes > 15;
+
+            $verificationMethod = $allowed ? 'wifi' : 'none';
+
+            $attendance->update([
+                'check_in' => $now,
+                'is_late'  => $isLate ? 1 : 0,
+                // Lưu IP và loại mạng (doanh nghiệp muốn giữ network_type)
+                'check_in_ip' => $clientIp,
+                'check_in_network_type' => $validated['network_type'] ?? null,
+                'check_in_verification_method' => $verificationMethod,
+            ]);
+
+            $adminRecipients = Notification::recipientIdsForGroups(['admin']);
+            $shiftLabel = $attendance->shift === 'morning' ? 'ca sáng' : 'ca chiều';
+
+            $locationInfo = '';
+
+            Notification::createForRecipients($adminRecipients, [
+                'type' => 'attendance_check_in',
+                'title' => 'Nhân viên vừa chấm công',
+                'content' => $user->name . ' đã check-in ' . $shiftLabel . ' ngày ' . $attendance->work_date . '.' . $locationInfo,
+                'related_id' => $attendance->id,
+            ]);
+
+            $successMsg = 'Check-in thành công';
+            if ($isLate) {
+                $successMsg .= ' (Trễ ' . $lateMinutes . ' phút)';
+            }
+
+            DB::commit();
+            return response()->json(['status' => 'success', 'message' => $successMsg]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => 'error', 'message' => 'Lỗi khi check-in: ' . $e->getMessage()], 500);
         }
-
-        $accessResult = $this->evaluateAttendanceAccess(
-            $request->ip(),
-            $validated['latitude'] ?? null,
-            $validated['longitude'] ?? null
-        );
-
-        if (!$accessResult['allowed']) {
-            return back()->with('error', $accessResult['message']);
-        }
-
-        $expectedStart = Carbon::parse(
-            $attendance->work_date . ' ' . $attendance->expected_check_in,
-            'Asia/Ho_Chi_Minh'
-        );
-
-        $lateMinutes = $expectedStart->diffInMinutes($now, false);
-
-        if ($lateMinutes < 0) {
-            return back()->with('error', 'Chưa tới giờ làm');
-        }
-
-        if ($lateMinutes > 120) {
-            return back()->with('error', 'Trễ quá 2 tiếng');
-        }
-
-        $isLate = $lateMinutes > 15;
-
-        $attendance->update([
-            'check_in' => $now,
-            'is_late'  => $isLate ? 1 : 0,
-            'late_status' => $isLate ? 'rejected' : null,
-            'late_reason' => null,
-            'check_in_ip' => $request->ip(),
-            'check_in_latitude' => $validated['latitude'] ?? null,
-            'check_in_longitude' => $validated['longitude'] ?? null,
-            'check_in_network_type' => $validated['network_type'] ?? null,
-            'check_in_distance_meters' => $accessResult['distance_meters'],
-            'check_in_verification_method' => $accessResult['method'],
-        ]);
-
-        $adminRecipients = Notification::recipientIdsForGroups(['admin']);
-        $shiftLabel = $attendance->shift === 'morning' ? 'ca sáng' : 'ca chiều';
-        Notification::createForRecipients($adminRecipients, [
-            'type' => 'attendance_check_in',
-            'title' => 'Nhân viên vừa chấm công',
-            'content' => $user->name . ' đã check-in ' . $shiftLabel . ' ngày ' . $attendance->work_date . '.',
-            'related_id' => $attendance->id,
-        ]);
-
-        return back()->with('success', 'Check-in thành công');
     }
 
     public function checkOut(Request $request, Attendance $attendance)
@@ -319,132 +486,138 @@ class AttendanceController extends Controller
             abort(403);
         }
 
-        if (!$attendance->check_in) {
-            return back()->with('error', 'Chưa check-in.');
-        }
+        DB::beginTransaction();
+        try {
+            $attendance = Attendance::lockForUpdate()
+                ->where('id', $attendance->id)
+                ->where('staff_id', $staff->user_id)
+                ->firstOrFail();
 
-        if ($attendance->check_out) {
-            return back()->with('error', 'Đã check-out rồi.');
-        }
-
-        $accessResult = $this->evaluateAttendanceAccess(
-            $request->ip(),
-            $validated['latitude'] ?? null,
-            $validated['longitude'] ?? null
-        );
-
-        if (!$accessResult['allowed']) {
-            return back()->with('error', $accessResult['message']);
-        }
-
-        $now = Carbon::now('Asia/Ho_Chi_Minh');
-
-        $checkIn = Carbon::parse($attendance->check_in, 'Asia/Ho_Chi_Minh');
-
-        $expectedStart = Carbon::parse(
-            $attendance->work_date . ' ' . $attendance->expected_check_in,
-            'Asia/Ho_Chi_Minh'
-        );
-
-        $expectedEnd = Carbon::parse(
-            $attendance->work_date . ' ' . $attendance->expected_check_out,
-            'Asia/Ho_Chi_Minh'
-        );
-
-        /*
-    |--------------------------------------------------------------------------
-    | AUTO CHECKOUT SAU 2 GIỜ TỪ CHECK-IN
-    |--------------------------------------------------------------------------
-    */
-
-        $twoHoursAfterCheckIn = $checkIn->copy()->addHours(2);
-
-        if ($now->gte($twoHoursAfterCheckIn)) {
-            // Hệ thống tự đóng ca tại giờ kết thúc ca
-            $checkOut = $expectedEnd;
-        } else {
-            $checkOut = $now;
-        }
-
-        if ($checkOut->lte($checkIn)) {
-            return back()->with('error', 'Thời gian không hợp lệ.');
-        }
-
-        /*
-    |--------------------------------------------------------------------------
-    | KIỂM TRA VỀ SỚM
-    |--------------------------------------------------------------------------
-    */
-
-        if ($checkOut->lt($expectedEnd)) {
-
-            $attendance->is_early_leave = 1;
-
-            $reasonType = $request->input('reason_type');
-            $reason     = $request->input('reason');
-
-            if (!$reason || $reasonType !== 'early') {
-                return back()->with('error', 'Bạn đang check-out trước giờ. Vui lòng nhập lý do.');
+            if (!$attendance->check_in) {
+                DB::rollBack();
+                return response()->json(['status' => 'error', 'message' => 'Chưa check-in.'], 400);
             }
 
-            $attendance->early_leave_reason = $reason;
-            $attendance->early_leave_status = 'pending';
-        } else {
-            $attendance->is_early_leave = 0;
+            if ($attendance->check_out) {
+                DB::rollBack();
+                return response()->json(['status' => 'error', 'message' => 'Đã check-out rồi.'], 400);
+            }
+
+            $accessResult = $this->evaluateAttendanceAccess(
+                $request->ip(),
+                $validated['latitude'] ?? null,
+                $validated['longitude'] ?? null
+            );
+
+            if (!$accessResult['allowed']) {
+                return response()->json(['status' => 'error', 'message' => $accessResult['message']], 400);
+            }
+
+            $now = Carbon::now('Asia/Ho_Chi_Minh');
+
+            $checkIn = Carbon::parse($attendance->check_in, 'Asia/Ho_Chi_Minh');
+
+            $expectedStart = Carbon::parse(
+                $attendance->work_date . ' ' . $attendance->expected_check_in,
+                'Asia/Ho_Chi_Minh'
+            );
+
+            $expectedEnd = Carbon::parse(
+                $attendance->work_date . ' ' . $attendance->expected_check_out,
+                'Asia/Ho_Chi_Minh'
+            );
+
+            // Xác định về sớm trước, sau đó mới áp dụng quy tắc auto-checkout.
+            $isEarlyLeave = $now->lt($expectedEnd);
+
+            if ($isEarlyLeave) {
+                $reasonType = $request->input('reason_type');
+                $reason     = $request->input('reason');
+
+                if (!$reason || $reasonType !== 'early') {
+                    DB::rollBack();
+                    return response()->json(['status' => 'error', 'message' => 'Bạn đang check-out trước giờ. Vui lòng nhập lý do.'], 400);
+                }
+
+                $attendance->early_leave_reason = $reason;
+                $attendance->early_leave_status = 'pending';
+            }
+
+            // Auto-checkout: nếu quá 2 giờ sau giờ kết ca thì coi như quên checkout và chốt về giờ kết ca.
+            $twoHoursAfterExpectedEnd = $expectedEnd->copy()->addHours(2);
+
+            if ($now->gte($twoHoursAfterExpectedEnd)) {
+                $checkOut = $expectedEnd;
+            } else {
+                $checkOut = $now;
+            }
+
+            if ($checkOut->lte($checkIn)) {
+                DB::rollBack();
+                return response()->json(['status' => 'error', 'message' => 'Thời gian không hợp lệ.'], 400);
+            }
+
+            $attendance->is_early_leave = $isEarlyLeave ? 1 : 0;
+
+            // Quy tắc tính công:
+            // - Nếu vào trễ > 15 phút: tính theo thời gian thực tế (check_in -> check_out).
+            // - Nếu vào trễ <= 15 phút:
+            //   - Về sớm: tính từ giờ dự kiến vào ca đến giờ checkout thực tế.
+            //   - Không về sớm: tính đủ thời lượng ca.
+
+            $expectedStart = Carbon::parse(
+                $attendance->work_date . ' ' . $attendance->expected_check_in,
+                'Asia/Ho_Chi_Minh'
+            );
+
+            $expectedEnd = Carbon::parse(
+                $attendance->work_date . ' ' . $attendance->expected_check_out,
+                'Asia/Ho_Chi_Minh'
+            );
+
+            $expectedMinutes = $expectedStart->diffInMinutes($expectedEnd);
+
+            $lateMinutes = $expectedStart->diffInMinutes($checkIn, false);
+
+            if ($lateMinutes > 0) {
+                $attendance->is_late = 1;
+            }
+
+            if ($attendance->is_early_leave) {
+                if ($lateMinutes > 15) {
+                    $workedMinutes = $checkIn->diffInMinutes($checkOut);
+                } else {
+                    $workedMinutes = $expectedStart->diffInMinutes($checkOut);
+                }
+            } else if ($lateMinutes > 15) {
+                $workedMinutes = $checkIn->diffInMinutes($checkOut);
+            } else {
+                $workedMinutes = $expectedMinutes;
+            }
+
+            if ($workedMinutes < 0) {
+                $workedMinutes = 0;
+            }
+
+            if ($staff->employment_status === 'official') {
+                $hourlyRate = $staff->official_hourly_wage ?? 20000;
+            } else {
+                $hourlyRate = $staff->probation_hourly_wage ?? 15000;
+            }
+
+            $salary = ($workedMinutes / 60) * $hourlyRate;
+
+            $attendance->check_out      = $checkOut;
+            $attendance->worked_minutes = $workedMinutes;
+            $attendance->salary_amount  = round($salary);
+            $attendance->is_completed   = 1;
+            $attendance->save();
+            DB::commit();
+            return response()->json(['status' => 'success', 'message' => 'Check-out thành công.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => 'error', 'message' => 'Lỗi khi check-out: ' . $e->getMessage()], 500);
         }
-
-        /*
-    |--------------------------------------------------------------------------
-    | TÍNH PHÚT LÀM THỰC TẾ
-    |--------------------------------------------------------------------------
-    */
-
-        $actualEnd = $checkOut->gt($expectedEnd) ? $expectedEnd : $checkOut;
-
-        $workedMinutes = $checkIn->diffInMinutes($actualEnd);
-
-        // Trừ phút đi trễ (>15p đã đánh dấu từ check-in)
-        if ($attendance->is_late) {
-            $lateMinutes = $expectedStart->diffInMinutes($checkIn);
-            $workedMinutes -= $lateMinutes;
-        }
-
-        // Trừ phút về sớm nếu chưa được duyệt
-        if ($attendance->is_early_leave && $attendance->early_leave_status !== 'approved') {
-            $earlyMinutes = $actualEnd->diffInMinutes($expectedEnd);
-            $workedMinutes -= $earlyMinutes;
-        }
-
-        if ($workedMinutes < 0) {
-            $workedMinutes = 0;
-        }
-
-        /*
-    |--------------------------------------------------------------------------
-    | TÍNH LƯƠNG
-    |--------------------------------------------------------------------------
-    */
-
-        $hourlyRate = $staff->employment_status === 'official'
-            ? $staff->official_hourly_wage
-            : $staff->probation_hourly_wage;
-
-        $salary = ($workedMinutes / 60) * $hourlyRate;
-
-        $attendance->check_out      = $checkOut;
-        $attendance->worked_minutes = $workedMinutes;
-        $attendance->salary_amount  = round($salary);
-        $attendance->is_completed   = 1;
-        $attendance->check_out_ip = $request->ip();
-        $attendance->check_out_latitude = $validated['latitude'] ?? null;
-        $attendance->check_out_longitude = $validated['longitude'] ?? null;
-        $attendance->check_out_network_type = $validated['network_type'] ?? null;
-        $attendance->check_out_distance_meters = $accessResult['distance_meters'];
-        $attendance->check_out_verification_method = $accessResult['method'];
-
-        $attendance->save();
-
-        return back()->with('success', 'Check-out thành công.');
     }
 
     public function pending()
@@ -452,59 +625,11 @@ class AttendanceController extends Controller
         abort_unless(Auth::user()->role === 'admin', 403);
 
         $attendances = Attendance::with('staff.user')
-            ->where(function ($q) {
-                $q->where('late_status', 'pending')
-                    ->orWhere('early_leave_status', 'pending');
-            })
+            ->where('early_leave_status', 'pending')
             ->orderBy('work_date', 'desc')
             ->get();
 
         return view('admin.attendances.pending', compact('attendances'));
-    }
-
-    public function approveLate(Attendance $attendance)
-    {
-        abort_unless(Auth::user()->role === 'admin', 403);
-
-        if ($attendance->late_status !== 'pending') {
-            return back()->with('error', 'Không có yêu cầu duyệt.');
-        }
-
-        $attendance->late_status = 'approved';
-
-        $staff = $attendance->staff;
-
-        $hourlyRate = $staff->employment_status === 'official'
-            ? $staff->official_hourly_wage
-            : $staff->probation_hourly_wage;
-
-        $expectedStart = Carbon::parse($attendance->work_date . ' ' . $attendance->expected_check_in);
-        $expectedEnd   = Carbon::parse($attendance->work_date . ' ' . $attendance->expected_check_out);
-
-        $expectedMinutes = $expectedStart->diffInMinutes($expectedEnd);
-
-
-        $attendance->worked_minutes = $expectedMinutes;
-        $attendance->salary_amount  = round(($expectedMinutes / 60) * $hourlyRate);
-
-        $attendance->save();
-
-        return back()->with('success', 'Đã duyệt đi trễ và tính đủ lương ca.');
-    }
-
-    public function rejectLate(Attendance $attendance)
-    {
-        abort_unless(Auth::user()->role === 'admin', 403);
-
-        if ($attendance->late_status !== 'pending') {
-            return back()->with('error', 'Không có yêu cầu duyệt.');
-        }
-
-        $attendance->late_status = 'rejected';
-
-        $attendance->save();
-
-        return back()->with('success', 'Đã từ chối đi trễ.');
     }
 
     public function approveEarly(Attendance $attendance)
@@ -517,27 +642,14 @@ class AttendanceController extends Controller
 
         $attendance->early_leave_status = 'approved';
 
-        $staff = $attendance->staff;
+        [$workedMinutes, $hourlyRate] = $this->calculateEarlyLeaveSalaryByDecision($attendance, true);
 
-        $hourlyRate = $staff->employment_status === 'official'
-            ? $staff->official_hourly_wage
-            : $staff->probation_hourly_wage;
-
-        $expectedStart = Carbon::parse($attendance->work_date . ' ' . $attendance->expected_check_in);
-        $expectedEnd   = Carbon::parse($attendance->work_date . ' ' . $attendance->expected_check_out);
-
-        $expectedMinutes = $expectedStart->diffInMinutes($expectedEnd);
-
-
-        if (($attendance->worked_minutes ?? 0) < $expectedMinutes) {
-
-            $attendance->worked_minutes = $expectedMinutes;
-            $attendance->salary_amount  = round(($expectedMinutes / 60) * $hourlyRate);
-        }
+        $attendance->worked_minutes = $workedMinutes;
+        $attendance->salary_amount = round(($workedMinutes / 60) * $hourlyRate);
 
         $attendance->save();
 
-        return back()->with('success', 'Đã duyệt về sớm và tính đủ lương ca.');
+        return back()->with('success', 'Đã duyệt về sớm. Lương tính đến giờ nhân viên xin về sớm.');
     }
 
     public function rejectEarly(Attendance $attendance)
@@ -550,39 +662,42 @@ class AttendanceController extends Controller
 
         $attendance->early_leave_status = 'rejected';
 
+        [$workedMinutes, $hourlyRate] = $this->calculateEarlyLeaveSalaryByDecision($attendance, false);
+
+        $attendance->worked_minutes = $workedMinutes;
+        $attendance->salary_amount = round(($workedMinutes / 60) * $hourlyRate);
+
         $attendance->save();
 
-        return back()->with('success', 'Đã từ chối về sớm.');
+        return back()->with('success', 'Đã từ chối về sớm. Lương được tính đến hết ca.');
     }
 
-    public function submitLateReason(Request $request, Attendance $attendance)
+    private function calculateEarlyLeaveSalaryByDecision(Attendance $attendance, bool $isApproved): array
     {
-        $staff = Auth::user()->staff;
+        $staff = $attendance->staff;
 
-        if (!$staff || $attendance->staff_id !== $staff->user_id) {
-            abort(403);
+        $actualCheckIn = Carbon::parse($attendance->work_date . ' ' . $attendance->check_in, 'Asia/Ho_Chi_Minh');
+        $actualCheckOut = Carbon::parse($attendance->work_date . ' ' . $attendance->check_out, 'Asia/Ho_Chi_Minh');
+        $expectedStart = Carbon::parse($attendance->work_date . ' ' . $attendance->expected_check_in, 'Asia/Ho_Chi_Minh');
+        $expectedEnd = Carbon::parse($attendance->work_date . ' ' . $attendance->expected_check_out, 'Asia/Ho_Chi_Minh');
+
+        $lateMinutes = $expectedStart->diffInMinutes($actualCheckIn, false);
+        $salaryStart = $lateMinutes > 15 ? $actualCheckIn : $expectedStart;
+        $salaryEnd = $isApproved ? $actualCheckOut : $expectedEnd;
+
+        $workedMinutes = $salaryStart->diffInMinutes($salaryEnd, false);
+        if ($workedMinutes < 0) {
+            $workedMinutes = 0;
         }
 
-        if (!$attendance->is_late) {
-            return back()->with('error', 'Ca này không có đi trễ.');
+        if ($staff->employment_status === 'official') {
+            $hourlyRate = $staff->official_hourly_wage ?? 20000;
+        } else {
+            $hourlyRate = $staff->probation_hourly_wage ?? 15000;
         }
 
-        if (in_array($attendance->late_status, ['approved', 'rejected'])) {
-            return back()->with('error', 'Yêu cầu đã được xử lý.');
-        }
-
-        $request->validate([
-            'late_reason' => 'required|string|max:500'
-        ]);
-
-        $attendance->update([
-            'late_reason' => $request->late_reason,
-            'late_status' => 'pending'
-        ]);
-
-        return back()->with('success', 'Đã gửi lý do đi trễ.');
+        return [$workedMinutes, $hourlyRate];
     }
-
     public function submitEarlyReason(Request $request, Attendance $attendance)
     {
         $staff = Auth::user()->staff;
@@ -613,60 +728,23 @@ class AttendanceController extends Controller
 
     private function evaluateAttendanceAccess(string $ip, ?float $latitude, ?float $longitude): array
     {
-        $allowedNetworks = config('attendance.allowed_networks', []);
-        $officeLat = config('attendance.origin_latitude');
-        $officeLng = config('attendance.origin_longitude');
-        $maxDistanceMeters = (float) config('attendance.max_distance_meters', 50);
-
+        // Simplified: only network-based check (company requested "same network with admin")
+        $allowedNetworks = $this->getAllowedNetworks();
         $allowByNetwork = $this->isAllowedNetwork($ip, $allowedNetworks);
-        $allowByRadius = false;
-        $distanceMeters = null;
 
-        if (
-            is_numeric($officeLat)
-            && is_numeric($officeLng)
-            && $latitude !== null
-            && $longitude !== null
-        ) {
-            $distanceMeters = $this->calculateDistanceMeters(
-                (float) $officeLat,
-                (float) $officeLng,
-                $latitude,
-                $longitude
-            );
-
-            $allowByRadius = $distanceMeters <= $maxDistanceMeters;
-        }
-
-        if ($allowByNetwork && $allowByRadius) {
-            $method = 'both';
-        } elseif ($allowByNetwork) {
-            $method = 'wifi';
-        } elseif ($allowByRadius) {
-            $method = 'radius';
-        } else {
-            $method = 'none';
-        }
-
-        if ($method === 'none') {
-            $message = 'Chấm công bị từ chối: cần cùng mạng Wi-Fi hợp lệ hoặc trong bán kính 50m từ điểm gốc.';
-
-            if ($distanceMeters !== null) {
-                $message .= ' Khoảng cách hiện tại: ' . round($distanceMeters, 2) . 'm.';
-            }
-
+        if (!$allowByNetwork) {
             return [
                 'allowed' => false,
-                'method' => $method,
-                'distance_meters' => $distanceMeters,
-                'message' => $message,
+                'method' => 'none',
+                'distance_meters' => null,
+                'message' => 'Chấm công bị từ chối: cần kết nối cùng mạng Wi-Fi công ty.',
             ];
         }
 
         return [
             'allowed' => true,
-            'method' => $method,
-            'distance_meters' => $distanceMeters,
+            'method' => 'wifi',
+            'distance_meters' => null,
             'message' => null,
         ];
     }

@@ -82,7 +82,6 @@
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <div>
                     <h5 class="mb-1">Danh sách nhân viên</h5>
-                    <small class="text-muted">Theo dõi trạng thái tài khoản, vai trò và thông tin làm việc của nhân viên trên cùng một màn hình.</small>
                 </div>
                 <span class="badge bg-primary">Hiển thị {{ $staffs->count() }} / {{ $staffs->total() }} nhân viên</span>
             </div>
@@ -174,7 +173,6 @@
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <div>
                     <h6 class="mb-1">Bảng nhân viên</h6>
-                    <small class="text-muted"> Có thể xem nhanh chi tiết, khóa hoặc chỉnh sửa trực tiếp từ danh sách.</small>
                 </div>
                 <a href="{{ route('admin.staff.create') }}" class="btn btn-primary btn-sm">+ Thêm nhân viên</a>
             </div>

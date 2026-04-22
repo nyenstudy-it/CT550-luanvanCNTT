@@ -1,0 +1,515 @@
+﻿erDiagram
+    attendances {
+        INT id "PK"
+        INT staff_id "FK"
+        DATE work_date
+        STRING shift
+        TIME expected_check_in
+        TIME expected_check_out
+        TIME check_in
+        STRING check_in_ip
+        DECIMAL check_in_latitude
+        DECIMAL check_in_longitude
+        STRING check_in_network_type
+        DECIMAL check_in_distance_meters
+        STRING check_in_verification_method
+        INT is_late
+        INT is_early_leave
+        TEXT early_leave_reason
+        STRING early_leave_status
+        INT early_leave_pay_percent
+        INT early_leave_approved_by "FK"
+        DATETIME early_leave_approved_at
+        INT is_auto_checkout_forced
+        INT scenario_type
+        INT is_completed
+        DECIMAL salary_amount
+        TIME check_out
+        STRING check_out_ip
+        DECIMAL check_out_latitude
+        DECIMAL check_out_longitude
+        STRING check_out_network_type
+        DECIMAL check_out_distance_meters
+        STRING check_out_verification_method
+        INT worked_minutes
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    blog_blocks {
+        INT id "PK"
+        INT blog_id "FK"
+        STRING type
+        TEXT content
+        STRING image
+        INT position
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    blogs {
+        INT id "PK"
+        STRING title
+        STRING slug
+        TEXT summary
+        TEXT content
+        STRING image
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    cache {
+        STRING key "PK"
+        TEXT value
+        INT expiration
+    }
+    cache_locks {
+        STRING key "PK"
+        STRING owner
+        INT expiration
+    }
+    category_products {
+        INT id "PK"
+        STRING name
+        TEXT description
+        STRING image_url
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    contacts {
+        INT id "PK"
+        STRING name
+        STRING email
+        TEXT message
+        STRING status
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    customer_messages {
+        INT id "PK"
+        INT customer_id "FK"
+        INT product_id "FK"
+        INT staff_id "FK"
+        TEXT message
+        STRING sender_type
+        INT is_read
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    customers {
+        INT id "PK"
+        INT user_id "FK"
+        STRING phone
+        TEXT address
+        STRING province
+        STRING district
+        STRING ward
+        INT is_default_address
+        DATE date_of_birth
+        STRING gender
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    discount_product {
+        INT id "PK"
+        INT discount_id "FK"
+        INT product_id "FK"
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    discount_usages {
+        INT id "PK"
+        INT discount_id "FK"
+        INT user_id "FK"
+        INT order_id "FK"
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    discounts {
+        INT id "PK"
+        STRING code
+        STRING type
+        DECIMAL value
+        DECIMAL min_order_value
+        DECIMAL max_discount
+        STRING audience
+        INT usage_limit
+        INT used_count
+        DATETIME start_at
+        DATETIME end_at
+        INT is_active
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    failed_jobs {
+        INT id "PK"
+        STRING uuid
+        TEXT connection
+        TEXT queue
+        TEXT payload
+        TEXT exception
+        DATETIME failed_at
+    }
+    import_items {
+        INT id "PK"
+        INT import_id "FK"
+        INT product_variant_id "FK"
+        DATE manufacture_date
+        DATE expired_at
+        INT quantity
+        INT remaining_quantity
+        DECIMAL unit_price
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    imports {
+        INT id "PK"
+        INT supplier_id "FK"
+        DATE import_date
+        DECIMAL total_amount
+        DATETIME created_at
+        DATETIME updated_at
+        INT staff_id "FK"
+    }
+    inventories {
+        INT id "PK"
+        INT product_variant_id "FK"
+        INT quantity
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    inventory_writeoffs {
+        INT id "PK"
+        INT product_variant_id "FK"
+        INT import_item_id "FK"
+        INT quantity_written_off
+        DECIMAL unit_cost
+        DECIMAL total_cost
+        STRING reason
+        STRING note
+        INT written_off_by "FK"
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    job_batches {
+        STRING id "PK"
+        STRING name
+        INT total_jobs
+        INT pending_jobs
+        INT failed_jobs
+        TEXT failed_job_ids
+        TEXT options
+        INT cancelled_at
+        INT created_at
+        INT finished_at
+    }
+    jobs {
+        INT id "PK"
+        STRING queue
+        TEXT payload
+        INT attempts
+        INT reserved_at
+        INT available_at
+        INT created_at
+    }
+    leave_balances {
+        INT id "PK"
+        INT staff_id "FK"
+        INT year
+        STRING type
+        INT total_days
+        INT used_days
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    leave_requests {
+        INT id "PK"
+        INT staff_id "FK"
+        DATE start_date
+        DATE end_date
+        STRING type
+        STRING status
+        TEXT reason
+        INT approved_by "FK"
+        DATETIME approved_at
+        TEXT rejection_reason
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    migrations {
+        INT id "PK"
+        STRING migration
+        INT batch
+    }
+    notifications {
+        INT id "PK"
+        STRING type
+        STRING title
+        TEXT content
+        INT user_id
+        INT related_id
+        INT is_read
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    order_cancellations {
+        INT id "PK"
+        INT order_id "FK"
+        STRING cancelled_by
+        STRING reason
+        DATETIME cancelled_at
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    order_items {
+        INT id "PK"
+        INT order_id "FK"
+        INT product_variant_id "FK"
+        INT quantity
+        DECIMAL price
+        DECIMAL subtotal
+        DECIMAL cost_price
+        TEXT batch_details
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    order_return_images {
+        INT id "PK"
+        INT order_return_id "FK"
+        STRING image_path
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    order_returns {
+        INT id "PK"
+        INT order_id "FK"
+        STRING reason
+        STRING status
+        INT inspected_by
+        DATETIME inspected_at
+        TEXT inspection_notes
+        INT approved_by
+        DATETIME approved_at
+        TEXT rejection_reason
+        TEXT description
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    orders {
+        INT id "PK"
+        INT customer_id
+        STRING receiver_name
+        STRING receiver_phone
+        TEXT shipping_address
+        TEXT note
+        DECIMAL total_amount
+        INT shipping_fee
+        INT discount_amount
+        STRING discount_code
+        STRING status
+        STRING previous_status
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    password_reset_tokens {
+        STRING email "PK"
+        STRING token
+        DATETIME created_at
+    }
+    payments {
+        INT id "PK"
+        INT order_id "FK"
+        STRING method
+        DECIMAL amount
+        DECIMAL refund_amount
+        STRING refund_status
+        DATETIME refund_at
+        STRING transaction_code
+        STRING status
+        DATETIME paid_at
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    product_images {
+        INT id "PK"
+        INT product_id "FK"
+        INT product_variant_id "FK"
+        STRING image_path
+        INT is_primary
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    product_variants {
+        INT id "PK"
+        INT product_id "FK"
+        STRING sku
+        STRING volume
+        STRING weight
+        STRING color
+        STRING size
+        DECIMAL price
+        DATE manufacture_date
+        DATE expired_at
+        INT is_active
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    products {
+        INT id "PK"
+        INT category_id "FK"
+        INT supplier_id "FK"
+        STRING name
+        TEXT description
+        TEXT usage_instructions
+        TEXT storage_instructions
+        INT ocop_star
+        INT ocop_year
+        STRING image
+        STRING status
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    review_likes {
+        INT id "PK"
+        INT review_id "FK"
+        INT customer_id "FK"
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    review_replies {
+        INT id "PK"
+        INT review_id "FK"
+        INT parent_id "FK"
+        INT user_id "FK"
+        STRING author_name
+        INT is_admin
+        TEXT content
+        STRING status
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    reviews {
+        INT id "PK"
+        INT product_id "FK"
+        INT customer_id "FK"
+        INT order_id "FK"
+        INT rating
+        TEXT content
+        INT is_anonymous
+        DATETIME created_at
+        DATETIME updated_at
+        STRING status
+    }
+    salaries {
+        INT id "PK"
+        INT staff_id "FK"
+        INT month
+        INT year
+        INT total_minutes
+        DECIMAL total_hours
+        DECIMAL total_salary
+        INT late_count
+        INT early_leave_count
+        INT absent_count
+        DATETIME created_at
+        DATETIME updated_at
+        DECIMAL penalty_amount
+        DECIMAL bonus_amount
+        DECIMAL final_salary
+    }
+    sessions {
+        STRING id "PK"
+        INT user_id
+        STRING ip_address
+        TEXT user_agent
+        TEXT payload
+        INT last_activity
+    }
+    staffs {
+        INT user_id "PK, FK"
+        STRING phone
+        DATE date_of_birth
+        TEXT address
+        STRING position
+        DATE start_date
+        DATE probation_start
+        DATE probation_end
+        STRING employment_status
+        DECIMAL probation_hourly_wage
+        DECIMAL official_hourly_wage
+        DATETIME created_at
+    }
+    suppliers {
+        INT id "PK"
+        STRING name
+        STRING phone
+        STRING address
+        TEXT description
+    }
+    users {
+        INT id "PK"
+        STRING name
+        STRING email
+        DATETIME email_verified_at
+        STRING password
+        STRING avatar
+        STRING role
+        STRING status
+        STRING locked_reason
+        DATETIME locked_at
+        STRING remember_token
+        DATETIME created_at
+        DATETIME updated_at
+    }
+    wishlists {
+        INT id "PK"
+        INT user_id "FK"
+        INT product_id "FK"
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    attendances }o--|| staffs : "early_leave_approved_by -> user_id"
+    attendances }o--|| staffs : "staff_id -> user_id"
+    blog_blocks }o--|| blogs : "blog_id -> id"
+    customer_messages }o--|| users : "customer_id -> id"
+    customer_messages }o--|| products : "product_id -> id"
+    customer_messages }o--|| users : "staff_id -> id"
+    customers }o--|| users : "user_id -> id"
+    discount_product }o--|| discounts : "discount_id -> id"
+    discount_product }o--|| products : "product_id -> id"
+    discount_usages }o--|| discounts : "discount_id -> id"
+    discount_usages }o--|| orders : "order_id -> id"
+    discount_usages }o--|| users : "user_id -> id"
+    import_items }o--|| imports : "import_id -> id"
+    import_items }o--|| product_variants : "product_variant_id -> id"
+    imports }o--|| staffs : "staff_id -> user_id"
+    imports }o--|| suppliers : "supplier_id -> id"
+    inventories }o--|| product_variants : "product_variant_id -> id"
+    inventory_writeoffs }o--|| import_items : "import_item_id -> id"
+    inventory_writeoffs }o--|| product_variants : "product_variant_id -> id"
+    inventory_writeoffs }o--|| users : "written_off_by -> id"
+    leave_balances }o--|| staffs : "staff_id -> user_id"
+    leave_requests }o--|| staffs : "approved_by -> user_id"
+    leave_requests }o--|| staffs : "staff_id -> user_id"
+    order_cancellations }o--|| orders : "order_id -> id"
+    order_items }o--|| orders : "order_id -> id"
+    order_items }o--|| product_variants : "product_variant_id -> id"
+    order_return_images }o--|| order_returns : "order_return_id -> id"
+    order_returns }o--|| orders : "order_id -> id"
+    payments }o--|| orders : "order_id -> id"
+    product_images }o--|| products : "product_id -> id"
+    product_images }o--|| product_variants : "product_variant_id -> id"
+    product_variants }o--|| products : "product_id -> id"
+    products }o--|| category_products : "category_id -> id"
+    products }o--|| suppliers : "supplier_id -> id"
+    review_likes }o--|| customers : "customer_id -> id"
+    review_likes }o--|| reviews : "review_id -> id"
+    review_replies }o--|| review_replies : "parent_id -> id"
+    review_replies }o--|| reviews : "review_id -> id"
+    review_replies }o--|| users : "user_id -> id"
+    reviews }o--|| orders : "order_id -> id"
+    reviews }o--|| products : "product_id -> id"
+    reviews }o--|| users : "customer_id -> id"
+    salaries }o--|| staffs : "staff_id -> user_id"
+    staffs }o--|| users : "user_id -> id"
+    wishlists }o--|| products : "product_id -> id"
+    wishlists }o--|| users : "user_id -> id"
+

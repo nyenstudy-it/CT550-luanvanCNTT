@@ -6,7 +6,6 @@
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <div>
                     <h5 class="mb-1">Danh sách nhà phân phối</h5>
-                    <small class="text-muted">Theo dõi thông tin liên hệ và địa chỉ để quản lý nguồn cung.</small>
                 </div>
                 <a href="{{ route('admin.suppliers.create') }}" class="btn btn-sm btn-success">+ Thêm nhà phân phối</a>
             </div>

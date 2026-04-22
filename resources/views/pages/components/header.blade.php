@@ -97,12 +97,18 @@
             <div class="col-lg-7">
                 <nav class="header__menu">
                     <ul>
-                        <li class="active"><a href="{{ route('pages.trangchu') }}">Trang chủ</a></li>
-                        <li>
+                        <li class="{{ request()->routeIs('pages.trangchu', 'pages.home') ? 'active' : '' }}">
+                            <a href="{{ route('pages.trangchu') }}">Trang chủ</a>
+                        </li>
+                        <li class="{{ request()->routeIs('products.index', 'products.show') ? 'active' : '' }}">
                             <a href="{{ route('products.index') }}">Sản phẩm</a>
                         </li>
-                        <li><a href="{{route('blogs.index')}}">Tin tức</a></li>
-                        <li><a href="{{ route('contact') }}">Liên hệ</a></li>
+                        <li class="{{ request()->routeIs('blogs.index', 'blogs.show') ? 'active' : '' }}">
+                            <a href="{{route('blogs.index')}}">Tin tức</a>
+                        </li>
+                        <li class="{{ request()->routeIs('contact') ? 'active' : '' }}">
+                            <a href="{{ route('contact') }}">Liên hệ</a>
+                        </li>
                     </ul>
                 </nav>
             </div>

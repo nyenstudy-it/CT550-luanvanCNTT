@@ -7,7 +7,6 @@
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <div>
                     <h5 class="mb-1">Danh sách blog</h5>
-                    <small class="text-muted">Quản lý bài viết, nội dung và tiến độ xuất bản.</small>
                 </div>
                 <a href="{{ route('admin.blogs.create') }}" class="btn btn-sm btn-success">+ Thêm blog</a>
             </div>

@@ -40,8 +40,19 @@
 
                         <!-- Dropdown gợi ý -->
                         <div id="search-results" class="search-results"></div>
-                        <!-- Trạng thái voice -->
-                        <div id="voice-status"></div>
+
+                        <!-- Voice modal (centered) -->
+                        <div id="voice-modal" class="voice-modal-overlay" style="display:none;">
+                            <div class="voice-modal-content">
+                                <div class="voice-mic">
+                                    <i class="fa fa-microphone"></i>
+                                </div>
+                                <div class="voice-text">
+                                    <div class="voice-title">Đang nghe…</div>
+                                    <div id="voice-transcript" class="voice-transcript">&nbsp;</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="hero__search__phone">
@@ -209,30 +220,102 @@
             }
         }
 
-        /* Thông báo trạng thái giọng nói */
-        #voice-status {
-            position: absolute;
-            top: calc(100% + 4px);
-            right: 0;
-            background: #333;
+        /* Centered voice modal styles */
+        .voice-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            -webkit-backdrop-filter: blur(2px);
+            backdrop-filter: blur(2px);
+        }
+
+        .voice-modal-content {
+            background: #fff;
+            padding: 22px 24px;
+            border-radius: 12px;
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.25);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            min-width: 320px;
+            max-width: 90%;
+        }
+
+        .voice-mic {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff5252, #e53935);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             color: #fff;
-            font-size: 12px;
-            padding: 4px 10px;
-            border-radius: 4px;
-            display: none;
-            white-space: nowrap;
-            z-index: 1001;
+            font-size: 28px;
+            box-shadow: 0 8px 20px rgba(229, 57, 53, 0.28);
+            animation: mic-pulse 1.4s infinite;
+        }
+
+        @keyframes mic-pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1
+            }
+
+            50% {
+                transform: scale(1.08);
+                opacity: 0.8
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1
+            }
+        }
+
+        .voice-text .voice-title {
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: #222;
+        }
+
+        .voice-transcript {
+            color: #444;
+            font-size: 14px;
+            max-height: 64px;
+            overflow: auto;
+            word-break: break-word;
         }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const searchForm = document.querySelector('.hero__search__form form');
             const input = document.getElementById('search-input');
             const results = document.getElementById('search-results');
+            const allProductsUrl = "{{ route('products.index') }}";
             let timer;
 
-            if (!input || !results) {
+            if (!searchForm || !input || !results) {
                 return;
             }
+
+            function goToSearchResults(rawQuery) {
+                const query = (rawQuery || '').trim();
+                if (query.length === 0) {
+                    return;
+                }
+
+                const targetUrl = `${allProductsUrl}?keyword=${encodeURIComponent(query)}`;
+                window.location.href = targetUrl;
+            }
+
+            searchForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                goToSearchResults(input.value);
+            });
 
             // ---- Live search khi gõ ----
             input.addEventListener('keyup', function () {
@@ -289,23 +372,18 @@
 
             // ---- Voice Search ----
             const voiceBtn = document.getElementById('voice-search-btn');
-            const voiceStatus = document.getElementById('voice-status');
 
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             const isSecureVoiceContext = location.protocol === 'https:' ||
                 location.hostname === 'localhost' ||
                 location.hostname === '127.0.0.1';
 
-            if (!SpeechRecognition || !voiceBtn || !voiceStatus) {
+            if (!SpeechRecognition || !voiceBtn) {
                 // Ẩn nút nếu trình duyệt không hỗ trợ
                 if (voiceBtn) voiceBtn.style.display = 'none';
             } else if (!isSecureVoiceContext) {
                 voiceBtn.addEventListener('click', function () {
-                    voiceStatus.textContent = 'Voice search chỉ hoạt động trên HTTPS hoặc localhost.';
-                    voiceStatus.style.display = 'block';
-                    setTimeout(() => {
-                        voiceStatus.style.display = 'none';
-                    }, 3500);
+                    alert('Voice search chỉ hoạt động trên HTTPS hoặc localhost.');
                 });
             } else {
                 const recognition = new SpeechRecognition();
@@ -329,10 +407,17 @@
 
                 recognition.addEventListener('start', function () {
                     isListening = true;
-                    finalTranscript = input.value ? `${input.value.trim()} ` : '';
+                    finalTranscript = '';
                     voiceBtn.classList.add('listening');
                     voiceBtn.querySelector('i').className = 'fa fa-microphone';
-                    showStatus('Đang nghe…');
+                    // Clear input box and show centered modal
+                    input.value = '';
+                    const modal = document.getElementById('voice-modal');
+                    const transcriptEl = document.getElementById('voice-transcript');
+                    if (modal) {
+                        modal.style.display = 'flex';
+                        if (transcriptEl) transcriptEl.textContent = '';
+                    }
                 });
 
                 recognition.addEventListener('result', function (e) {
@@ -348,7 +433,9 @@
                     }
 
                     const liveText = `${finalTranscript}${interimTranscript}`.replace(/\s+/g, ' ').trim();
-                    input.value = liveText;
+                    // Only update modal, NOT the input box
+                    const transcriptEl = document.getElementById('voice-transcript');
+                    if (transcriptEl) transcriptEl.textContent = liveText || '';
 
                     if (liveText.length > 0) {
                         fetchSuggestions(liveText);
@@ -358,11 +445,20 @@
                 recognition.addEventListener('end', function () {
                     isListening = false;
                     voiceBtn.classList.remove('listening');
-                    hideStatus();
 
-                    const query = input.value.trim();
-                    if (query.length > 0) {
-                        fetchSuggestions(query);
+                    // Hide modal immediately - do not show popup
+                    const modal = document.getElementById('voice-modal');
+                    if (modal) {
+                        modal.style.display = 'none';
+                    }
+
+                    // Display the recognized text in the input box
+                    const finalText = finalTranscript.trim();
+                    input.value = finalText;
+
+                    // Auto-trigger search results display and navigate
+                    if (finalText.length > 0) {
+                        goToSearchResults(finalText);
                     }
                 });
 
@@ -374,20 +470,13 @@
                         'no-speech': 'Không nghe thấy giọng nói.',
                         'network': 'Lỗi mạng, không thể nhận diện giọng.',
                     };
-                    showStatus(messages[e.error] || 'Lỗi nhận diện giọng nói.', 3000);
-                });
-
-                function showStatus(msg, duration) {
-                    voiceStatus.textContent = msg;
-                    voiceStatus.style.display = 'block';
-                    if (duration) {
-                        setTimeout(() => { voiceStatus.style.display = 'none'; }, duration);
+                    alert(messages[e.error] || 'Lỗi nhận diện giọng nói.');
+                    // Hide modal immediately on error
+                    const modal = document.getElementById('voice-modal');
+                    if (modal) {
+                        modal.style.display = 'none';
                     }
-                }
-
-                function hideStatus() {
-                    voiceStatus.style.display = 'none';
-                }
+                });
             }
         });
     </script>

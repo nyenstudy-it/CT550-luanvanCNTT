@@ -15,7 +15,7 @@
                 </div>
             </div>
 
-            <form action="{{ route('admin.imports.store') }}" method="POST">
+            <form action="{{ route('admin.imports.store') }}" method="POST" id="importForm">
                 @csrf
 
                 <div class="row g-3 mb-4">
@@ -247,6 +247,11 @@
             box-shadow: 0 0 0 0.15rem rgba(220, 53, 69, 0.12);
         }
 
+        .date-input-invalid {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 0.15rem rgba(220, 53, 69, 0.12);
+        }
+
         .import-items-wrapper {
             border: 1px solid #e5e7eb;
             border-radius: 12px;
@@ -340,6 +345,7 @@
         let variantsByProduct = {};
 
         const supplierSelect = document.getElementById('supplierSelect');
+        const importForm = document.getElementById('importForm');
         const supplierProductsGrid = document.getElementById('supplierProductsGrid');
         const supplierProductCount = document.getElementById('supplierProductCount');
         const grandTotal = document.getElementById('grandTotal');
@@ -367,12 +373,12 @@
 
             supplierProductsGrid.className = 'supplier-products-grid';
             supplierProductsGrid.innerHTML = products.map(product => `
-                                <div class="product-mini-card">
-                                    <h6>${escapeHtml(product.name)}</h6>
-                                    <div class="product-mini-meta"><span>Biến thể</span><strong>${product.variant_count}</strong></div>
-                                    <div class="product-mini-meta"><span>Tồn hiện tại</span><strong>${product.total_stock}</strong></div>
-                                </div>
-                            `).join('');
+                                    <div class="product-mini-card">
+                                        <h6>${escapeHtml(product.name)}</h6>
+                                        <div class="product-mini-meta"><span>Biến thể</span><strong>${product.variant_count}</strong></div>
+                                        <div class="product-mini-meta"><span>Tồn hiện tại</span><strong>${product.total_stock}</strong></div>
+                                    </div>
+                                `).join('');
             supplierProductCount.textContent = `${products.length} sản phẩm`;
         }
 
@@ -488,6 +494,34 @@
                 });
         }
 
+        function validateDateInputsInRow(row) {
+            const manufactureInput = row.querySelector('input[name$="[manufacture_date]"]');
+            const expiredInput = row.querySelector('input[name$="[expired_at]"]');
+
+            if (!manufactureInput || !expiredInput) {
+                return true;
+            }
+
+            const manufactureValue = manufactureInput.value;
+            const expiredValue = expiredInput.value;
+
+            manufactureInput.classList.remove('date-input-invalid');
+            expiredInput.classList.remove('date-input-invalid');
+
+            if (!manufactureValue || !expiredValue) {
+                return true;
+            }
+
+            const isValid = expiredValue > manufactureValue;
+
+            if (!isValid) {
+                manufactureInput.classList.add('date-input-invalid');
+                expiredInput.classList.add('date-input-invalid');
+            }
+
+            return isValid;
+        }
+
         function resetRow(row) {
             const variantSearch = row.querySelector('.variant-search');
             const variantSelect = row.querySelector('.variant-select');
@@ -588,6 +622,13 @@
                 updateRowSummary(e.target.closest('tr'));
                 updateGrandTotal();
             }
+
+            if (e.target.name && (e.target.name.endsWith('[manufacture_date]') || e.target.name.endsWith('[expired_at]'))) {
+                const row = e.target.closest('tr');
+                if (row) {
+                    validateDateInputsInRow(row);
+                }
+            }
         });
 
 
@@ -597,48 +638,48 @@
             const row = table.insertRow();
 
             row.innerHTML = `
-                            <td>
-                                <input type="text" class="form-control search-input product-search mb-2" placeholder="Tìm nhanh sản phẩm...">
-                                <select name="items[${index}][product_id]" class="form-select product-select" required>
-                                    <option value="">-- Chọn sản phẩm --</option>
-                                </select>
-                            </td>
-                            <td>
-                                <input type="text" class="form-control search-input variant-search mb-2" placeholder="Tìm nhanh biến thể..." disabled>
-                                <select name="items[${index}][product_variant_id]" class="form-select variant-select" required>
-                                    <option value="">-- Chọn biến thể --</option>
-                                </select>
-                            </td>
-                            <td>
-                                <div class="meta-box stock-display">0</div>
-                            </td>
-                            <td>
-                                <div class="meta-box sale-price-display">0 đ</div>
-                            </td>
-                            <td>
-                                <input type="date" name="items[${index}][manufacture_date]" class="form-control">
-                            </td>
-                            <td>
-                                <input type="date" name="items[${index}][expired_at]" class="form-control">
-                            </td>
-                            <td>
-                                <input type="number" name="items[${index}][quantity]" class="form-control quantity-input" min="1" required>
-                            </td>
-                            <td>
-                                <input type="number" name="items[${index}][unit_price]" class="form-control unit-price-input" min="0" required>
-                                <div class="price-helper mt-2">
-                                    <button type="button" class="btn btn-link btn-sm p-0 latest-price-btn d-none">Dùng giá nhập gần nhất</button>
-                                    <div class="latest-price-display text-muted small">Chưa có lịch sử nhập</div>
-                                    <div class="price-warning text-danger small d-none">Giá nhập đang cao hơn giá bán hiện tại.</div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="meta-box row-total-display">0 đ</div>
-                            </td>
-                            <td>
-                                <button type="button" class="btn btn-danger btn-sm remove-row">X</button>
-                            </td>
-                        `;
+                                <td>
+                                    <input type="text" class="form-control search-input product-search mb-2" placeholder="Tìm nhanh sản phẩm...">
+                                    <select name="items[${index}][product_id]" class="form-select product-select" required>
+                                        <option value="">-- Chọn sản phẩm --</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control search-input variant-search mb-2" placeholder="Tìm nhanh biến thể..." disabled>
+                                    <select name="items[${index}][product_variant_id]" class="form-select variant-select" required>
+                                        <option value="">-- Chọn biến thể --</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <div class="meta-box stock-display">0</div>
+                                </td>
+                                <td>
+                                    <div class="meta-box sale-price-display">0 đ</div>
+                                </td>
+                                <td>
+                                    <input type="date" name="items[${index}][manufacture_date]" class="form-control">
+                                </td>
+                                <td>
+                                    <input type="date" name="items[${index}][expired_at]" class="form-control">
+                                </td>
+                                <td>
+                                    <input type="number" name="items[${index}][quantity]" class="form-control quantity-input" min="1" required>
+                                </td>
+                                <td>
+                                    <input type="number" name="items[${index}][unit_price]" class="form-control unit-price-input" min="0" required>
+                                    <div class="price-helper mt-2">
+                                        <button type="button" class="btn btn-link btn-sm p-0 latest-price-btn d-none">Dùng giá nhập gần nhất</button>
+                                        <div class="latest-price-display text-muted small">Chưa có lịch sử nhập</div>
+                                        <div class="price-warning text-danger small d-none">Giá nhập đang cao hơn giá bán hiện tại.</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="meta-box row-total-display">0 đ</div>
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-danger btn-sm remove-row">X</button>
+                                </td>
+                            `;
 
             // nếu đã chọn nhà phân phối thì load lại sản phẩm cho dòng mới
             if (currentProducts.length > 0) {
@@ -689,6 +730,13 @@
                 updateRowSummary(e.target.closest('tr'));
                 updateGrandTotal();
             }
+
+            if (e.target.name && (e.target.name.endsWith('[manufacture_date]') || e.target.name.endsWith('[expired_at]'))) {
+                const row = e.target.closest('tr');
+                if (row) {
+                    validateDateInputsInRow(row);
+                }
+            }
         });
 
         document.addEventListener('click', function (e) {
@@ -701,6 +749,25 @@
                     unitPriceInput.value = latestPrice;
                     updateRowSummary(row);
                     updateGrandTotal();
+                }
+            }
+        });
+
+        importForm.addEventListener('submit', function (e) {
+            const rows = document.querySelectorAll('#itemsTable tbody tr');
+
+            for (const row of rows) {
+                const isValid = validateDateInputsInRow(row);
+                if (!isValid) {
+                    e.preventDefault();
+
+                    const expiredInput = row.querySelector('input[name$="[expired_at]"]');
+                    if (expiredInput) {
+                        expiredInput.focus();
+                    }
+
+                    alert('HSD phải lớn hơn NSX. Vui lòng nhập lại ngày cho sản phẩm này.');
+                    return;
                 }
             }
         });

@@ -7,7 +7,6 @@
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <div>
                     <h5 class="mb-1">Danh sách danh mục sản phẩm</h5>
-                    <small class="text-muted">Quản lý danh mục và hình ảnh hiển thị trên hệ thống.</small>
                 </div>
                 <a href="{{ route('admin.categories.create') }}" class="btn btn-sm btn-success">+ Thêm danh mục</a>
             </div>

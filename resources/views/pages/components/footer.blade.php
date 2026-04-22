@@ -5,7 +5,7 @@
             <div class="col-lg-3 col-md-6 col-sm-6">
                 <div class="footer__about">
                     <div class="footer__about__logo">
-                        <a href="./index.html"><img src="{{ asset('frontend/images/logo.png') }}" alt=""></a>
+                        <a href="{{ route('pages.trangchu') }}"><img src="{{ asset('frontend/images/logo.png') }}" sizes="119px 50px" alt=""></a>
                     </div>
                     <ul>
                         <li>Địa chỉ: Đại học Cần Thơ, đường 3/2, Phường Ninh Kiều, Cần Thơ</li>

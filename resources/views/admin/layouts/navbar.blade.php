@@ -35,9 +35,9 @@
         <i class="fa fa-bars"></i>
     </a>
 
-    <form class="d-none d-md-flex ms-4">
+    {{-- <form class="d-none d-md-flex ms-4">
         <input class="form-control border-0" type="search" placeholder="Search">
-    </form>
+    </form> --}}
 
     <div class="navbar-nav align-items-center ms-auto">
 
@@ -83,7 +83,7 @@
                 <span class="d-none d-lg-inline-flex">Thông báo</span>
             </a>
 
-            <ul class="dropdown-menu dropdown-menu-end bg-light border-0 rounded-0 rounded-bottom m-0 admin-notification-dropdown"
+            <ul class="dropdown-menu dropdown-menu-end bg-light border-0 rounded-0 rounded-bottom m-0 admin-notification-dropdown admin-noti-pretty"
                 aria-labelledby="adminNotiToggle">
                 <li class="px-3 py-2">
                     <form method="POST" action="{{ route('admin.notifications.markAllRead') }}">
@@ -99,7 +99,8 @@
                 @forelse($notifications as $noti)
                     @if($noti->type !== 'chat_customer_message')
                         <li>
-                            <a href="{{ route('admin.notifications.read', $noti->id) }}" class="dropdown-item"
+                            <a href="{{ route('admin.notifications.read', $noti->id) }}"
+                                class="dropdown-item admin-noti-item {{ !$noti->is_read ? 'unread' : '' }}"
                                 data-notification-type="{{ $noti->type }}"
                                 data-read-url="{{ route('admin.notifications.read', $noti->id) }}">
                                 <h6 class="fw-normal mb-1">{{ $noti->title }}</h6>
@@ -107,16 +108,16 @@
                                 <small class="text-muted">{{ $noti->created_at->diffForHumans() }}</small>
                             </a>
                         </li>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
                     @endif
                 @empty
                     <li><span class="dropdown-item text-center">Không có thông báo</span></li>
                 @endforelse
                 <li>
-                    <a href="{{ route('admin.notifications') }}" class="dropdown-item text-center">
-                        Xem các thông báo trước đó
+                    <hr class="dropdown-divider">
+                </li>
+                <li>
+                    <a href="{{ route('admin.notifications') }}" class="dropdown-item text-center view-all">
+                        Xem tất cả thông báo
                     </a>
                 </li>
             </ul>
@@ -160,14 +161,15 @@
                                 <div class="p-3 text-muted text-center">Đang tải hội thoại...</div>
                             </div>
                         </div>
-                        <div class="col-lg-8 d-flex flex-column">
-                            <div class="p-3 border-bottom">
+                        <div class="col-lg-8 d-flex flex-column" style="max-height: 68vh;">
+                            <div class="p-3 border-bottom" style="flex-shrink: 0;">
                                 <strong id="admin-chat-customer-name">Chưa chọn hội thoại</strong>
                             </div>
-                            <div id="admin-chat-messages" class="flex-grow-1 p-3 bg-light overflow-auto">
+                            <div id="admin-chat-messages" class="overflow-auto p-3 bg-light"
+                                style="height: auto; max-height: 380px; min-height: 330px; flex-shrink: 0;">
                                 <div class="text-muted text-center mt-4">Chọn khách hàng để xem tin nhắn</div>
                             </div>
-                            <div class="p-3 border-top">
+                            <div class="p-3 border-top" style="flex-shrink: 0;">
                                 <div class="d-flex gap-2">
                                     <textarea id="admin-chat-reply" class="form-control" rows="2"
                                         placeholder="Nhập nội dung phản hồi..."></textarea>
@@ -201,7 +203,9 @@
             let conversationData = [];
             let lastConversationHash = null;
             let lastMessagesHash = null;
+            let lastMessageId = null;  // Track last message ID for incremental loading
             let pollTimer = null;
+            let isLoadingConversation = false;  // Prevent duplicate requests
 
             function escapeHtml(value) {
                 return String(value || '')
@@ -298,10 +302,65 @@
                 }).join('');
             }
 
+            let adminMessageCache = new Set();  // Track message IDs to prevent duplicates
+
+            function appendMessages(messages) {
+                if (!Array.isArray(messages) || messages.length === 0) {
+                    return;
+                }
+
+                // Create messages incrementally (append only new, non-duplicate messages)
+                const fragment = document.createDocumentFragment();
+                let newCount = 0;
+
+                messages.forEach(function (msg) {
+                    if (!msg.id || adminMessageCache.has(msg.id)) {
+                        return;  // Skip duplicates
+                    }
+
+                    adminMessageCache.add(msg.id);
+                    const mine = msg.sender_type !== 'customer';
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = 'd-flex mb-2 ' + (mine ? 'justify-content-end' : 'justify-content-start');
+                    messageDiv.setAttribute('data-msg-id', msg.id);
+                    messageDiv.innerHTML = [
+                        '<div class="p-2 rounded ' + (mine ? 'bg-primary text-white' : 'bg-white border') + '" style="max-width: 78%;">',
+                        '<div>' + escapeHtml(msg.message || '') + '</div>',
+                        '<small class="d-block mt-1 ' + (mine ? 'text-white-50' : 'text-muted') + '">' + formatTime(msg.created_at) + '</small>',
+                        '</div>'
+                    ].join('');
+                    fragment.appendChild(messageDiv);
+                    newCount++;
+                });
+
+                if (newCount > 0) {
+                    // Remove placeholder if exists
+                    const placeholder = messagesEl.querySelector('.text-muted');
+                    if (placeholder) {
+                        placeholder.remove();
+                    }
+
+                    messagesEl.appendChild(fragment);
+
+                    // Only auto-scroll if user was already at bottom (within 100px)
+                    const isAtBottom = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 100;
+                    if (isAtBottom) {
+                        messagesEl.scrollTop = messagesEl.scrollHeight;
+                    }
+                }
+
+                // Track last message ID for next incremental load
+                if (messages.length > 0) {
+                    lastMessageId = messages[messages.length - 1].id;
+                }
+            }
+
             function renderMessages(messages) {
                 if (!Array.isArray(messages) || messages.length === 0) {
                     messagesEl.innerHTML = '<div class="text-muted text-center mt-4">Chưa có tin nhắn</div>';
                     lastMessagesHash = '';
+                    lastMessageId = null;
+                    adminMessageCache.clear();
                     return;
                 }
 
@@ -311,19 +370,59 @@
                 }
                 lastMessagesHash = hash;
 
-                messagesEl.innerHTML = messages.map(function (msg) {
-                    const mine = msg.sender_type !== 'customer';
-                    return [
-                        '<div class="d-flex mb-2 ' + (mine ? 'justify-content-end' : 'justify-content-start') + '">',
-                        '<div class="p-2 rounded ' + (mine ? 'bg-primary text-white' : 'bg-white border') + '" style="max-width: 78%;">',
-                        '<div>' + escapeHtml(msg.message || '') + '</div>',
-                        '<small class="d-block mt-1 ' + (mine ? 'text-white-50' : 'text-muted') + '">' + formatTime(msg.created_at) + '</small>',
-                        '</div>',
-                        '</div>'
-                    ].join('');
-                }).join('');
+                // Clear container
+                messagesEl.innerHTML = '';
+                adminMessageCache.clear();
 
-                messagesEl.scrollTop = messagesEl.scrollHeight;
+                // Render messages in chunks to avoid massive reflow
+                // Process 25 messages at a time
+                const chunkSize = 25;
+                let chunkIndex = 0;
+
+                function renderChunk() {
+                    const start = chunkIndex * chunkSize;
+                    const end = Math.min(start + chunkSize, messages.length);
+                    const fragment = document.createDocumentFragment();
+
+                    for (let i = start; i < end; i++) {
+                        const msg = messages[i];
+                        if (!msg.id) continue;
+
+                        adminMessageCache.add(msg.id);
+                        const mine = msg.sender_type !== 'customer';
+
+                        const div = document.createElement('div');
+                        div.className = 'd-flex mb-2 ' + (mine ? 'justify-content-end' : 'justify-content-start');
+                        div.setAttribute('data-msg-id', msg.id);
+                        div.innerHTML = [
+                            '<div class="p-2 rounded ' + (mine ? 'bg-primary text-white' : 'bg-white border') + '" style="max-width: 78%;">',
+                            '<div>' + escapeHtml(msg.message || '') + '</div>',
+                            '<small class="d-block mt-1 ' + (mine ? 'text-white-50' : 'text-muted') + '">' + formatTime(msg.created_at) + '</small>',
+                            '</div>'
+                        ].join('');
+                        fragment.appendChild(div);
+                    }
+
+                    messagesEl.appendChild(fragment);
+
+                    // Process next chunk
+                    chunkIndex++;
+                    if (chunkIndex * chunkSize < messages.length) {
+                        // Schedule next chunk render
+                        requestAnimationFrame(renderChunk);
+                    } else {
+                        // All chunks done - scroll to bottom
+                        messagesEl.scrollTop = messagesEl.scrollHeight;
+                    }
+                }
+
+                // Start rendering
+                renderChunk();
+
+                // Track last message ID
+                if (messages.length > 0) {
+                    lastMessageId = messages[messages.length - 1].id;
+                }
             }
 
             function loadConversations(preferredCustomerId) {
@@ -350,7 +449,7 @@
                         renderConversationList(conversationData);
                         updateNavbarBadge();
                         if (activeCustomerId) {
-                            loadConversation(activeCustomerId);
+                            loadConversation(activeCustomerId, true);
                         }
                     })
                     .catch(function () {
@@ -358,8 +457,15 @@
                     });
             }
 
-            function loadConversation(customerId) {
+            function loadConversation(customerId, isInitial) {
                 activeCustomerId = Number(customerId);
+
+                // Prevent duplicate requests
+                if (isLoadingConversation) {
+                    return;
+                }
+                isLoadingConversation = true;
+
                 const selected = conversationData.find(function (item) {
                     return Number(item.customer_id) === activeCustomerId;
                 });
@@ -370,7 +476,13 @@
                 // Re-render list immediately so active highlight matches the opened conversation.
                 renderConversationList(conversationData);
 
-                fetch('/admin/chats/' + activeCustomerId, {
+                // Build query with incremental loading support
+                let url = '/admin/chats/' + activeCustomerId;
+                if (!isInitial && lastMessageId) {
+                    url += '?from_id=' + lastMessageId;
+                }
+
+                fetch(url, {
                     headers: {
                         'Accept': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest'
@@ -378,16 +490,30 @@
                 })
                     .then(function (response) {
                         if (!response.ok) {
-                            throw new Error('Failed');
+                            throw new Error('HTTP ' + response.status);
                         }
                         return response.json();
                     })
                     .then(function (messages) {
-                        renderMessages(messages);
+                        if (isInitial || !lastMessageId) {
+                            // Initial load: render all
+                            renderMessages(messages);
+                        } else {
+                            // Incremental load: append new messages
+                            appendMessages(messages);
+                        }
                         updateNavbarBadge();
                     })
-                    .catch(function () {
+                    .catch(function (err) {
+                        console.error('Error loading conversation:', err);
+                        if (!isInitial) {
+                            // On incremental load errors, just silently skip (network might be slow)
+                            return;
+                        }
                         messagesEl.innerHTML = '<div class="text-danger text-center mt-4">Không tải được tin nhắn</div>';
+                    })
+                    .finally(function () {
+                        isLoadingConversation = false;
                     });
             }
 
@@ -402,6 +528,9 @@
                 }
 
                 sendBtn.disabled = true;
+                const originalText = sendBtn.textContent;
+                sendBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+
                 fetch('/admin/chats/' + activeCustomerId + '/reply', {
                     method: 'POST',
                     headers: {
@@ -414,17 +543,27 @@
                 })
                     .then(function (response) {
                         if (!response.ok) {
-                            throw new Error('Failed');
+                            return response.json().then(data => {
+                                throw new Error(data.message || 'Gửi thất bại');
+                            });
                         }
                         return response.json();
                     })
                     .then(function () {
                         replyEl.value = '';
-                        loadConversations(activeCustomerId);
-                        loadConversation(activeCustomerId);
+                        // Use incremental loading - just load new messages since lastMessageId
+                        // This is MUCH faster than full reload
+                        setTimeout(function () {
+                            loadConversation(activeCustomerId, false);
+                        }, 200);  // Small delay to ensure message is saved to DB
+                    })
+                    .catch(function (err) {
+                        console.error('Error sending reply:', err);
+                        alert('Lỗi gửi tin nhắn: ' + err.message);
                     })
                     .finally(function () {
                         sendBtn.disabled = false;
+                        sendBtn.textContent = originalText;
                     });
             }
 
@@ -457,7 +596,8 @@
                     return;
                 }
                 const customerId = item.dataset.customerId;
-                loadConversation(customerId);
+                lastMessageId = null;  // Reset for new conversation
+                loadConversation(customerId, true);
             });
 
             if (searchEl) {
@@ -479,13 +619,29 @@
                 if (pollTimer) {
                     clearInterval(pollTimer);
                 }
+
+                // ⚡ ULTRA-OPTIMIZED POLLING:
+                // - Base interval: 3s (good balance between real-time and performance)
+                // - Conversation list: only refresh on open, and every 30s max
+                // - This reduces DB load significantly
+                let lastConversationPoll = Date.now();
+                const conversationPollInterval = 30000;  // 30 seconds (reduced from 15)
+                let pollCount = 0;
+
                 pollTimer = setInterval(function () {
                     if (activeCustomerId) {
-                        loadConversation(activeCustomerId);
-                    } else {
-                        loadConversations();
+                        // Poll active conversation
+                        loadConversation(activeCustomerId, false);
                     }
-                }, 8000);
+
+                    pollCount++;
+                    // Refresh conversation list very infrequently (every 10 polls = 30 seconds)
+                    const now = Date.now();
+                    if (now - lastConversationPoll > conversationPollInterval) {
+                        loadConversations(activeCustomerId);
+                        lastConversationPoll = now;
+                    }
+                }, 3000);  // Increased from 2500ms to 3000ms - still feels real-time with better performance
             });
 
             modalEl.addEventListener('hidden.bs.modal', function () {

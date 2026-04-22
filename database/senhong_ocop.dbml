@@ -1,0 +1,559 @@
+﻿Project senhong_ocop {
+  database_type: 'MySQL'
+}
+
+Table attendances {
+  id bigint(20) unsigned [pk]
+  staff_id bigint(20) unsigned
+  work_date date
+  shift enum('morning','afternoon')
+  expected_check_in time
+  expected_check_out time
+  check_in time
+  check_in_ip varchar(45)
+  check_in_latitude decimal(10,7)
+  check_in_longitude decimal(10,7)
+  check_in_network_type varchar(50)
+  check_in_distance_meters decimal(8,2)
+  check_in_verification_method varchar(20)
+  is_late tinyint(1)
+  is_early_leave tinyint(1)
+  early_leave_reason text
+  early_leave_status enum('pending','approved','rejected')
+  early_leave_pay_percent int(11)
+  early_leave_approved_by bigint(20) unsigned
+  early_leave_approved_at timestamp
+  is_auto_checkout_forced tinyint(1)
+  scenario_type tinyint(3) unsigned
+  is_completed tinyint(1)
+  salary_amount decimal(12,2)
+  check_out time
+  check_out_ip varchar(45)
+  check_out_latitude decimal(10,7)
+  check_out_longitude decimal(10,7)
+  check_out_network_type varchar(50)
+  check_out_distance_meters decimal(8,2)
+  check_out_verification_method varchar(20)
+  worked_minutes int(11)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table blog_blocks {
+  id bigint(20) unsigned [pk]
+  blog_id bigint(20) unsigned
+  type enum('text','image')
+  content text
+  image varchar(255)
+  position int(11)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table blogs {
+  id bigint(20) unsigned [pk]
+  title varchar(255)
+  slug varchar(255) [unique]
+  summary text
+  content longtext
+  image varchar(255)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table cache {
+  key varchar(255) [pk]
+  value mediumtext
+  expiration int(11)
+}
+
+Table cache_locks {
+  key varchar(255) [pk]
+  owner varchar(255)
+  expiration int(11)
+}
+
+Table category_products {
+  id bigint(20) unsigned [pk]
+  name varchar(255)
+  description text
+  image_url varchar(255)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table contacts {
+  id bigint(20) unsigned [pk]
+  name varchar(255)
+  email varchar(255)
+  message text
+  status enum('pending','read')
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table customer_messages {
+  id bigint(20) unsigned [pk]
+  customer_id bigint(20) unsigned
+  product_id bigint(20) unsigned
+  staff_id bigint(20) unsigned
+  message text
+  sender_type enum('customer','staff','admin')
+  is_read tinyint(1)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table customers {
+  id bigint(20) unsigned [pk]
+  user_id bigint(20) unsigned
+  phone varchar(255)
+  address text
+  province varchar(255)
+  district varchar(255)
+  ward varchar(255)
+  is_default_address tinyint(1)
+  date_of_birth date
+  gender enum('male','female','other')
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table discount_product {
+  id bigint(20) unsigned [pk]
+  discount_id bigint(20) unsigned
+  product_id bigint(20) unsigned
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table discount_usages {
+  id bigint(20) unsigned [pk]
+  discount_id bigint(20) unsigned
+  user_id bigint(20) unsigned
+  order_id bigint(20) unsigned
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table discounts {
+  id bigint(20) unsigned [pk]
+  code varchar(255) [unique]
+  type enum('percent','fixed')
+  value decimal(10,2)
+  min_order_value decimal(10,2)
+  max_discount decimal(10,2)
+  audience varchar(30)
+  usage_limit int(11)
+  used_count int(11)
+  start_at timestamp
+  end_at timestamp
+  is_active tinyint(1)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table failed_jobs {
+  id bigint(20) unsigned [pk]
+  uuid varchar(255) [unique]
+  connection text
+  queue text
+  payload longtext
+  exception longtext
+  failed_at timestamp
+}
+
+Table import_items {
+  id bigint(20) unsigned [pk]
+  import_id bigint(20) unsigned
+  product_variant_id bigint(20) unsigned
+  manufacture_date date
+  expired_at date
+  quantity int(11)
+  remaining_quantity int(11)
+  unit_price decimal(15,2)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table imports {
+  id bigint(20) unsigned [pk]
+  supplier_id bigint(20) unsigned
+  import_date date
+  total_amount decimal(15,2)
+  created_at timestamp
+  updated_at timestamp
+  staff_id bigint(20) unsigned
+}
+
+Table inventories {
+  id bigint(20) unsigned [pk]
+  product_variant_id bigint(20) unsigned [unique]
+  quantity int(11)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table inventory_writeoffs {
+  id bigint(20) unsigned [pk]
+  product_variant_id bigint(20) unsigned
+  import_item_id bigint(20) unsigned
+  quantity_written_off int(11)
+  unit_cost decimal(15,2)
+  total_cost decimal(15,2)
+  reason enum('expired','damaged','other')
+  note varchar(255)
+  written_off_by bigint(20) unsigned
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table job_batches {
+  id varchar(255) [pk]
+  name varchar(255)
+  total_jobs int(11)
+  pending_jobs int(11)
+  failed_jobs int(11)
+  failed_job_ids longtext
+  options mediumtext
+  cancelled_at int(11)
+  created_at int(11)
+  finished_at int(11)
+}
+
+Table jobs {
+  id bigint(20) unsigned [pk]
+  queue varchar(255)
+  payload longtext
+  attempts tinyint(3) unsigned
+  reserved_at int(10) unsigned
+  available_at int(10) unsigned
+  created_at int(10) unsigned
+}
+
+Table leave_balances {
+  id bigint(20) unsigned [pk]
+  staff_id bigint(20) unsigned
+  year year(4)
+  type enum('phep','sick','maternity','unpaid')
+  total_days int(11)
+  used_days int(11)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table leave_requests {
+  id bigint(20) unsigned [pk]
+  staff_id bigint(20) unsigned
+  start_date date
+  end_date date
+  type enum('phep','sick','maternity','unpaid','other')
+  status enum('pending','approved','rejected','cancelled')
+  reason text
+  approved_by bigint(20) unsigned
+  approved_at timestamp
+  rejection_reason text
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table migrations {
+  id int(10) unsigned [pk]
+  migration varchar(255)
+  batch int(11)
+}
+
+Table notifications {
+  id bigint(20) unsigned [pk]
+  type varchar(255)
+  title varchar(255)
+  content text
+  user_id bigint(20) unsigned
+  related_id bigint(20) unsigned
+  is_read tinyint(1)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table order_cancellations {
+  id bigint(20) unsigned [pk]
+  order_id bigint(20) unsigned
+  cancelled_by enum('customer','staff','admin')
+  reason varchar(255)
+  cancelled_at timestamp
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table order_items {
+  id bigint(20) unsigned [pk]
+  order_id bigint(20) unsigned
+  product_variant_id bigint(20) unsigned
+  quantity int(11)
+  price decimal(15,2)
+  subtotal decimal(12,2)
+  cost_price decimal(12,2)
+  batch_details longtext
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table order_return_images {
+  id bigint(20) unsigned [pk]
+  order_return_id bigint(20) unsigned
+  image_path varchar(255)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table order_returns {
+  id bigint(20) unsigned [pk]
+  order_id bigint(20) unsigned
+  reason varchar(255)
+  status enum('requested','approved','rejected','given_to_shipper','goods_received','inspected_defective','inspected_good','refunded')
+  inspected_by bigint(20) unsigned
+  inspected_at timestamp
+  inspection_notes text
+  approved_by bigint(20) unsigned
+  approved_at timestamp
+  rejection_reason text
+  description text
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table orders {
+  id bigint(20) unsigned [pk]
+  customer_id bigint(20) unsigned
+  receiver_name varchar(255)
+  receiver_phone varchar(255)
+  shipping_address text
+  note text
+  total_amount decimal(15,2)
+  shipping_fee bigint(20) unsigned
+  discount_amount int(11)
+  discount_code varchar(255)
+  status enum('pending','confirmed','shipping','completed','cancelled','refund_requested','refunded')
+  previous_status varchar(255)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table password_reset_tokens {
+  email varchar(255) [pk]
+  token varchar(255)
+  created_at timestamp
+}
+
+Table payments {
+  id bigint(20) unsigned [pk]
+  order_id bigint(20) unsigned
+  method enum('COD','VNPAY','MOMO','BANK_TRANSFER')
+  amount decimal(12,2)
+  refund_amount decimal(10,2)
+  refund_status varchar(255)
+  refund_at timestamp
+  transaction_code varchar(255)
+  status enum('pending','paid','failed')
+  paid_at timestamp
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table product_images {
+  id bigint(20) unsigned [pk]
+  product_id bigint(20) unsigned
+  product_variant_id bigint(20) unsigned
+  image_path varchar(255)
+  is_primary tinyint(1)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table product_variants {
+  id bigint(20) unsigned [pk]
+  product_id bigint(20) unsigned
+  sku varchar(255)
+  volume varchar(50)
+  weight varchar(50)
+  color varchar(50)
+  size varchar(50)
+  price decimal(10,2)
+  manufacture_date date
+  expired_at date
+  is_active tinyint(1)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table products {
+  id bigint(20) unsigned [pk]
+  category_id bigint(20) unsigned
+  supplier_id bigint(20) unsigned
+  name varchar(255)
+  description text
+  usage_instructions text
+  storage_instructions text
+  ocop_star tinyint(3) unsigned
+  ocop_year smallint(5) unsigned
+  image varchar(255)
+  status enum('active','inactive')
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table review_likes {
+  id bigint(20) unsigned [pk]
+  review_id bigint(20) unsigned
+  customer_id bigint(20) unsigned
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table review_replies {
+  id bigint(20) unsigned [pk]
+  review_id bigint(20) unsigned
+  parent_id bigint(20) unsigned
+  user_id bigint(20) unsigned
+  author_name varchar(255)
+  is_admin tinyint(1)
+  content text
+  status varchar(255)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table reviews {
+  id bigint(20) unsigned [pk]
+  product_id bigint(20) unsigned
+  customer_id bigint(20) unsigned
+  order_id bigint(20) unsigned
+  rating tinyint(4)
+  content text
+  is_anonymous tinyint(1)
+  created_at timestamp
+  updated_at timestamp
+  status varchar(255)
+}
+
+Table salaries {
+  id bigint(20) unsigned [pk]
+  staff_id bigint(20) unsigned
+  month int(11)
+  year int(11)
+  total_minutes int(11)
+  total_hours decimal(8,2)
+  total_salary decimal(12,2)
+  late_count int(11)
+  early_leave_count int(11)
+  absent_count int(11)
+  created_at timestamp
+  updated_at timestamp
+  penalty_amount decimal(12,2)
+  bonus_amount decimal(12,2)
+  final_salary decimal(12,2)
+}
+
+Table sessions {
+  id varchar(255) [pk]
+  user_id bigint(20) unsigned
+  ip_address varchar(45)
+  user_agent text
+  payload longtext
+  last_activity int(11)
+}
+
+Table staffs {
+  user_id bigint(20) unsigned [pk]
+  phone varchar(255)
+  date_of_birth date
+  address text
+  position enum('cashier','warehouse','order_staff')
+  start_date date
+  probation_start date
+  probation_end date
+  employment_status enum('probation','official','resigned')
+  probation_hourly_wage decimal(10,2)
+  official_hourly_wage decimal(10,2)
+  created_at timestamp
+}
+
+Table suppliers {
+  id bigint(20) unsigned [pk]
+  name varchar(255)
+  phone varchar(255)
+  address varchar(255)
+  description text
+}
+
+Table users {
+  id bigint(20) unsigned [pk]
+  name varchar(255)
+  email varchar(255) [unique]
+  email_verified_at timestamp
+  password varchar(255)
+  avatar varchar(255)
+  role enum('admin','staff','customer')
+  status enum('active','locked')
+  locked_reason varchar(255)
+  locked_at timestamp
+  remember_token varchar(100)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table wishlists {
+  id bigint(20) unsigned [pk]
+  user_id bigint(20) unsigned
+  product_id bigint(20) unsigned
+  created_at timestamp
+  updated_at timestamp
+}
+
+Ref: attendances.early_leave_approved_by > staffs.user_id
+Ref: attendances.staff_id > staffs.user_id
+Ref: blog_blocks.blog_id > blogs.id
+Ref: customer_messages.customer_id > users.id
+Ref: customer_messages.product_id > products.id
+Ref: customer_messages.staff_id > users.id
+Ref: customers.user_id > users.id
+Ref: discount_product.discount_id > discounts.id
+Ref: discount_product.product_id > products.id
+Ref: discount_usages.discount_id > discounts.id
+Ref: discount_usages.order_id > orders.id
+Ref: discount_usages.user_id > users.id
+Ref: import_items.import_id > imports.id
+Ref: import_items.product_variant_id > product_variants.id
+Ref: imports.staff_id > staffs.user_id
+Ref: imports.supplier_id > suppliers.id
+Ref: inventories.product_variant_id > product_variants.id
+Ref: inventory_writeoffs.import_item_id > import_items.id
+Ref: inventory_writeoffs.product_variant_id > product_variants.id
+Ref: inventory_writeoffs.written_off_by > users.id
+Ref: leave_balances.staff_id > staffs.user_id
+Ref: leave_requests.approved_by > staffs.user_id
+Ref: leave_requests.staff_id > staffs.user_id
+Ref: order_cancellations.order_id > orders.id
+Ref: order_items.order_id > orders.id
+Ref: order_items.product_variant_id > product_variants.id
+Ref: order_return_images.order_return_id > order_returns.id
+Ref: order_returns.order_id > orders.id
+Ref: payments.order_id > orders.id
+Ref: product_images.product_id > products.id
+Ref: product_images.product_variant_id > product_variants.id
+Ref: product_variants.product_id > products.id
+Ref: products.category_id > category_products.id
+Ref: products.supplier_id > suppliers.id
+Ref: review_likes.customer_id > customers.id
+Ref: review_likes.review_id > reviews.id
+Ref: review_replies.parent_id > review_replies.id
+Ref: review_replies.review_id > reviews.id
+Ref: review_replies.user_id > users.id
+Ref: reviews.order_id > orders.id
+Ref: reviews.product_id > products.id
+Ref: reviews.customer_id > users.id
+Ref: salaries.staff_id > staffs.user_id
+Ref: staffs.user_id > users.id
+Ref: wishlists.product_id > products.id
+Ref: wishlists.user_id > users.id
+

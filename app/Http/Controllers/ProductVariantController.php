@@ -107,8 +107,6 @@ class ProductVariantController extends Controller
             'volume'           => $request->volume,
             'weight'           => $request->weight,
             'price'            => $request->price,
-            'manufacture_date' => $request->manufacture_date,
-            'expired_at'       => $request->expired_at,
         ]);
 
         if (empty($variant->sku)) {

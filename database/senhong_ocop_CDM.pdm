@@ -1,0 +1,808 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?PowerDesigner Version="16.1.2.4"?>
+<Document type="PhysicalDataModel" version="16.1.2.4">
+<RootObject id="o1">
+<Name>senhong_ocop</Name>
+<Code>senhong_ocop</Code>
+<Description>SENHONG OCOP SYSTEM - Physical Data Model
+Database: MySQL
+Created: April 16, 2026</Description>
+<CreationDate>2026-04-16</CreationDate>
+<Creator>OCOP System</Creator>
+<ModelOptions/>
+<TargetModel>MySQL 5.1+</TargetModel>
+<Tables>
+<Table id="t1">
+<Name>users</Name>
+<Code>users</Code>
+<Description>System users (admin, staff, customer, supplier)</Description>
+<Columns>
+<Column id="c1" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c2" name="name" code="name" type="VARCHAR" length="255" mandatory="1"/>
+<Column id="c3" name="email" code="email" type="VARCHAR" length="255" mandatory="1" unique="1"/>
+<Column id="c4" name="email_verified_at" code="email_verified_at" type="TIMESTAMP" mandatory="0"/>
+<Column id="c5" name="password" code="password" type="VARCHAR" length="255" mandatory="1"/>
+<Column id="c6" name="phone" code="phone" type="VARCHAR" length="20" mandatory="0" unique="1"/>
+<Column id="c7" name="avatar" code="avatar" type="VARCHAR" length="255" mandatory="0"/>
+<Column id="c8" name="role" code="role" type="ENUM" mandatory="1" default="customer"/>
+<Column id="c9" name="is_active" code="is_active" type="TINYINT" length="1" mandatory="1" default="1"/>
+<Column id="c10" name="lock_expires_at" code="lock_expires_at" type="TIMESTAMP" mandatory="0"/>
+<Column id="c11" name="lock_enabled_by" code="lock_enabled_by" type="BIGINT" length="20" mandatory="0"/>
+<Column id="c12" name="remember_token" code="remember_token" type="VARCHAR" length="100" mandatory="0"/>
+<Column id="c13" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c14" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk1" name="pk_users">
+<KeyColumn idref="c1"/>
+</PrimaryKey>
+</Table>
+<Table id="t2">
+<Name>staffs</Name>
+<Code>staffs</Code>
+<Description>Staff profile information (employees)</Description>
+<Columns>
+<Column id="c21" name="user_id" code="user_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c22" name="phone" code="phone" type="VARCHAR" length="20" mandatory="0"/>
+<Column id="c23" name="date_of_birth" code="date_of_birth" type="DATE" mandatory="0"/>
+<Column id="c24" name="address" code="address" type="TEXT" mandatory="0"/>
+<Column id="c25" name="position" code="position" type="ENUM" mandatory="1" default="staff"/>
+<Column id="c26" name="start_date" code="start_date" type="DATE" mandatory="0"/>
+<Column id="c27" name="probation_start" code="probation_start" type="DATE" mandatory="0"/>
+<Column id="c28" name="probation_end" code="probation_end" type="DATE" mandatory="0"/>
+<Column id="c29" name="employment_status" code="employment_status" type="ENUM" mandatory="1" default="probation"/>
+<Column id="c30" name="probation_hourly_wage" code="probation_hourly_wage" type="DECIMAL" precision="10" scale="2" mandatory="0"/>
+<Column id="c31" name="official_hourly_wage" code="official_hourly_wage" type="DECIMAL" precision="10" scale="2" mandatory="0"/>
+<Column id="c32" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c33" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk2" name="pk_staffs">
+<KeyColumn idref="c21"/>
+</PrimaryKey>
+<ForeignKey id="fk1" name="fk_staffs_users">
+<KeyColumn idref="c21" referencedTableid="t1" referencedColumnId="c1"/>
+</ForeignKey>
+</Table>
+<Table id="t3">
+<Name>customers</Name>
+<Code>customers</Code>
+<Description>Customer profile information</Description>
+<Columns>
+<Column id="c41" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c42" name="user_id" code="user_id" type="BIGINT" length="20" mandatory="0" unique="1"/>
+<Column id="c43" name="phone" code="phone" type="VARCHAR" length="20" mandatory="0"/>
+<Column id="c44" name="date_of_birth" code="date_of_birth" type="DATE" mandatory="0"/>
+<Column id="c45" name="address" code="address" type="TEXT" mandatory="0"/>
+<Column id="c46" name="is_default_address" code="is_default_address" type="TINYINT" length="1" mandatory="1" default="0"/>
+<Column id="c47" name="province_code" code="province_code" type="VARCHAR" length="5" mandatory="0"/>
+<Column id="c48" name="district_code" code="district_code" type="VARCHAR" length="5" mandatory="0"/>
+<Column id="c49" name="ward_code" code="ward_code" type="VARCHAR" length="5" mandatory="0"/>
+<Column id="c50" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c51" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk3" name="pk_customers">
+<KeyColumn idref="c41"/>
+</PrimaryKey>
+<ForeignKey id="fk2" name="fk_customers_users">
+<KeyColumn idref="c42" referencedTableid="t1" referencedColumnId="c1"/>
+</ForeignKey>
+</Table>
+<Table id="t4">
+<Name>attendances</Name>
+<Code>attendances</Code>
+<Description>Daily attendance tracking with 5 scenarios</Description>
+<Columns>
+<Column id="c61" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c62" name="staff_id" code="staff_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c63" name="work_date" code="work_date" type="DATE" mandatory="1" searchkey="1"/>
+<Column id="c64" name="shift" code="shift" type="ENUM" mandatory="1" searchkey="1"/>
+<Column id="c65" name="expected_check_in" code="expected_check_in" type="TIME" mandatory="1"/>
+<Column id="c66" name="expected_check_out" code="expected_check_out" type="TIME" mandatory="1"/>
+<Column id="c67" name="check_in" code="check_in" type="TIME" mandatory="0"/>
+<Column id="c68" name="check_in_ip" code="check_in_ip" type="VARCHAR" length="45" mandatory="0"/>
+<Column id="c69" name="check_in_latitude" code="check_in_latitude" type="DECIMAL" precision="10" scale="7" mandatory="0"/>
+<Column id="c70" name="check_in_longitude" code="check_in_longitude" type="DECIMAL" precision="10" scale="7" mandatory="0"/>
+<Column id="c71" name="check_in_network_type" code="check_in_network_type" type="VARCHAR" length="50" mandatory="0"/>
+<Column id="c72" name="check_in_distance_meters" code="check_in_distance_meters" type="DECIMAL" precision="8" scale="2" mandatory="0"/>
+<Column id="c73" name="check_in_verification_method" code="check_in_verification_method" type="VARCHAR" length="20" mandatory="0"/>
+<Column id="c74" name="check_out" code="check_out" type="TIME" mandatory="0"/>
+<Column id="c75" name="check_out_ip" code="check_out_ip" type="VARCHAR" length="45" mandatory="0"/>
+<Column id="c76" name="check_out_latitude" code="check_out_latitude" type="DECIMAL" precision="10" scale="7" mandatory="0"/>
+<Column id="c77" name="check_out_longitude" code="check_out_longitude" type="DECIMAL" precision="10" scale="7" mandatory="0"/>
+<Column id="c78" name="check_out_network_type" code="check_out_network_type" type="VARCHAR" length="50" mandatory="0"/>
+<Column id="c79" name="check_out_distance_meters" code="check_out_distance_meters" type="DECIMAL" precision="8" scale="2" mandatory="0"/>
+<Column id="c80" name="check_out_verification_method" code="check_out_verification_method" type="VARCHAR" length="20" mandatory="0"/>
+<Column id="c81" name="is_late" code="is_late" type="TINYINT" length="1" mandatory="1" default="0"/>
+<Column id="c82" name="is_early_leave" code="is_early_leave" type="TINYINT" length="1" mandatory="1" default="0"/>
+<Column id="c83" name="is_completed" code="is_completed" type="TINYINT" length="1" mandatory="1" default="0"/>
+<Column id="c84" name="is_auto_checkout_forced" code="is_auto_checkout_forced" type="TINYINT" length="1" mandatory="1" default="0"/>
+<Column id="c85" name="early_leave_reason" code="early_leave_reason" type="TEXT" mandatory="0"/>
+<Column id="c86" name="early_leave_status" code="early_leave_status" type="ENUM" mandatory="1" default="pending"/>
+<Column id="c87" name="early_leave_pay_percent" code="early_leave_pay_percent" type="INT" mandatory="1" default="100"/>
+<Column id="c88" name="early_leave_approved_by" code="early_leave_approved_by" type="BIGINT" length="20" mandatory="0"/>
+<Column id="c89" name="early_leave_approved_at" code="early_leave_approved_at" type="TIMESTAMP" mandatory="0"/>
+<Column id="c90" name="scenario_type" code="scenario_type" type="TINYINT" length="3" mandatory="0"/>
+<Column id="c91" name="worked_minutes" code="worked_minutes" type="INT" mandatory="0"/>
+<Column id="c92" name="salary_amount" code="salary_amount" type="DECIMAL" precision="12" scale="2" mandatory="0"/>
+<Column id="c93" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c94" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk4" name="pk_attendances">
+<KeyColumn idref="c61"/>
+</PrimaryKey>
+<UniqueKey id="uk1" name="uk_staff_date_shift">
+<KeyColumn idref="c62"/>
+<KeyColumn idref="c63"/>
+<KeyColumn idref="c64"/>
+</UniqueKey>
+<ForeignKey id="fk3" name="fk_attendances_staffs">
+<KeyColumn idref="c62" referencedTableid="t2" referencedColumnId="c21"/>
+</ForeignKey>
+</Table>
+<Table id="t5">
+<Name>salaries</Name>
+<Code>salaries</Code>
+<Description>Monthly salary calculation with bonuses and penalties</Description>
+<Columns>
+<Column id="c101" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c102" name="staff_id" code="staff_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c103" name="month" code="month" type="INT" length="2" mandatory="0"/>
+<Column id="c104" name="year" code="year" type="INT" length="4" mandatory="0"/>
+<Column id="c105" name="total_hours" code="total_hours" type="DECIMAL" precision="8" scale="2" mandatory="0"/>
+<Column id="c106" name="total_amount" code="total_amount" type="DECIMAL" precision="12" scale="2" mandatory="0"/>
+<Column id="c107" name="bonus" code="bonus" type="DECIMAL" precision="12" scale="2" mandatory="1" default="0"/>
+<Column id="c108" name="penalty" code="penalty" type="DECIMAL" precision="12" scale="2" mandatory="1" default="0"/>
+<Column id="c109" name="absent_count" code="absent_count" type="INT" mandatory="1" default="0"/>
+<Column id="c110" name="absent_amount" code="absent_amount" type="DECIMAL" precision="12" scale="2" mandatory="1" default="0"/>
+<Column id="c111" name="final_amount" code="final_amount" type="DECIMAL" precision="12" scale="2" mandatory="0"/>
+<Column id="c112" name="status" code="status" type="ENUM" mandatory="1" default="draft"/>
+<Column id="c113" name="notes" code="notes" type="TEXT" mandatory="0"/>
+<Column id="c114" name="paid_at" code="paid_at" type="TIMESTAMP" mandatory="0"/>
+<Column id="c115" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c116" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk5" name="pk_salaries">
+<KeyColumn idref="c101"/>
+</PrimaryKey>
+<UniqueKey id="uk2" name="uk_staff_month_year">
+<KeyColumn idref="c102"/>
+<KeyColumn idref="c103"/>
+<KeyColumn idref="c104"/>
+</UniqueKey>
+<ForeignKey id="fk4" name="fk_salaries_staffs">
+<KeyColumn idref="c102" referencedTableid="t2" referencedColumnId="c21"/>
+</ForeignKey>
+</Table>
+<Table id="t6">
+<Name>suppliers</Name>
+<Code>suppliers</Code>
+<Description>Supplier information</Description>
+<Columns>
+<Column id="c121" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c122" name="name" code="name" type="VARCHAR" length="255" mandatory="1"/>
+<Column id="c123" name="email" code="email" type="VARCHAR" length="255" mandatory="0"/>
+<Column id="c124" name="phone" code="phone" type="VARCHAR" length="20" mandatory="0"/>
+<Column id="c125" name="address" code="address" type="TEXT" mandatory="0"/>
+<Column id="c126" name="city" code="city" type="VARCHAR" length="100" mandatory="0"/>
+<Column id="c127" name="province_code" code="province_code" type="VARCHAR" length="5" mandatory="0"/>
+<Column id="c128" name="tax_code" code="tax_code" type="VARCHAR" length="20" mandatory="0"/>
+<Column id="c129" name="contact_person" code="contact_person" type="VARCHAR" length="255" mandatory="0"/>
+<Column id="c130" name="is_active" code="is_active" type="TINYINT" length="1" mandatory="1" default="1"/>
+<Column id="c131" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c132" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk6" name="pk_suppliers">
+<KeyColumn idref="c121"/>
+</PrimaryKey>
+</Table>
+<Table id="t7">
+<Name>category_products</Name>
+<Code>category_products</Code>
+<Description>Product categories</Description>
+<Columns>
+<Column id="c141" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c142" name="name" code="name" type="VARCHAR" length="255" mandatory="1" unique="1"/>
+<Column id="c143" name="description" code="description" type="TEXT" mandatory="0"/>
+<Column id="c144" name="image_url" code="image_url" type="VARCHAR" length="255" mandatory="0"/>
+<Column id="c145" name="slug" code="slug" type="VARCHAR" length="255" mandatory="0" unique="1"/>
+<Column id="c146" name="display_order" code="display_order" type="INT" mandatory="1" default="0"/>
+<Column id="c147" name="is_active" code="is_active" type="TINYINT" length="1" mandatory="1" default="1"/>
+<Column id="c148" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c149" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk7" name="pk_category_products">
+<KeyColumn idref="c141"/>
+</PrimaryKey>
+</Table>
+<Table id="t8">
+<Name>products</Name>
+<Code>products</Code>
+<Description>Product master data</Description>
+<Columns>
+<Column id="c161" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c162" name="category_id" code="category_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c163" name="name" code="name" type="VARCHAR" length="255" mandatory="1"/>
+<Column id="c164" name="type" code="type" type="ENUM" mandatory="1" default="simple"/>
+<Column id="c165" name="description" code="description" type="LONGTEXT" mandatory="0"/>
+<Column id="c166" name="origin" code="origin" type="VARCHAR" length="100" mandatory="0"/>
+<Column id="c167" name="is_active" code="is_active" type="TINYINT" length="1" mandatory="1" default="1"/>
+<Column id="c168" name="is_featured" code="is_featured" type="TINYINT" length="1" mandatory="1" default="0"/>
+<Column id="c169" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c170" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk8" name="pk_products">
+<KeyColumn idref="c161"/>
+</PrimaryKey>
+<ForeignKey id="fk5" name="fk_products_category">
+<KeyColumn idref="c162" referencedTableid="t7" referencedColumnId="c141"/>
+</ForeignKey>
+</Table>
+<Table id="t9">
+<Name>product_variants</Name>
+<Code>product_variants</Code>
+<Description>Product variants (size, color, volume)</Description>
+<Columns>
+<Column id="c181" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c182" name="product_id" code="product_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c183" name="sku" code="sku" type="VARCHAR" length="50" mandatory="1" unique="1"/>
+<Column id="c184" name="name" code="name" type="VARCHAR" length="255" mandatory="0"/>
+<Column id="c185" name="size" code="size" type="VARCHAR" length="50" mandatory="0"/>
+<Column id="c186" name="color" code="color" type="VARCHAR" length="50" mandatory="0"/>
+<Column id="c187" name="weight" code="weight" type="DECIMAL" precision="8" scale="2" mandatory="0"/>
+<Column id="c188" name="unit" code="unit" type="VARCHAR" length="20" mandatory="0"/>
+<Column id="c189" name="cost_price" code="cost_price" type="DECIMAL" precision="12" scale="2" mandatory="0"/>
+<Column id="c190" name="selling_price" code="selling_price" type="DECIMAL" precision="12" scale="2" mandatory="1"/>
+<Column id="c191" name="display_price" code="display_price" type="DECIMAL" precision="12" scale="2" mandatory="0"/>
+<Column id="c192" name="thickness" code="thickness" type="INT" mandatory="0"/>
+<Column id="c193" name="is_active" code="is_active" type="TINYINT" length="1" mandatory="1" default="1"/>
+<Column id="c194" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c195" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk9" name="pk_product_variants">
+<KeyColumn idref="c181"/>
+</PrimaryKey>
+<ForeignKey id="fk6" name="fk_variants_products">
+<KeyColumn idref="c182" referencedTableid="t8" referencedColumnId="c161"/>
+</ForeignKey>
+</Table>
+<Table id="t10">
+<Name>product_images</Name>
+<Code>product_images</Code>
+<Description>Product image gallery</Description>
+<Columns>
+<Column id="c201" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c202" name="product_id" code="product_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c203" name="product_variant_id" code="product_variant_id" type="BIGINT" length="20" mandatory="0" searchkey="1"/>
+<Column id="c204" name="path" code="path" type="VARCHAR" length="255" mandatory="1"/>
+<Column id="c205" name="is_primary" code="is_primary" type="TINYINT" length="1" mandatory="1" default="0"/>
+<Column id="c206" name="display_order" code="display_order" type="INT" mandatory="1" default="0"/>
+<Column id="c207" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk10" name="pk_product_images">
+<KeyColumn idref="c201"/>
+</PrimaryKey>
+<ForeignKey id="fk7" name="fk_product_images_products">
+<KeyColumn idref="c202" referencedTableid="t8" referencedColumnId="c161"/>
+</ForeignKey>
+<ForeignKey id="fk8" name="fk_product_images_variants">
+<KeyColumn idref="c203" referencedTableid="t9" referencedColumnId="c181"/>
+</ForeignKey>
+</Table>
+<Table id="t11">
+<Name>imports</Name>
+<Code>imports</Code>
+<Description>Inventory import records from suppliers</Description>
+<Columns>
+<Column id="c211" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c212" name="supplier_id" code="supplier_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c213" name="staff_id" code="staff_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c214" name="import_date" code="import_date" type="DATE" mandatory="1" searchkey="1"/>
+<Column id="c215" name="notes" code="notes" type="TEXT" mandatory="0"/>
+<Column id="c216" name="status" code="status" type="ENUM" mandatory="1" default="draft"/>
+<Column id="c217" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c218" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk11" name="pk_imports">
+<KeyColumn idref="c211"/>
+</PrimaryKey>
+<ForeignKey id="fk9" name="fk_imports_suppliers">
+<KeyColumn idref="c212" referencedTableid="t6" referencedColumnId="c121"/>
+</ForeignKey>
+<ForeignKey id="fk10" name="fk_imports_staffs">
+<KeyColumn idref="c213" referencedTableid="t2" referencedColumnId="c21"/>
+</ForeignKey>
+</Table>
+<Table id="t12">
+<Name>import_items</Name>
+<Code>import_items</Code>
+<Description>Individual items in each import</Description>
+<Columns>
+<Column id="c221" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c222" name="import_id" code="import_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c223" name="product_variant_id" code="product_variant_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c224" name="quantity" code="quantity" type="INT" mandatory="1"/>
+<Column id="c225" name="remaining_quantity" code="remaining_quantity" type="INT" mandatory="1" default="0"/>
+<Column id="c226" name="cost_price" code="cost_price" type="DECIMAL" precision="12" scale="2" mandatory="0"/>
+<Column id="c227" name="manufacturing_date" code="manufacturing_date" type="DATE" mandatory="0"/>
+<Column id="c228" name="expiry_date" code="expiry_date" type="DATE" mandatory="0"/>
+<Column id="c229" name="batch_number" code="batch_number" type="VARCHAR" length="100" mandatory="0"/>
+<Column id="c230" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c231" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk12" name="pk_import_items">
+<KeyColumn idref="c221"/>
+</PrimaryKey>
+<ForeignKey id="fk11" name="fk_import_items_imports">
+<KeyColumn idref="c222" referencedTableid="t11" referencedColumnId="c211"/>
+</ForeignKey>
+<ForeignKey id="fk12" name="fk_import_items_variants">
+<KeyColumn idref="c223" referencedTableid="t9" referencedColumnId="c181"/>
+</ForeignKey>
+</Table>
+<Table id="t13">
+<Name>inventories</Name>
+<Code>inventories</Code>
+<Description>Real-time stock tracking per product variant</Description>
+<Columns>
+<Column id="c241" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c242" name="product_variant_id" code="product_variant_id" type="BIGINT" length="20" mandatory="1" unique="1"/>
+<Column id="c243" name="total_quantity" code="total_quantity" type="INT" mandatory="1" default="0"/>
+<Column id="c244" name="available_quantity" code="available_quantity" type="INT" mandatory="1" default="0"/>
+<Column id="c245" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk13" name="pk_inventories">
+<KeyColumn idref="c241"/>
+</PrimaryKey>
+<ForeignKey id="fk13" name="fk_inventories_variants">
+<KeyColumn idref="c242" referencedTableid="t9" referencedColumnId="c181"/>
+</ForeignKey>
+</Table>
+<Table id="t14">
+<Name>inventory_writeoffs</Name>
+<Code>inventory_writeoffs</Code>
+<Description>Inventory writeoff records (expired, damaged, lost)</Description>
+<Columns>
+<Column id="c251" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c252" name="product_variant_id" code="product_variant_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c253" name="import_item_id" code="import_item_id" type="BIGINT" length="20" mandatory="0" searchkey="1"/>
+<Column id="c254" name="quantity" code="quantity" type="INT" mandatory="1"/>
+<Column id="c255" name="reason" code="reason" type="ENUM" mandatory="1" default="damaged"/>
+<Column id="c256" name="notes" code="notes" type="TEXT" mandatory="0"/>
+<Column id="c257" name="writeoff_date" code="writeoff_date" type="DATE" mandatory="1" default="CURRENT_DATE"/>
+<Column id="c258" name="approved_by" code="approved_by" type="BIGINT" length="20" mandatory="0"/>
+<Column id="c259" name="approved_at" code="approved_at" type="TIMESTAMP" mandatory="0"/>
+<Column id="c260" name="status" code="status" type="ENUM" mandatory="1" default="pending"/>
+<Column id="c261" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c262" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk14" name="pk_inventory_writeoffs">
+<KeyColumn idref="c251"/>
+</PrimaryKey>
+<ForeignKey id="fk14" name="fk_writeoffs_variants">
+<KeyColumn idref="c252" referencedTableid="t9" referencedColumnId="c181"/>
+</ForeignKey>
+<ForeignKey id="fk15" name="fk_writeoffs_import_items">
+<KeyColumn idref="c253" referencedTableid="t12" referencedColumnId="c221"/>
+</ForeignKey>
+<ForeignKey id="fk16" name="fk_writeoffs_approved_by">
+<KeyColumn idref="c258" referencedTableid="t2" referencedColumnId="c21"/>
+</ForeignKey>
+</Table>
+<Table id="t15">
+<Name>orders</Name>
+<Code>orders</Code>
+<Description>Customer orders</Description>
+<Columns>
+<Column id="c271" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c272" name="order_number" code="order_number" type="VARCHAR" length="50" mandatory="1" unique="1"/>
+<Column id="c273" name="customer_id" code="customer_id" type="BIGINT" length="20" mandatory="0" searchkey="1"/>
+<Column id="c274" name="total_amount" code="total_amount" type="DECIMAL" precision="12" scale="2" mandatory="1"/>
+<Column id="c275" name="shipping_fee" code="shipping_fee" type="DECIMAL" precision="12" scale="2" mandatory="1" default="0"/>
+<Column id="c276" name="discount" code="discount" type="DECIMAL" precision="12" scale="2" mandatory="1" default="0"/>
+<Column id="c277" name="final_amount" code="final_amount" type="DECIMAL" precision="12" scale="2" mandatory="1"/>
+<Column id="c278" name="status" code="status" type="ENUM" mandatory="1" default="pending"/>
+<Column id="c279" name="previous_status" code="previous_status" type="VARCHAR" length="50" mandatory="0"/>
+<Column id="c280" name="shipping_method" code="shipping_method" type="VARCHAR" length="100" mandatory="0"/>
+<Column id="c281" name="shipping_address" code="shipping_address" type="TEXT" mandatory="0"/>
+<Column id="c282" name="shipping_city" code="shipping_city" type="VARCHAR" length="100" mandatory="0"/>
+<Column id="c283" name="shipping_province_code" code="shipping_province_code" type="VARCHAR" length="5" mandatory="0"/>
+<Column id="c284" name="shipping_name" code="shipping_name" type="VARCHAR" length="255" mandatory="0"/>
+<Column id="c285" name="shipping_phone" code="shipping_phone" type="VARCHAR" length="20" mandatory="0"/>
+<Column id="c286" name="notes" code="notes" type="TEXT" mandatory="0"/>
+<Column id="c287" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c288" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk15" name="pk_orders">
+<KeyColumn idref="c271"/>
+</PrimaryKey>
+<ForeignKey id="fk17" name="fk_orders_customers">
+<KeyColumn idref="c273" referencedTableid="t3" referencedColumnId="c41"/>
+</ForeignKey>
+</Table>
+<Table id="t16">
+<Name>order_items</Name>
+<Code>order_items</Code>
+<Description>Individual items in each order</Description>
+<Columns>
+<Column id="c291" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c292" name="order_id" code="order_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c293" name="product_variant_id" code="product_variant_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c294" name="quantity" code="quantity" type="INT" mandatory="1"/>
+<Column id="c295" name="unit_price" code="unit_price" type="DECIMAL" precision="12" scale="2" mandatory="0"/>
+<Column id="c296" name="display_price" code="display_price" type="DECIMAL" precision="12" scale="2" mandatory="0"/>
+<Column id="c297" name="total_price" code="total_price" type="DECIMAL" precision="12" scale="2" mandatory="0"/>
+<Column id="c298" name="batch_number" code="batch_number" type="VARCHAR" length="100" mandatory="0"/>
+<Column id="c299" name="manufacturing_date" code="manufacturing_date" type="DATE" mandatory="0"/>
+<Column id="c300" name="expiry_date" code="expiry_date" type="DATE" mandatory="0"/>
+<Column id="c301" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk16" name="pk_order_items">
+<KeyColumn idref="c291"/>
+</PrimaryKey>
+<ForeignKey id="fk18" name="fk_order_items_orders">
+<KeyColumn idref="c292" referencedTableid="t15" referencedColumnId="c271"/>
+</ForeignKey>
+<ForeignKey id="fk19" name="fk_order_items_variants">
+<KeyColumn idref="c293" referencedTableid="t9" referencedColumnId="c181"/>
+</ForeignKey>
+</Table>
+<Table id="t17">
+<Name>order_cancellations</Name>
+<Code>order_cancellations</Code>
+<Description>Order cancellation records</Description>
+<Columns>
+<Column id="c311" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c312" name="order_id" code="order_id" type="BIGINT" length="20" mandatory="1" unique="1"/>
+<Column id="c313" name="reason" code="reason" type="VARCHAR" length="255" mandatory="0"/>
+<Column id="c314" name="cancelled_by" code="cancelled_by" type="VARCHAR" length="50" mandatory="0"/>
+<Column id="c315" name="cancelled_at" code="cancelled_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk17" name="pk_order_cancellations">
+<KeyColumn idref="c311"/>
+</PrimaryKey>
+<ForeignKey id="fk20" name="fk_order_cancellations">
+<KeyColumn idref="c312" referencedTableid="t15" referencedColumnId="c271"/>
+</ForeignKey>
+</Table>
+<Table id="t18">
+<Name>payments</Name>
+<Code>payments</Code>
+<Description>Payment records for orders</Description>
+<Columns>
+<Column id="c321" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c322" name="order_id" code="order_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c323" name="amount" code="amount" type="DECIMAL" precision="12" scale="2" mandatory="1"/>
+<Column id="c324" name="payment_method" code="payment_method" type="ENUM" mandatory="1" default="cash"/>
+<Column id="c325" name="payment_gateway" code="payment_gateway" type="VARCHAR" length="100" mandatory="0"/>
+<Column id="c326" name="transaction_id" code="transaction_id" type="VARCHAR" length="255" mandatory="0" unique="1"/>
+<Column id="c327" name="status" code="status" type="ENUM" mandatory="1" default="pending"/>
+<Column id="c328" name="refund_amount" code="refund_amount" type="DECIMAL" precision="12" scale="2" mandatory="0"/>
+<Column id="c329" name="refund_reason" code="refund_reason" type="TEXT" mandatory="0"/>
+<Column id="c330" name="refunded_at" code="refunded_at" type="TIMESTAMP" mandatory="0"/>
+<Column id="c331" name="notes" code="notes" type="TEXT" mandatory="0"/>
+<Column id="c332" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c333" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk18" name="pk_payments">
+<KeyColumn idref="c321"/>
+</PrimaryKey>
+<ForeignKey id="fk21" name="fk_payments_orders">
+<KeyColumn idref="c322" referencedTableid="t15" referencedColumnId="c271"/>
+</ForeignKey>
+</Table>
+<Table id="t19">
+<Name>order_returns</Name>
+<Code>order_returns</Code>
+<Description>Order return/refund requests</Description>
+<Columns>
+<Column id="c341" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c342" name="order_id" code="order_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c343" name="reason" code="reason" type="VARCHAR" length="255" mandatory="0"/>
+<Column id="c344" name="description" code="description" type="TEXT" mandatory="0"/>
+<Column id="c345" name="status" code="status" type="ENUM" mandatory="1" default="pending"/>
+<Column id="c346" name="refund_amount" code="refund_amount" type="DECIMAL" precision="12" scale="2" mandatory="0"/>
+<Column id="c347" name="requested_at" code="requested_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c348" name="approved_at" code="approved_at" type="TIMESTAMP" mandatory="0"/>
+<Column id="c349" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c350" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk19" name="pk_order_returns">
+<KeyColumn idref="c341"/>
+</PrimaryKey>
+<ForeignKey id="fk22" name="fk_order_returns_orders">
+<KeyColumn idref="c342" referencedTableid="t15" referencedColumnId="c271"/>
+</ForeignKey>
+</Table>
+<Table id="t20">
+<Name>order_return_images</Name>
+<Code>order_return_images</Code>
+<Description>Images for return requests</Description>
+<Columns>
+<Column id="c351" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c352" name="order_return_id" code="order_return_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c353" name="image_path" code="image_path" type="VARCHAR" length="255" mandatory="0"/>
+<Column id="c354" name="uploaded_at" code="uploaded_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk20" name="pk_order_return_images">
+<KeyColumn idref="c351"/>
+</PrimaryKey>
+<ForeignKey id="fk23" name="fk_order_return_images">
+<KeyColumn idref="c352" referencedTableid="t19" referencedColumnId="c341"/>
+</ForeignKey>
+</Table>
+<Table id="t21">
+<Name>wishlists</Name>
+<Code>wishlists</Code>
+<Description>Customer wishlist (saved items)</Description>
+<Columns>
+<Column id="c361" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c362" name="customer_id" code="customer_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c363" name="product_variant_id" code="product_variant_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c364" name="added_at" code="added_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk21" name="pk_wishlists">
+<KeyColumn idref="c361"/>
+</PrimaryKey>
+<UniqueKey id="uk3" name="uk_customer_variant">
+<KeyColumn idref="c362"/>
+<KeyColumn idref="c363"/>
+</UniqueKey>
+<ForeignKey id="fk24" name="fk_wishlists_customers">
+<KeyColumn idref="c362" referencedTableid="t3" referencedColumnId="c41"/>
+</ForeignKey>
+<ForeignKey id="fk25" name="fk_wishlists_variants">
+<KeyColumn idref="c363" referencedTableid="t9" referencedColumnId="c181"/>
+</ForeignKey>
+</Table>
+<Table id="t22">
+<Name>discounts</Name>
+<Code>discounts</Code>
+<Description>Discount/promotion codes</Description>
+<Columns>
+<Column id="c371" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c372" name="code" code="code" type="VARCHAR" length="50" mandatory="1" unique="1"/>
+<Column id="c373" name="description" code="description" type="TEXT" mandatory="0"/>
+<Column id="c374" name="discount_type" code="discount_type" type="ENUM" mandatory="1" default="percentage"/>
+<Column id="c375" name="discount_value" code="discount_value" type="DECIMAL" precision="12" scale="2" mandatory="1"/>
+<Column id="c376" name="max_discount_amount" code="max_discount_amount" type="DECIMAL" precision="12" scale="2" mandatory="0"/>
+<Column id="c377" name="min_order_amount" code="min_order_amount" type="DECIMAL" precision="12" scale="2" mandatory="0"/>
+<Column id="c378" name="usage_limit" code="usage_limit" type="INT" mandatory="0"/>
+<Column id="c379" name="usage_count" code="usage_count" type="INT" mandatory="1" default="0"/>
+<Column id="c380" name="start_date" code="start_date" type="DATE" mandatory="0"/>
+<Column id="c381" name="end_date" code="end_date" type="DATE" mandatory="0"/>
+<Column id="c382" name="audience" code="audience" type="ENUM" mandatory="1" default="all"/>
+<Column id="c383" name="is_active" code="is_active" type="TINYINT" length="1" mandatory="1" default="1"/>
+<Column id="c384" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c385" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk22" name="pk_discounts">
+<KeyColumn idref="c371"/>
+</PrimaryKey>
+</Table>
+<Table id="t23">
+<Name>discount_usages</Name>
+<Code>discount_usages</Code>
+<Description>Discount usage tracking</Description>
+<Columns>
+<Column id="c391" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c392" name="discount_id" code="discount_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c393" name="order_id" code="order_id" type="BIGINT" length="20" mandatory="0" searchkey="1"/>
+<Column id="c394" name="customer_id" code="customer_id" type="BIGINT" length="20" mandatory="0" searchkey="1"/>
+<Column id="c395" name="used_at" code="used_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk23" name="pk_discount_usages">
+<KeyColumn idref="c391"/>
+</PrimaryKey>
+<ForeignKey id="fk26" name="fk_discount_usages_discounts">
+<KeyColumn idref="c392" referencedTableid="t22" referencedColumnId="c371"/>
+</ForeignKey>
+<ForeignKey id="fk27" name="fk_discount_usages_orders">
+<KeyColumn idref="c393" referencedTableid="t15" referencedColumnId="c271"/>
+</ForeignKey>
+<ForeignKey id="fk28" name="fk_discount_usages_customers">
+<KeyColumn idref="c394" referencedTableid="t3" referencedColumnId="c41"/>
+</ForeignKey>
+</Table>
+<Table id="t24">
+<Name>discount_product</Name>
+<Code>discount_product</Code>
+<Description>Mapping of discounts to specific products</Description>
+<Columns>
+<Column id="c401" name="discount_id" code="discount_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c402" name="product_id" code="product_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+</Columns>
+<PrimaryKey id="pk24" name="pk_discount_product">
+<KeyColumn idref="c401"/>
+<KeyColumn idref="c402"/>
+</PrimaryKey>
+<ForeignKey id="fk29" name="fk_discount_product_discounts">
+<KeyColumn idref="c401" referencedTableid="t22" referencedColumnId="c371"/>
+</ForeignKey>
+<ForeignKey id="fk30" name="fk_discount_product_products">
+<KeyColumn idref="c402" referencedTableid="t8" referencedColumnId="c161"/>
+</ForeignKey>
+</Table>
+<Table id="t25">
+<Name>blogs</Name>
+<Code>blogs</Code>
+<Description>Blog posts and articles</Description>
+<Columns>
+<Column id="c411" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c412" name="title" code="title" type="VARCHAR" length="255" mandatory="1"/>
+<Column id="c413" name="slug" code="slug" type="VARCHAR" length="255" mandatory="1" unique="1"/>
+<Column id="c414" name="summary" code="summary" type="TEXT" mandatory="0"/>
+<Column id="c415" name="content" code="content" type="LONGTEXT" mandatory="0"/>
+<Column id="c416" name="image" code="image" type="VARCHAR" length="255" mandatory="0"/>
+<Column id="c417" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c418" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk25" name="pk_blogs">
+<KeyColumn idref="c411"/>
+</PrimaryKey>
+</Table>
+<Table id="t26">
+<Name>blog_blocks</Name>
+<Code>blog_blocks</Code>
+<Description>Content blocks within blog posts</Description>
+<Columns>
+<Column id="c421" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c422" name="blog_id" code="blog_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c423" name="type" code="type" type="ENUM" mandatory="1" default="text"/>
+<Column id="c424" name="content" code="content" type="TEXT" mandatory="0"/>
+<Column id="c425" name="image" code="image" type="VARCHAR" length="255" mandatory="0"/>
+<Column id="c426" name="position" code="position" type="INT" mandatory="0"/>
+<Column id="c427" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c428" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk26" name="pk_blog_blocks">
+<KeyColumn idref="c421"/>
+</PrimaryKey>
+<ForeignKey id="fk31" name="fk_blog_blocks">
+<KeyColumn idref="c422" referencedTableid="t25" referencedColumnId="c411"/>
+</ForeignKey>
+</Table>
+<Table id="t27">
+<Name>reviews</Name>
+<Code>reviews</Code>
+<Description>Product reviews and ratings</Description>
+<Columns>
+<Column id="c431" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c432" name="customer_id" code="customer_id" type="BIGINT" length="20" mandatory="0" searchkey="1"/>
+<Column id="c433" name="product_id" code="product_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c434" name="order_item_id" code="order_item_id" type="BIGINT" length="20" mandatory="0" searchkey="1"/>
+<Column id="c435" name="rating" code="rating" type="INT" mandatory="1"/>
+<Column id="c436" name="title" code="title" type="VARCHAR" length="255" mandatory="0"/>
+<Column id="c437" name="comment" code="comment" type="TEXT" mandatory="0"/>
+<Column id="c438" name="anonymous" code="anonymous" type="TINYINT" length="1" mandatory="1" default="0"/>
+<Column id="c439" name="status" code="status" type="ENUM" mandatory="1" default="pending"/>
+<Column id="c440" name="helpful_count" code="helpful_count" type="INT" mandatory="1" default="0"/>
+<Column id="c441" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c442" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk27" name="pk_reviews">
+<KeyColumn idref="c431"/>
+</PrimaryKey>
+<ForeignKey id="fk32" name="fk_reviews_customers">
+<KeyColumn idref="c432" referencedTableid="t3" referencedColumnId="c41"/>
+</ForeignKey>
+<ForeignKey id="fk33" name="fk_reviews_products">
+<KeyColumn idref="c433" referencedTableid="t8" referencedColumnId="c161"/>
+</ForeignKey>
+<ForeignKey id="fk34" name="fk_reviews_order_items">
+<KeyColumn idref="c434" referencedTableid="t16" referencedColumnId="c291"/>
+</ForeignKey>
+</Table>
+<Table id="t28">
+<Name>review_likes</Name>
+<Code>review_likes</Code>
+<Description>Likes on product reviews</Description>
+<Columns>
+<Column id="c451" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c452" name="review_id" code="review_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c453" name="customer_id" code="customer_id" type="BIGINT" length="20" mandatory="0" searchkey="1"/>
+<Column id="c454" name="liked_at" code="liked_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk28" name="pk_review_likes">
+<KeyColumn idref="c451"/>
+</PrimaryKey>
+<UniqueKey id="uk4" name="uk_review_customer_like">
+<KeyColumn idref="c452"/>
+<KeyColumn idref="c453"/>
+</UniqueKey>
+<ForeignKey id="fk35" name="fk_review_likes_reviews">
+<KeyColumn idref="c452" referencedTableid="t27" referencedColumnId="c431"/>
+</ForeignKey>
+<ForeignKey id="fk36" name="fk_review_likes_customers">
+<KeyColumn idref="c453" referencedTableid="t3" referencedColumnId="c41"/>
+</ForeignKey>
+</Table>
+<Table id="t29">
+<Name>review_replies</Name>
+<Code>review_replies</Code>
+<Description>Staff replies to product reviews</Description>
+<Columns>
+<Column id="c461" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c462" name="review_id" code="review_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c463" name="staff_id" code="staff_id" type="BIGINT" length="20" mandatory="0" searchkey="1"/>
+<Column id="c464" name="comment" code="comment" type="TEXT" mandatory="1"/>
+<Column id="c465" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c466" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk29" name="pk_review_replies">
+<KeyColumn idref="c461"/>
+</PrimaryKey>
+<ForeignKey id="fk37" name="fk_review_replies_reviews">
+<KeyColumn idref="c462" referencedTableid="t27" referencedColumnId="c431"/>
+</ForeignKey>
+<ForeignKey id="fk38" name="fk_review_replies_staffs">
+<KeyColumn idref="c463" referencedTableid="t2" referencedColumnId="c21"/>
+</ForeignKey>
+</Table>
+<Table id="t30">
+<Name>contacts</Name>
+<Code>contacts</Code>
+<Description>Contact form submissions</Description>
+<Columns>
+<Column id="c471" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c472" name="name" code="name" type="VARCHAR" length="255" mandatory="0"/>
+<Column id="c473" name="email" code="email" type="VARCHAR" length="255" mandatory="0"/>
+<Column id="c474" name="message" code="message" type="TEXT" mandatory="0"/>
+<Column id="c475" name="status" code="status" type="ENUM" mandatory="1" default="pending"/>
+<Column id="c476" name="reply" code="reply" type="TEXT" mandatory="0"/>
+<Column id="c477" name="replied_at" code="replied_at" type="TIMESTAMP" mandatory="0"/>
+<Column id="c478" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c479" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk30" name="pk_contacts">
+<KeyColumn idref="c471"/>
+</PrimaryKey>
+</Table>
+<Table id="t31">
+<Name>customer_messages</Name>
+<Code>customer_messages</Code>
+<Description>Customer messages/inquiries</Description>
+<Columns>
+<Column id="c481" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c482" name="customer_id" code="customer_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c483" name="product_id" code="product_id" type="BIGINT" length="20" mandatory="0" searchkey="1"/>
+<Column id="c484" name="staff_id" code="staff_id" type="BIGINT" length="20" mandatory="0" searchkey="1"/>
+<Column id="c485" name="message" code="message" type="TEXT" mandatory="1"/>
+<Column id="c486" name="is_read" code="is_read" type="TINYINT" length="1" mandatory="1" default="0"/>
+<Column id="c487" name="read_at" code="read_at" type="TIMESTAMP" mandatory="0"/>
+<Column id="c488" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+<Column id="c489" name="updated_at" code="updated_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk31" name="pk_customer_messages">
+<KeyColumn idref="c481"/>
+</PrimaryKey>
+<ForeignKey id="fk39" name="fk_customer_messages_customers">
+<KeyColumn idref="c482" referencedTableid="t3" referencedColumnId="c41"/>
+</ForeignKey>
+<ForeignKey id="fk40" name="fk_customer_messages_products">
+<KeyColumn idref="c483" referencedTableid="t8" referencedColumnId="c161"/>
+</ForeignKey>
+<ForeignKey id="fk41" name="fk_customer_messages_staffs">
+<KeyColumn idref="c484" referencedTableid="t2" referencedColumnId="c21"/>
+</ForeignKey>
+</Table>
+<Table id="t32">
+<Name>notifications</Name>
+<Code>notifications</Code>
+<Description>System notifications for users</Description>
+<Columns>
+<Column id="c491" name="id" code="id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c492" name="user_id" code="user_id" type="BIGINT" length="20" mandatory="1" searchkey="1"/>
+<Column id="c493" name="type" code="type" type="VARCHAR" length="100" mandatory="0"/>
+<Column id="c494" name="message" code="message" type="TEXT" mandatory="0"/>
+<Column id="c495" name="read_at" code="read_at" type="TIMESTAMP" mandatory="0"/>
+<Column id="c496" name="created_at" code="created_at" type="TIMESTAMP" mandatory="1" default="CURRENT_TIMESTAMP"/>
+</Columns>
+<PrimaryKey id="pk32" name="pk_notifications">
+<KeyColumn idref="c491"/>
+</PrimaryKey>
+<ForeignKey id="fk42" name="fk_notifications_users">
+<KeyColumn idref="c492" referencedTableid="t1" referencedColumnId="c1"/>
+</ForeignKey>
+</Table>
+</Tables>
+</RootObject>
+</Document>

@@ -22,6 +22,8 @@
     <link rel="stylesheet" href="{{ asset('frontend/css/slicknav.min.css') }}" type="text/css">
     <link rel="stylesheet" href="{{ asset('frontend/css/style.css') }}" type="text/css">
     <link rel="stylesheet" href="{{ asset('frontend/css/chatbox.css') }}" type="text/css">
+    <!-- SweetAlert2 - Load early for popups -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body>
@@ -35,10 +37,7 @@
                 ->count();
         }
     @endphp
-    <!-- Page Preloder -->
-    <div id="preloder">
-        <div class="loader"></div>
-    </div>
+
 
     {{-- <!-- Humberger Begin -->
     <div class="humberger__menu__overlay"></div>
@@ -115,8 +114,6 @@
     <script src="{{ asset('frontend/js/owl.carousel.min.js') }}"></script>
     <script src="{{ asset('frontend/js/main.js') }}"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
     <!-- JS show/hide categories -->
     <script>
         $(document).ready(function () {
@@ -143,33 +140,416 @@
 
 
     @yield('scripts')
+    @php
+        $flashMessages = [
+            'order_success' => session('order_success'),
+            'success' => session('success'),
+            'error' => session('error'),
+            'warning' => session('warning'),
+            'info' => session('info'),
+            'showCartPopup' => session('showCartPopup'),
+        ];
+    @endphp
+    <script>
+        // Check localStorage for cart popup flag in case session data was consumed by AJAX
+        if (!{!! json_encode($flashMessages['showCartPopup']) !!} && localStorage.getItem('showCartPopupOnLoad')) {
+            void 0;
+        }
 
-    @if(session('order_success'))
+        (function () {
+            const flashMessages = {!! json_encode($flashMessages) !!};
 
-        <script>
+            const cartUrl = {!! json_encode(route('cart.list')) !!};
+            const loginUrl = {!! json_encode(route('login')) !!};
+            const orderSuccessBaseUrl = {!! json_encode(url('/order')) !!};
+            const shownMessages = new Set();
 
-            document.addEventListener("DOMContentLoaded", function () {
+            function hasSwal() {
+                return typeof Swal !== 'undefined';
+            }
 
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Đặt hàng thành công!',
-                    html: `
-                                    Cảm ơn bạn đã mua hàng tại <b>SEN HỒNG OCOP</b><br>
-                                    Mã đơn hàng: <b>#{{ session('order_success') }}</b>
-                                `,
-                    confirmButtonText: 'Xem đơn hàng',
-                    confirmButtonColor: '#28a745'
-                }).then(() => {
+            function normalizeLevel(level) {
+                if (!level) {
+                    return 'info';
+                }
 
-                    window.location.href = "{{ route('orders.detail', session('order_success')) }}";
+                const normalized = String(level).toLowerCase();
+                if (['success', 'error', 'warning', 'info'].includes(normalized)) {
+                    return normalized;
+                }
 
+                if (normalized.includes('danger')) {
+                    return 'error';
+                }
+
+                return 'info';
+            }
+
+            function defaultTitle(level) {
+                switch (normalizeLevel(level)) {
+                    case 'success':
+                        return 'Thành công';
+                    case 'error':
+                        return 'Có lỗi xảy ra';
+                    case 'warning':
+                        return 'Lưu ý';
+                    default:
+                        return 'Thông báo';
+                }
+            }
+
+            function firePopup(options) {
+                const popupOptions = Object.assign({
+                    icon: 'info',
+                    title: 'Thông báo',
+                    confirmButtonColor: '#7fad39'
+                }, options || {});
+
+                if (hasSwal()) {
+                    return Swal.fire(popupOptions);
+                }
+
+                console.warn('⚠ Swal not available, using fallback alert()');
+                // FALLBACK: Use simple alert() - better than nothing
+                const alertMessage = (popupOptions.title || '') + '\n\n' + (popupOptions.text || '');
+                alert(alertMessage || 'Thông báo');
+
+                // Return a promise that mimics Swal result
+                return Promise.resolve({
+                    isConfirmed: true,
+                    isDismissed: false
                 });
+            }
 
+            async function notify(level, message, options) {
+                const text = (message || '').toString().trim();
+                if (!text) {
+                    return;
+                }
+
+                const lowerText = text.toLowerCase();
+                const dedupeKey = normalizeLevel(level) + '::' + text;
+
+                // Không dedup popup "thêm vào giỏ hàng" - nếu người dùng thêm nhiều lần cần popup mỗi lần
+                const isAddToCart = lowerText.includes('thêm vào giỏ hàng');
+
+                if (!isAddToCart) {
+                    // Apply dedup cho popup khác
+                    if (shownMessages.has(dedupeKey)) {
+                        return;
+                    }
+                    shownMessages.add(dedupeKey);
+                }
+
+                const lv = normalizeLevel(level);
+                // lowerText already defined above at line 256, don't redefine
+
+                if (lv === 'success' && lowerText.includes('thêm vào giỏ hàng')) {
+                    const result = await firePopup(Object.assign({
+                        icon: 'success',
+                        title: 'Thêm vào giỏ hàng thành công',
+                        text: 'Bạn muốn thanh toán ngay hay tiếp tục mua sắm?',
+                        showCancelButton: true,
+                        confirmButtonText: 'Thanh toán',
+                        cancelButtonText: 'Tiếp tục mua sắm'
+                    }, options || {}));
+
+                    if (result.isConfirmed) {
+                        window.location.href = cartUrl;
+                    }
+
+                    return;
+                }
+
+                if (lv === 'success' && lowerText.includes('thêm vào yêu thích')) {
+                    await firePopup(Object.assign({
+                        icon: 'success',
+                        title: 'Đã thêm vào yêu thích',
+                        text: 'Sản phẩm đã được lưu vào danh sách yêu thích của bạn.'
+                    }, options || {}));
+                    return;
+                }
+
+                if (lv === 'success' && lowerText.includes('đã gửi đánh giá, chờ duyệt')) {
+                    await firePopup(Object.assign({
+                        icon: 'success',
+                        title: 'Cảm ơn đã đánh giá',
+                        text: 'Cảm ơn bạn đã đánh giá sản phẩm. Quản trị viên sẽ xem xét đánh giá của bạn trong thời gian sớm nhất.'
+                    }, options || {}));
+                    return;
+                }
+
+                if (lv === 'success' && (lowerText.includes('đã huỷ đơn hàng') || lowerText.includes('đã hủy đơn hàng'))) {
+                    await firePopup(Object.assign({
+                        icon: 'success',
+                        title: 'Huỷ đơn thành công',
+                        text: 'Đơn hàng của bạn đã được huỷ thành công.'
+                    }, options || {}));
+                    return;
+                }
+
+                if (lv === 'success' && lowerText.includes('chờ xử lý hoàn hàng')) {
+                    await firePopup(Object.assign({
+                        icon: 'success',
+                        title: 'Đã gửi yêu cầu hoàn hàng',
+                        text: 'Yêu cầu hoàn hàng đã được ghi nhận. Cửa hàng sẽ xử lý trong thời gian sớm nhất.'
+                    }, options || {}));
+                    return;
+                }
+
+                if (lv === 'success' && lowerText.includes('đã gửi yêu cầu hoàn hàng')) {
+                    await firePopup(Object.assign({
+                        icon: 'success',
+                        title: 'Đã gửi yêu cầu hoàn hàng',
+                        text: 'Yêu cầu hoàn hàng của bạn đã được gửi thành công.'
+                    }, options || {}));
+                    return;
+                }
+
+                if (lv === 'success' && lowerText.includes('xác nhận nhận hàng')) {
+                    await firePopup(Object.assign({
+                        icon: 'success',
+                        title: 'Đã nhận được hàng',
+                        text: 'Cảm ơn bạn đã xác nhận nhận hàng.'
+                    }, options || {}));
+                    return;
+                }
+
+                if ((lv === 'warning' || lv === 'info') && lowerText.includes('chưa đăng nhập')) {
+                    const result = await firePopup(Object.assign({
+                        icon: 'warning',
+                        title: 'Bạn chưa đăng nhập',
+                        text: text,
+                        showCancelButton: true,
+                        confirmButtonText: 'Đăng nhập',
+                        cancelButtonText: 'Để sau'
+                    }, options || {}));
+
+                    if (result.isConfirmed) {
+                        window.location.href = loginUrl;
+                    }
+
+                    return;
+                }
+
+                await firePopup(Object.assign({
+                    icon: lv,
+                    title: defaultTitle(lv),
+                    text: text
+                }, options || {}));
+            }
+
+            async function showOrderSuccess(orderId) {
+                if (!orderId) {
+                    return false;
+                }
+
+                const safeOrderId = String(orderId).trim();
+                if (!safeOrderId) {
+                    return false;
+                }
+
+                try {
+                    await firePopup({
+                        icon: 'success',
+                        title: 'Đặt hàng thành công!',
+                        html: 'Cảm ơn bạn đã mua hàng tại <b>SEN HỒNG OCOP</b><br>Mã đơn hàng: <b>#' + safeOrderId + '</b>',
+                        confirmButtonText: 'Xem đơn hàng'
+                    });
+
+                    // Only navigate if we're not already on the order detail page
+                    const currentPath = window.location.pathname;
+                    const orderDetailPath = '/order/' + encodeURIComponent(safeOrderId);
+
+                    if (!currentPath.includes(orderDetailPath)) {
+                        window.location.href = orderSuccessBaseUrl + '/' + encodeURIComponent(safeOrderId);
+                    }
+
+                    return true;
+                } catch (error) {
+                    console.error('✗ showOrderSuccess: Error showing popup', error);
+                    return false;
+                }
+            }
+
+            function alertToLevel(alertElement) {
+                if (!alertElement) {
+                    return 'info';
+                }
+
+                if (alertElement.classList.contains('alert-success')) {
+                    return 'success';
+                }
+
+                if (alertElement.classList.contains('alert-danger')) {
+                    return 'error';
+                }
+
+                if (alertElement.classList.contains('alert-warning')) {
+                    return 'warning';
+                }
+
+                return 'info';
+            }
+
+            async function showFlashMessages() {
+                // Check localStorage flag in case PHP session was consumed by AJAX
+                const localStorageValue = localStorage.getItem('showCartPopupOnLoad');
+                const localStorageCartPopup = localStorageValue === 'true';
+
+                // Check both conditions
+                const phpSessionHasFlag = flashMessages.showCartPopup === true;
+                const shouldShowCartPopup = phpSessionHasFlag || localStorageCartPopup;
+
+                // Check order_success first
+                const orderSuccessResult = await showOrderSuccess(flashMessages.order_success);
+                if (orderSuccessResult) {
+                    return;
+                }
+
+                // Handle explicit cart popup flag - GUARANTEED to show (with or without Swal)
+                if (shouldShowCartPopup) {
+                    // Clear localStorage flag
+                    localStorage.removeItem('showCartPopupOnLoad');
+
+                    const result = await firePopup({
+                        icon: 'success',
+                        title: 'Thêm vào giỏ hàng thành công',
+                        text: 'Bạn muốn thanh toán ngay hay tiếp tục mua sắm?',
+                        showCancelButton: true,
+                        confirmButtonText: 'Thanh toán',
+                        cancelButtonText: 'Tiếp tục mua sắm',
+                        confirmButtonColor: '#7fad39'
+                    });
+
+                    if (result.isConfirmed) {
+                        window.location.href = cartUrl;
+                    }
+                    return;
+                }
+
+                if (flashMessages.success) {
+                    await notify('success', flashMessages.success);
+                }
+                if (flashMessages.error) {
+                    await notify('error', flashMessages.error);
+                }
+                if (flashMessages.warning) {
+                    await notify('warning', flashMessages.warning);
+                }
+                if (flashMessages.info) {
+                    await notify('info', flashMessages.info);
+                }
+            }
+
+            async function convertInlineAlertsToPopup() {
+                const alerts = Array.from(document.querySelectorAll('main .alert'));
+
+                for (const alertElement of alerts) {
+                    const text = (alertElement.textContent || '').trim();
+                    if (!text) {
+                        alertElement.remove();
+                        continue;
+                    }
+
+                    await notify(alertToLevel(alertElement), text);
+                    alertElement.remove();
+                }
+            }
+
+            window.ocopPopup = {
+                fire: firePopup,
+                notify: function (level, message, options) {
+                    notify(level, message, options).catch(err => {
+                        console.error('Error in notify():', err);
+                    });
+                }
+            };
+
+            // Global popup() function - available on all pages
+            window.popup = function (icon, title, text, additionalOptions) {
+                if (window.ocopPopup && typeof window.ocopPopup.fire === 'function') {
+                    return window.ocopPopup.fire(Object.assign({
+                        icon: icon,
+                        title: title,
+                        text: text,
+                        confirmButtonColor: '#7fad39'
+                    }, additionalOptions || {}));
+                }
+
+                if (typeof Swal !== 'undefined') {
+                    return Swal.fire(Object.assign({
+                        icon: icon,
+                        title: title,
+                        text: text,
+                        confirmButtonColor: '#7fad39'
+                    }, additionalOptions || {}));
+                }
+
+                return Promise.resolve({ isConfirmed: false, isDismissed: true });
+            };
+
+            (function () {
+                // If document is already loaded (readyState is 'interactive' or 'complete'),
+                // we need to call showFlashMessages immediately since DOMContentLoaded won't fire
+                if (document.readyState === 'interactive' || document.readyState === 'complete') {
+                    // Small delay to ensure all event listeners are ready
+                    setTimeout(async function () {
+                        if (!window.__ocopFlashMessagesShown) {
+                            window.__ocopFlashMessagesShown = true;
+                            await showFlashMessages();
+                            await convertInlineAlertsToPopup();
+                        }
+                    }, 50);
+                }
+            })();
+
+            document.addEventListener('DOMContentLoaded', async function () {
+                if (window.__ocopFlashMessagesShown === true) {
+                    return;
+                }
+
+                if (window.__ocopSkipGlobalPopup === true) {
+                    return;
+                }
+
+                // Wait briefly for Swal to be available if not already
+                let waitCount = 0;
+                while (!window.Swal && waitCount < 50) {
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                    waitCount++;
+                }
+
+                if (!window.Swal) {
+                    console.warn('⚠ WARNING: Swal not available after waiting 500ms - using fallback alert()');
+                }
+
+                // Set flag BEFORE calling showFlashMessages to avoid duplicate calls
+                window.__ocopFlashMessagesShown = true;
+                await showFlashMessages();
+                await convertInlineAlertsToPopup();
             });
 
-        </script>
+            // Fallback: nếu DOMContentLoaded không trigger (page đã load trước khi script chạy), dùng window.load
+            window.addEventListener('load', async function () {
+                if (window.__ocopFlashMessagesShown === true) {
+                    return;
+                }
 
-    @endif
+                if (window.__ocopSkipGlobalPopup === true) {
+                    return;
+                }
+
+                // Set flag to prevent duplicate execution
+                window.__ocopFlashMessagesShown = true;
+
+                // Show flash messages at window.load as fallback
+                await showFlashMessages();
+                await convertInlineAlertsToPopup();
+            }, { once: true });
+
+        })();
+    </script>
 
     <div id="ai-chatbox" class="ai-chatbox">
         @auth
@@ -246,7 +626,10 @@
             ]
         };
     </script>
-    <script src="{{ asset('frontend/js/chatbox.js') }}"></script>
+    <script
+        src="{{ asset('frontend/js/chatbox.js') }}?v={{ filemtime(public_path('frontend/js/chatbox.js')) }}"></script>
+
+    @stack('scripts')
 
 </body>
 

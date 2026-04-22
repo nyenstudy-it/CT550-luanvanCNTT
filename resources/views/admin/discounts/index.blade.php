@@ -21,7 +21,6 @@
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <div>
                     <h5 class="mb-1">Danh sách mã giảm giá</h5>
-                    <small class="text-muted">Quản lý mã toàn shop và mã theo từng sản phẩm.</small>
                 </div>
                 <a href="{{ route('admin.discounts.create') }}" class="btn btn-success btn-sm">+ Thêm mã giảm giá</a>
             </div>
@@ -88,7 +87,19 @@
                     </select>
                 </div>
 
-                <div class="col-md-3 d-flex align-items-end gap-2">
+                <div class="col-md-2">
+                    <label class="form-label">Đối tượng</label>
+                    <select name="audience" class="form-select">
+                        <option value="">-- Tất cả --</option>
+                        @foreach(\App\Models\Discount::audienceOptions() as $audienceValue => $audienceLabel)
+                            <option value="{{ $audienceValue }}" {{ request('audience') === $audienceValue ? 'selected' : '' }}>
+                                {{ $audienceLabel }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="col-md-1 d-flex align-items-end gap-2">
                     <button type="submit" class="btn btn-primary">Lọc</button>
                     <a href="{{ route('admin.discounts.index') }}" class="btn btn-outline-secondary">Đặt lại</a>
                 </div>
@@ -106,6 +117,7 @@
                             <th width="150">Mã giảm giá</th>
                             <th width="100">Loại</th>
                             <th width="100">Giá trị</th>
+                            <th width="150">Đối tượng</th>
                             <th width="220">Phạm vi áp dụng</th>
                             <th width="100">Đã sử dụng / Giới hạn</th>
                             <th width="100">Trạng thái</th>
@@ -127,12 +139,9 @@
                                 </td>
 
                                 <td>
-                                    @if($discount->type == 'percent')
-                                        {{ $discount->value }} %
-                                    @else
-                                        {{ number_format($discount->value, 0, ',', '.') }} đ
-                                    @endif
+                                    {{ $discount->value_label }}
                                 </td>
+                                <td>{{ $discount->audience_label }}</td>
                                 <td>
                                     @if($discount->products->isEmpty())
                                         <span class="badge bg-dark admin-badge">Toàn shop</span>
@@ -167,7 +176,7 @@
                                     @endphp
                                     <span class="badge bg-{{ $badge }} admin-badge">{{ $status }}</span>
                                 </td>
-                                <td>{{ $discount->created_at->format('d/m/Y H:i') }}</td>
+                                <td>{{ $discount->created_at?->format('d/m/Y H:i') ?? '-' }}</td>
                                 <td>
                                     <a href="{{ route('admin.discounts.edit', $discount->id) }}"
                                         class="btn btn-sm btn-outline-primary admin-action-btn mb-1">Sửa</a>
@@ -209,12 +218,9 @@
                                                     </p>
 
                                                     <p><strong>Giá trị:</strong>
-                                                        @if($discount->type == 'percent')
-                                                            {{ $discount->value }} %
-                                                        @else
-                                                            {{ number_format($discount->value, 0, ',', '.') }} đ
-                                                        @endif
+                                                        {{ $discount->value_label }}
                                                     </p>
+                                                    <p><strong>Đối tượng áp dụng:</strong> {{ $discount->audience_label }}</p>
                                                     <p><strong>Số lần sử dụng tối đa:</strong>
                                                         {{ $discount->usage_limit ?? '∞' }}</p>
                                                     <p><strong>Số lần đã sử dụng:</strong> {{ $discount->used_count }}</p>
@@ -240,9 +246,9 @@
                                                     <p><strong>Ngày kết thúc:</strong>
                                                         {{ $discount->end_at?->format('d/m/Y H:i') ?? '-' }}</p>
                                                     <p><strong>Ngày tạo:</strong>
-                                                        {{ $discount->created_at->format('d/m/Y H:i') }}</p>
+                                                        {{ $discount->created_at?->format('d/m/Y H:i') ?? '-' }}</p>
                                                     <p><strong>Ngày cập nhật:</strong>
-                                                        {{ $discount->updated_at->format('d/m/Y H:i') }}</p>
+                                                        {{ $discount->updated_at?->format('d/m/Y H:i') ?? '-' }}</p>
                                                 </div>
                                                 <div class="modal-footer">
                                                     <button type="button" class="btn btn-secondary"
@@ -256,7 +262,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center text-muted">Chưa có mã giảm giá</td>
+                                <td colspan="10" class="text-center text-muted">Chưa có mã giảm giá</td>
                             </tr>
                         @endforelse
                     </tbody>

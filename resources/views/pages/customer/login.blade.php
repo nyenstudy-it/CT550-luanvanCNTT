@@ -87,27 +87,18 @@
                         {{-- ALERT --}}
 
                         @if(session('success'))
-
-                            <div class="alert alert-success">
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                <i class="bi bi-check-circle me-2"></i>
                                 {{ session('success') }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                             </div>
                         @endif
 
                         @if(session('error'))
-
-                            <div class="alert alert-danger">
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <i class="bi bi-exclamation-circle me-2"></i>
                                 {{ session('error') }}
-                            </div>
-                        @endif
-
-                        @if ($errors->any())
-
-                            <div class="alert alert-danger">
-                                <ul class="mb-0">
-                                    @foreach ($errors->all() as $error)
-                                        <li>{{ $error }}</li>
-                                    @endforeach
-                                </ul>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                             </div>
                         @endif
 
@@ -124,24 +115,28 @@
 
                                 <div class="mb-3">
                                     <label class="form-label">Email</label>
-                                    <input type="email" name="email" value="{{ old('email') }}" class="form-control"
-                                        required>
+                                    <input type="email" name="email" value="{{ old('email') }}"
+                                        class="form-control @error('email') is-invalid @enderror" required>
+                                    @error('email')
+                                        <div class="invalid-feedback d-block">
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ $message }}
+                                        </div>
+                                    @enderror
                                 </div>
 
                                 <div class="mb-4 password-box">
-
                                     <label class="form-label">Mật khẩu</label>
-
-                                    <input type="password" name="password" id="loginPassword" class="form-control"
-                                        required>
-
+                                    <input type="password" name="password" id="loginPassword"
+                                        class="form-control @error('password') is-invalid @enderror" required>
                                     <button type="button" class="eye-btn"
                                         onclick="togglePassword('loginPassword','eyeLogin')">
-
                                         <i id="eyeLogin" class="bi bi-eye"></i>
-
                                     </button>
-
+                                    @error('password')
+                                        <div class="invalid-feedback d-block">
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ $message }}
+                                        </div>
+                                    @enderror
                                 </div>
 
                                 <button type="submit" class="btn btn-success w-100">
@@ -184,20 +179,36 @@
 
                                 <div class="mb-3">
                                     <label class="form-label">Họ và tên</label>
-                                    <input type="text" name="name" value="{{ old('name') }}" class="form-control"
-                                        required>
+                                    <input type="text" name="name" value="{{ old('name') }}"
+                                        class="form-control @error('name') is-invalid @enderror" required>
+                                    @error('name')
+                                        <div class="invalid-feedback d-block">
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ $message }}
+                                        </div>
+                                    @enderror
                                 </div>
 
                                 <div class="mb-3">
                                     <label class="form-label">Email</label>
-                                    <input type="email" name="email" value="{{ old('email') }}" class="form-control"
-                                        required>
+                                    <input type="email" name="email" value="{{ old('email') }}"
+                                        class="form-control @error('email') is-invalid @enderror" required>
+                                    @error('email')
+                                        <div class="invalid-feedback d-block">
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ $message }}
+                                        </div>
+                                    @enderror
                                 </div>
 
                                 <div class="mb-3">
                                     <label class="form-label">Số điện thoại</label>
-                                    <input type="text" name="phone" value="{{ old('phone') }}" class="form-control"
-                                        required>
+                                    <input type="text" name="phone" value="{{ old('phone') }}"
+                                        class="form-control @error('phone') is-invalid @enderror"
+                                        placeholder="0xxxxxxxxx" pattern="0\d{9}" required>
+                                    @error('phone')
+                                        <div class="invalid-feedback d-block">
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ $message }}
+                                        </div>
+                                    @enderror
                                 </div>
 
                                 <div class="mb-3">
@@ -206,24 +217,35 @@
                                 </div>
 
                                 <div class="mb-3 password-box">
-
                                     <label class="form-label">Mật khẩu</label>
-
-                                    <input type="password" name="password" id="registerPassword" class="form-control"
+                                    <input type="password" name="password" id="registerPassword"
+                                        class="form-control @error('password') is-invalid @enderror"
+                                        pattern="^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
+                                        title="Mật khẩu phải chứa tối thiểu 8 ký tự, bao gồm: chữ hoa, chữ thường, số và ký tự đặc biệt (@$!%*?&)"
                                         required>
-
                                     <button type="button" class="eye-btn"
                                         onclick="togglePassword('registerPassword','eyeRegister')">
-
                                         <i id="eyeRegister" class="bi bi-eye"></i>
-
                                     </button>
-
+                                    @error('password')
+                                        <div class="invalid-feedback d-block">
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ $message }}
+                                        </div>
+                                    @enderror
+                                    <small class="text-muted d-block mt-1">
+                                        Yêu cầu: 8+ ký tự, chữ hoa, chữ thường, số, ký tự đặc biệt (@$!%*?&)
+                                    </small>
                                 </div>
 
                                 <div class="mb-4">
                                     <label class="form-label">Xác nhận mật khẩu</label>
-                                    <input type="password" name="password_confirmation" class="form-control" required>
+                                    <input type="password" name="password_confirmation"
+                                        class="form-control @error('password') is-invalid @enderror" required>
+                                    @error('password')
+                                        <div class="invalid-feedback d-block">
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ $message }}
+                                        </div>
+                                    @enderror
                                 </div>
 
                                 <button type="submit" class="btn btn-success w-100">

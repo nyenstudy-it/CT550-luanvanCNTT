@@ -31,6 +31,11 @@ class Customer extends Model
 
     public function orders()
     {
+        // Orders currently store user ids in `customer_id` column. To support
+        // existing data, fetch orders where orders.customer_id == users.id
+        // via hasManyThrough on User if necessary. Keep this helper for
+        // code that expects Customer->orders() returning orders belonging
+        // to the customer's user record.
         return $this->hasMany(Order::class, 'customer_id');
     }
 

@@ -91,10 +91,10 @@
         <tbody>
             @forelse($batchItems as $index => $batch)
                 @php
-                    $importQty = (int) $batch->quantity;
-                    $remainingQty = (int) $batch->remaining_quantity;
-                    $soldQty = max(0, $importQty - $remainingQty);
-                    $importPrice = (float) $batch->unit_price;
+                    $importQty = max(0, (int) ($batch->quantity ?? 0));
+                    $remainingQty = max(0, (int) ($batch->remaining_quantity ?? 0));
+                    $soldQty = max(0, min($importQty, $importQty - $remainingQty));
+                    $importPrice = max(0, (float) ($batch->unit_price ?? 0));
                     $diff = $sellingPrice - $importPrice;
                     $expiry = $batch->expired_at ? \Carbon\Carbon::parse($batch->expired_at)->startOfDay() : null;
                     $manufactureDate = $batch->manufacture_date ? \Carbon\Carbon::parse($batch->manufacture_date)->format('d/m/Y') : '—';
@@ -128,11 +128,12 @@
                             </div>
                         @endif
                     </td>
-                    <td class="text-end">{{ number_format($importQty) }}</td>
-                    <td class="text-end">{{ number_format($remainingQty) }}</td>
-                    <td class="text-end">{{ number_format($soldQty) }}</td>
-                    <td class="text-end">{{ number_format($importPrice) }} đ</td>
-                    <td class="text-end">{{ number_format($sellingPrice) }} đ</td>
+                    <td class="text-end">{{ number_format($importQty, 0) }}</td>
+                    <td class="text-end {{ $remainingQty == 0 ? 'text-warning' : '' }}">
+                        {{ number_format($remainingQty, 0) }}</td>
+                    <td class="text-end">{{ number_format($soldQty, 0) }}</td>
+                    <td class="text-end">{{ number_format($importPrice, 0) }} đ</td>
+                    <td class="text-end">{{ number_format($sellingPrice, 0) }} đ</td>
                     <td class="text-end {{ $diff >= 0 ? 'text-success' : 'text-danger' }} fw-semibold">
                         {{ number_format($diff) }} đ
                     </td>

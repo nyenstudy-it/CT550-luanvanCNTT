@@ -15,6 +15,8 @@ class Parameter
 
     public const RETURN_URL = "returnUrl";
     public const NOTIFY_URL = "notifyUrl";
+    public const REDIRECT_URL = "redirectUrl";
+    public const IPN_URL = "ipnUrl";
 
     public const REQUEST_TYPE = "requestType";
     public const EXTRA_DATA = "extraData";
@@ -58,5 +60,4 @@ class Parameter
     public const PAY_STATUS_URI = "/pay/query-status";
     public const PAY_REFUND_URI = "/pay/refund";
     public const PAY_QR_CODE_URI = "/pay/notify";
-
 }

@@ -33,7 +33,12 @@ class HomeController extends Controller
             ->get();
 
         $now = now();
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
         $userId = Auth::id();
+        $completedOrdersCount = $user && $user->isCustomer()
+            ? $user->orders()->where('status', 'completed')->count()
+            : null;
 
         $discounts = Discount::query()
             ->whereDoesntHave('products')
@@ -61,7 +66,9 @@ class HomeController extends Controller
             })
 
             ->orderByDesc('id')
-            ->get();
+            ->get()
+            ->filter(fn(Discount $discount) => $discount->isEligibleForCompletedOrdersCount($completedOrdersCount))
+            ->values();
 
         $blogs = Blog::latest()->take(3)->get();
 

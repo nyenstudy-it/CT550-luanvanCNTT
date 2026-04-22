@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Discount;
 use App\Models\User;
 use App\Models\Customer;
 use Illuminate\Http\Request;
@@ -23,8 +24,12 @@ class CustomerAuthController extends Controller
         $request->validate([
             'name'     => 'required|max:255',
             'email'    => 'required|email|unique:users,email',
-            'password' => 'required|min:6|confirmed',
-            'phone'    => 'required'
+            'password' => 'required|min:8|regex:/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/|confirmed',
+            'phone'    => 'required|regex:/^0\d{9}$/|unique:customers,phone'
+        ], [
+            'password.regex' => 'Mật khẩu phải chứa tối thiểu 8 ký tự, bao gồm: chữ hoa, chữ thường, số và ký tự đặc biệt (@$!%*?&)',
+            'phone.regex' => 'Số điện thoại phải đúng 10 số và bắt đầu với 0',
+            'phone.unique' => 'Số điện thoại này đã được đăng ký'
         ]);
 
         DB::beginTransaction();
@@ -50,14 +55,26 @@ class CustomerAuthController extends Controller
 
             Auth::login($user);
 
-            return redirect('/')->with('success', 'Đăng ký thành công');
+            $welcomeDiscountCount = Discount::query()
+                ->whereDoesntHave('products')
+                ->get()
+                ->filter(fn(Discount $discount) => $discount->isActive() && $discount->isEligibleForCompletedOrdersCount(0))
+                ->count();
+
+            $successMessage = 'Đăng ký thành công';
+
+            if ($welcomeDiscountCount > 0) {
+                $successMessage .= '. Bạn có ' . $welcomeDiscountCount . ' voucher dành cho khách mới trong mục Voucher của tôi.';
+            }
+
+            return redirect('/')->with('success', $successMessage);
         } catch (\Exception $e) {
 
             DB::rollBack();
 
             return back()
                 ->withInput()
-                ->with('error', 'Có lỗi xảy ra, vui lòng thử lại.');
+                ->with('error', $e->getMessage() ?: 'Có lỗi xảy ra, vui lòng thử lại.');
         }
     }
     public function showLogin()
@@ -116,13 +133,14 @@ class CustomerAuthController extends Controller
 
     public function profileUpdate(Request $request)
     {
+        /** @var User $user */
         $user = Auth::user();
         $customer = $user->customer;
 
-        $request->validate([
+        $rules = [
             'name'     => 'required|max:255',
             'email'    => 'required|email|unique:users,email,' . $user->id,
-            'phone'    => 'required',
+            'phone'    => 'required|regex:/^0\d{9}$/|unique:customers,phone,' . $customer->id,
             'address'  => 'nullable|string|max:255',
             'province' => 'nullable|string|max:255',
             'district' => 'nullable|string|max:255',
@@ -130,10 +148,25 @@ class CustomerAuthController extends Controller
             'date_of_birth' => 'nullable|date',
             'gender'   => 'nullable|in:male,female,other',
             'current_password' => 'required_with:password',
-            'password' => 'nullable|min:6|confirmed',
+            'password' => 'nullable|min:8|regex:/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/|confirmed',
             'avatar'   => 'nullable|image|max:2048',
             'is_default_address' => 'nullable|boolean'
-        ]);
+        ];
+
+        $messages = [
+            'phone.regex' => 'Số điện thoại phải đúng 10 số và bắt đầu với 0',
+            'phone.unique' => 'Số điện thoại này đã được đăng ký',
+            'password.regex' => 'Mật khẩu phải chứa tối thiểu 8 ký tự, bao gồm: chữ hoa, chữ thường, số và ký tự đặc biệt (@$!%*?&)'
+        ];
+
+        $request->validate($rules, $messages);
+
+        // Kiểm tra mật khẩu hiện tại nếu có thay đổi mật khẩu
+        if ($request->filled('password') && !Hash::check($request->current_password, $user->password)) {
+            return back()->withErrors([
+                'current_password' => 'Mật khẩu hiện tại không đúng'
+            ])->withInput();
+        }
 
         DB::beginTransaction();
 
@@ -144,13 +177,6 @@ class CustomerAuthController extends Controller
             ]);
 
             if ($request->filled('password')) {
-
-                if (!Hash::check($request->current_password, $user->password)) {
-                    return back()->withErrors([
-                        'current_password' => 'Mật khẩu hiện tại không đúng'
-                    ])->withInput();
-                }
-
                 $user->update([
                     'password' => Hash::make($request->password)
                 ]);
@@ -195,7 +221,7 @@ class CustomerAuthController extends Controller
 
             DB::rollBack();
 
-            return back()->with('error', 'Có lỗi xảy ra, vui lòng thử lại.');
+            return back()->with('error', $e->getMessage() ?: 'Có lỗi xảy ra, vui lòng thử lại.');
         }
     }
 }

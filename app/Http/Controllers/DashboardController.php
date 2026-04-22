@@ -18,6 +18,7 @@ use App\Models\Salary;
 use App\Models\Notification;
 use App\Models\Wishlist;
 use App\Models\User;
+use App\Models\Attendance;
 
 class DashboardController extends Controller
 {
@@ -30,15 +31,19 @@ class DashboardController extends Controller
 
         // --- Thống kê doanh số ---
         if ($user->role === 'admin' || $isCashierStaff) {
+            // FIX: Calculate revenue based on order COMPLETION date (updated_at), not creation date
             $paidOrdersQuery = Order::query()
+                ->where('status', 'completed')
                 ->whereHas('payment', function ($query) {
                     $query->where('status', 'paid');
                 });
 
-            $todaySale = (clone $paidOrdersQuery)
-                ->whereDate('orders.created_at', $today)
+            // TODAY'S REVENUE: All completed & paid orders updated today
+            $todayRevenue = (clone $paidOrdersQuery)
+                ->whereDate('orders.updated_at', $today)
                 ->sum('total_amount');
 
+            // TOTAL REVENUE
             $totalSale = (clone $paidOrdersQuery)
                 ->sum('total_amount');
 
@@ -51,7 +56,7 @@ class DashboardController extends Controller
                 ->where('refund_status', 'completed')
                 ->sum('refund_amount');
 
-            $todayRevenue = $todaySale - $todayRefundAmount;
+            $totalRevenue = $totalSale - $totalRefundAmount;
             $totalRevenue = $totalSale - $totalRefundAmount;
             $weekRevenue = $this->calculateNetRevenueByRange($today->copy()->startOfWeek(), $today->copy()->endOfWeek());
             $monthRevenue = $this->calculateNetRevenueByRange($monthStart, $monthEnd);
@@ -101,13 +106,12 @@ class DashboardController extends Controller
             // --- Khách hàng top ---
             $topCustomersByOrders = DB::table('orders')
                 ->join('payments', 'payments.order_id', '=', 'orders.id')
-                ->leftJoin('customers', 'customers.id', '=', 'orders.customer_id')
-                ->leftJoin('users', 'users.id', '=', 'customers.user_id')
+                ->join('customers', 'customers.id', '=', 'orders.customer_id')
+                ->join('users', 'users.id', '=', 'customers.user_id')
                 ->where('payments.status', 'paid')
-                ->whereNotNull('orders.customer_id')
                 ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
-                ->selectRaw("orders.customer_id, COALESCE(MAX(users.name), MAX(orders.receiver_name), 'Khách vãng lai') as customer_name, COUNT(orders.id) as orders_count, SUM(orders.total_amount) as total_spent")
-                ->groupBy('orders.customer_id')
+                ->selectRaw("orders.customer_id, users.name as customer_name, COUNT(orders.id) as orders_count, SUM(orders.total_amount) as total_spent")
+                ->groupBy('orders.customer_id', 'users.name')
                 ->orderByDesc('orders_count')
                 ->orderByDesc('total_spent')
                 ->limit(3)
@@ -115,13 +119,12 @@ class DashboardController extends Controller
 
             $topCustomersByValue = DB::table('orders')
                 ->join('payments', 'payments.order_id', '=', 'orders.id')
-                ->leftJoin('customers', 'customers.id', '=', 'orders.customer_id')
-                ->leftJoin('users', 'users.id', '=', 'customers.user_id')
+                ->join('customers', 'customers.id', '=', 'orders.customer_id')
+                ->join('users', 'users.id', '=', 'customers.user_id')
                 ->where('payments.status', 'paid')
-                ->whereNotNull('orders.customer_id')
                 ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
-                ->selectRaw("orders.customer_id, COALESCE(MAX(users.name), MAX(orders.receiver_name), 'Khách vãng lai') as customer_name, COUNT(orders.id) as orders_count, SUM(orders.total_amount) as total_spent")
-                ->groupBy('orders.customer_id')
+                ->selectRaw("orders.customer_id, users.name as customer_name, COUNT(orders.id) as orders_count, SUM(orders.total_amount) as total_spent")
+                ->groupBy('orders.customer_id', 'users.name')
                 ->orderByDesc('total_spent')
                 ->orderByDesc('orders_count')
                 ->limit(3)
@@ -171,9 +174,32 @@ class DashboardController extends Controller
                 'refund_invoices' => Payment::where('refund_status', 'completed')->whereBetween('refund_at', [$monthStart, $monthEnd])->count(),
                 'today_paid_invoices' => Payment::where('status', 'paid')->whereDate('paid_at', $today)->count(),
                 'avg_invoice_value' => Payment::where('status', 'paid')->whereBetween('paid_at', [$monthStart, $monthEnd])->avg('amount') ?? 0,
-                'total_shipping_fee' => (clone $paidOrdersQuery)->whereBetween('orders.created_at', [$monthStart, $monthEnd])->sum('shipping_fee'),
-                'total_discount_amount' => (clone $paidOrdersQuery)->whereBetween('orders.created_at', [$monthStart, $monthEnd])->sum('discount_amount'),
+                'total_shipping_fee' => (clone $paidOrdersQuery)->whereBetween('orders.updated_at', [$monthStart, $monthEnd])->sum('shipping_fee'),
+                'total_discount_amount' => (clone $paidOrdersQuery)->whereBetween('orders.updated_at', [$monthStart, $monthEnd])->sum('discount_amount'),
             ];
+
+            // --- Nhập hàng theo nhà cung cấp & danh mục ---
+            $importsBySupplier = DB::table('imports')
+                ->join('suppliers', 'suppliers.id', '=', 'imports.supplier_id')
+                ->join('import_items', 'import_items.import_id', '=', 'imports.id')
+                ->whereBetween('imports.import_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+                ->selectRaw('suppliers.name as supplier_name, COUNT(DISTINCT imports.id) as import_count, SUM(import_items.quantity * import_items.unit_price) as total_value')
+                ->groupBy('suppliers.name')
+                ->orderByDesc('total_value')
+                ->limit(5)
+                ->get();
+
+            $importsByCategory = DB::table('import_items')
+                ->join('imports', 'imports.id', '=', 'import_items.import_id')
+                ->join('product_variants', 'product_variants.id', '=', 'import_items.product_variant_id')
+                ->join('products', 'products.id', '=', 'product_variants.product_id')
+                ->leftJoin('category_products', 'category_products.id', '=', 'products.category_id')
+                ->whereBetween('imports.import_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+                ->selectRaw('COALESCE(category_products.name, "Khác") as category_name, SUM(import_items.quantity) as total_qty, SUM(import_items.quantity * import_items.unit_price) as total_value')
+                ->groupBy('category_name')
+                ->orderByDesc('total_value')
+                ->limit(5)
+                ->get();
 
             // --- Thanh lý hàng sắp hết hạn / hết hạn ---
             $expiringSoonDays = 30;
@@ -456,6 +482,43 @@ class DashboardController extends Controller
             ];
 
             $productCountByCategory = collect();
+
+            // Initialize imports data (empty for non-admin)
+            $importsBySupplier = collect();
+            $importsByCategory = collect();
+            $totalImportCost = 0;
+
+            $thisWeekProfitDetails = [
+                'net_profit' => 0,
+                'gross_profit' => 0,
+                'cogs' => 0,
+                'shipping_cost' => 0,
+                'staff_cost' => 0,
+                'discounts' => 0,
+                'inventory_shrinkage' => 0,
+            ];
+
+            $thisMonthProfitDetails = [
+                'net_profit' => 0,
+                'gross_profit' => 0,
+                'cogs' => 0,
+                'shipping_cost' => 0,
+                'staff_cost' => 0,
+                'discounts' => 0,
+                'inventory_shrinkage' => 0,
+            ];
+
+            // Initialize staff & labor stats
+            $thisWeekSalary = 0;
+            $thisWeekHours = 0;
+            $thisWeekRevenue = 0;
+            $thisWeekProfit = 0;
+            $thisMonthSalary = 0;
+            $thisMonthHours = 0;
+            $thisMonthRevenue = 0;
+            $thisMonthProfit = 0;
+            $weeklyComparison = [];
+            $monthlyComparison = [];
         }
 
         // --- Lấy thông báo cho dropdown của người dùng hiện tại ---
@@ -476,11 +539,181 @@ class DashboardController extends Controller
             ['title' => 'Approve staff requests', 'done' => false],
         ];
 
+        // --- Thống kê lương & doanh thu theo tuần --- 
+        $startOfWeek = $today->copy()->startOfWeek();
+        $endOfWeek = $today->copy()->endOfWeek();
+        $weekDateRange = $startOfWeek->format('d/m/Y') . ' - ' . $endOfWeek->format('d/m/Y'); // Khoảng thời gian tuần
+
+        // Tuần này - Lấy lương cuối (đã cộng thưởng/phạt)
+        $weekShifts = Attendance::whereDate('work_date', '>=', $startOfWeek)
+            ->whereDate('work_date', '<=', $endOfWeek)
+            ->count();
+        $monthShifts = Attendance::whereRaw('MONTH(work_date) = ? AND YEAR(work_date) = ?', [$startOfWeek->month, $startOfWeek->year])
+            ->count();
+        $salaryRatio = ($monthShifts > 0) ? ($weekShifts / $monthShifts) : 0;
+
+        $monthSalaryCost = Salary::where('month', $startOfWeek->month)
+            ->where('year', $startOfWeek->year)
+            ->sum('final_salary') ?? 0;
+        $thisWeekSalary = $monthSalaryCost * $salaryRatio;
+
+        $thisWeekMinutes = Attendance::whereDate('work_date', '>=', $startOfWeek)
+            ->whereDate('work_date', '<=', $endOfWeek)
+            ->sum('worked_minutes');
+        $thisWeekHours = $thisWeekMinutes ? round($thisWeekMinutes / 60, 2) : 0;
+
+        $thisWeekRevenue = $weekRevenue; // Doanh thu tuần này (từ orders)
+        $thisWeekProfitDetails = $this->calculateComprehensiveProfit($startOfWeek, $endOfWeek);
+        $thisWeekProfit = $thisWeekProfitDetails['net_profit'];
+
+        // Tháng này - Lấy lương cuối (đã cộng thưởng/phạt)
+        $monthDateRange = $monthStart->format('d/m/Y') . ' - ' . $monthEnd->format('d/m/Y');
+        $thisMonthSalary = Salary::where('month', $monthStart->month)
+            ->where('year', $monthStart->year)
+            ->sum('final_salary') ?? 0;
+
+        $thisMonthMinutes = Attendance::whereDate('work_date', '>=', $monthStart)
+            ->whereDate('work_date', '<=', $monthEnd)
+            ->sum('worked_minutes');
+        $thisMonthHours = $thisMonthMinutes ? round($thisMonthMinutes / 60, 2) : 0;
+
+        $thisMonthRevenue = $monthRevenue; // Doanh thu tháng này
+        $thisMonthProfitDetails = $this->calculateComprehensiveProfit($monthStart, $monthEnd);
+        $thisMonthProfit = $thisMonthProfitDetails['net_profit'];
+
+        // Lịch sử 4 tuần gần nhất
+        $weeklyComparison = [];
+        for ($i = 3; $i >= 0; $i--) {
+            $weekStart = $today->copy()->subWeeks($i)->startOfWeek();
+            $weekEnd = $today->copy()->subWeeks($i)->endOfWeek();
+
+            $weeklySalary = Salary::where('month', $weekStart->month)
+                ->where('year', $weekStart->year)
+                ->sum('final_salary');
+
+            // Tính tỉ lệ ca làm trong tuần
+            $weeklyShifts = Attendance::whereDate('work_date', '>=', $weekStart)
+                ->whereDate('work_date', '<=', $weekEnd)
+                ->count();
+            $totalMonthlyShifts = Attendance::whereRaw('MONTH(work_date) = ? AND YEAR(work_date) = ?', [$weekStart->month, $weekStart->year])
+                ->count();
+            $weekShiftRatio = ($totalMonthlyShifts > 0) ? ($weeklyShifts / $totalMonthlyShifts) : 0;
+            $weeklySalary = $weeklySalary * $weekShiftRatio;
+
+            $weeklyMinutes = Attendance::whereDate('work_date', '>=', $weekStart)
+                ->whereDate('work_date', '<=', $weekEnd)
+                ->sum('worked_minutes');
+            $weeklyHours = $weeklyMinutes ? round($weeklyMinutes / 60, 2) : 0;
+
+            $weeklyRevenue = $this->calculateNetRevenueByRange($weekStart, $weekEnd);
+            $weeklyProfitDetails = $this->calculateComprehensiveProfit($weekStart, $weekEnd);
+
+            $weeklyShifts = Attendance::whereDate('work_date', '>=', $weekStart)
+                ->whereDate('work_date', '<=', $weekEnd)
+                ->count();
+
+            $weeklyComparison[] = [
+                'week' => $weekStart->format('d/m') . ' - ' . $weekEnd->format('d/m'),
+                'salary' => $weeklySalary,
+                'hours' => $weeklyHours,
+                'revenue' => $weeklyRevenue,
+                'profit' => $weeklyProfitDetails['net_profit'],
+                'gross_profit' => $weeklyProfitDetails['gross_profit'],
+                'cogs' => $weeklyProfitDetails['cogs'],
+                'shipping_cost' => $weeklyProfitDetails['shipping_cost'],
+                'staff_cost' => $weeklyProfitDetails['staff_cost'],
+                'discounts' => $weeklyProfitDetails['discounts'],
+                'inventory_shrinkage' => $weeklyProfitDetails['inventory_shrinkage'],
+                'shifts' => $weeklyShifts,
+                'profit_margin' => $weeklyRevenue > 0 ? round(($weeklyProfitDetails['net_profit'] / $weeklyRevenue) * 100, 2) : 0,
+            ];
+        }
+
+        // Lịch sử 12 tháng gần nhất
+        $monthlyComparison = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $monthStart_iter = $today->copy()->subMonths($i)->startOfMonth();
+            $monthEnd_iter = $today->copy()->subMonths($i)->endOfMonth();
+            $monthLabel_iter = $monthStart_iter->format('m/Y');
+
+            $monthlySalary = Salary::where('month', $monthStart_iter->month)
+                ->where('year', $monthStart_iter->year)
+                ->sum('final_salary') ?? 0;
+
+            $monthlyMinutes = Attendance::whereDate('work_date', '>=', $monthStart_iter)
+                ->whereDate('work_date', '<=', $monthEnd_iter)
+                ->sum('worked_minutes');
+            $monthlyHours = $monthlyMinutes ? round($monthlyMinutes / 60, 2) : 0;
+
+            $monthlyRevenue = $this->calculateNetRevenueByRange($monthStart_iter, $monthEnd_iter);
+            $monthlyProfitDetails = $this->calculateComprehensiveProfit($monthStart_iter, $monthEnd_iter);
+
+            $monthlyShifts = Attendance::whereDate('work_date', '>=', $monthStart_iter)
+                ->whereDate('work_date', '<=', $monthEnd_iter)
+                ->count();
+
+            $monthlyComparison[] = [
+                'month' => $monthLabel_iter,
+                'salary' => $monthlySalary,
+                'hours' => $monthlyHours,
+                'revenue' => $monthlyRevenue,
+                'profit' => $monthlyProfitDetails['net_profit'],
+                'gross_profit' => $monthlyProfitDetails['gross_profit'],
+                'cogs' => $monthlyProfitDetails['cogs'],
+                'shipping_cost' => $monthlyProfitDetails['shipping_cost'],
+                'staff_cost' => $monthlyProfitDetails['staff_cost'],
+                'discounts' => $monthlyProfitDetails['discounts'],
+                'inventory_shrinkage' => $monthlyProfitDetails['inventory_shrinkage'],
+                'shifts' => $monthlyShifts,
+                'profit_margin' => $monthlyRevenue > 0 ? round(($monthlyProfitDetails['net_profit'] / $monthlyRevenue) * 100, 2) : 0,
+            ];
+        }
+
+        // ===== ƯU TIÊN 4: Dashboard alerts - Inventory Writeoff Metrics =====
+        $writeoffMetrics = [
+            'total_writeoff_cost_month' => DB::table('inventory_writeoffs')
+                ->whereBetween('created_at', [$monthStart, $monthEnd])
+                ->sum('total_cost'),
+            'total_writeoff_cost_week' => DB::table('inventory_writeoffs')
+                ->whereBetween('created_at', [$today->copy()->startOfWeek(), $today->copy()->endOfWeek()])
+                ->sum('total_cost'),
+            'total_writeoff_cost_today' => DB::table('inventory_writeoffs')
+                ->whereDate('created_at', $today)
+                ->sum('total_cost'),
+            'writeoff_count_month' => DB::table('inventory_writeoffs')
+                ->whereBetween('created_at', [$monthStart, $monthEnd])
+                ->sum('quantity_written_off'),
+            'writeoff_count_today' => DB::table('inventory_writeoffs')
+                ->whereDate('created_at', $today)
+                ->sum('quantity_written_off'),
+            'writeoff_by_reason' => DB::table('inventory_writeoffs')
+                ->whereBetween('created_at', [$monthStart, $monthEnd])
+                ->selectRaw('reason, COUNT(*) as count, SUM(total_cost) as cost')
+                ->groupBy('reason')
+                ->get()
+                ->map(function ($item) {
+                    $reasons = [
+                        'expired' => 'Hết hạn',
+                        'damaged' => 'Hư hỏng',
+                        'broken_packaging' => 'Bao bì phá',
+                        'water_damage' => 'Ẩm/Mốc/Nước',
+                        'manufacturing_flaw' => 'Lỗi sản xuất',
+                        'color_fading' => 'Phai màu',
+                        'contaminated' => 'Bị nhiễm bẩn',
+                        'stock_adjustment' => 'Điều chỉnh kho',
+                        'other' => 'Khác',
+                    ];
+                    return [
+                        'reason' => $reasons[$item->reason] ?? $item->reason,
+                        'count' => $item->count,
+                        'cost' => $item->cost,
+                    ];
+                }),
+        ];
+
         return view('admin.dashboard', compact(
             'selectedMonth',
             'monthLabel',
-            'todaySale',
-            'totalSale',
             'todayRevenue',
             'totalRevenue',
             'weekRevenue',
@@ -516,24 +749,131 @@ class DashboardController extends Controller
             'topProductsMonth',
             'invoiceSummary',
             'liquidationSummary',
+            'importsBySupplier',
+            'importsByCategory',
+            'totalImportCost',
             'dashboardCharts',
-            'productCountByCategory'
+            'productCountByCategory',
+            'thisWeekSalary',
+            'thisWeekHours',
+            'thisWeekRevenue',
+            'thisWeekProfit',
+            'thisWeekProfitDetails',
+            'thisMonthSalary',
+            'thisMonthHours',
+            'thisMonthRevenue',
+            'thisMonthProfit',
+            'thisMonthProfitDetails',
+            'weeklyComparison',
+            'monthlyComparison',
+            'weekDateRange',
+            'monthDateRange',
+            'writeoffMetrics'
         ));
     }
 
     private function calculateNetRevenueByRange(Carbon $start, Carbon $end): float
     {
-        $paid = Payment::query()
-            ->where('status', 'paid')
-            ->whereBetween('paid_at', [$start, $end])
-            ->sum('amount');
+        // FIX: Dùng payments.paid_at (khi tiền thực tế được nhận)
+        // Đảm bảo khớp với COGS calculation
+        $paid = DB::table('orders')
+            ->join('payments', 'payments.order_id', '=', 'orders.id')
+            ->where('orders.status', 'completed')
+            ->where('payments.status', 'paid')
+            ->whereBetween('payments.paid_at', [$start->startOfDay(), $end->endOfDay()])
+            ->sum('orders.total_amount');
 
         $refund = Payment::query()
-            ->where('refund_status', 'completed')
-            ->whereBetween('refund_at', [$start, $end])
-            ->sum('refund_amount');
+            ->join('orders', 'orders.id', '=', 'payments.order_id')
+            ->where('payments.refund_status', 'completed')
+            ->whereBetween('payments.refund_at', [$start->startOfDay(), $end->endOfDay()])
+            ->sum('payments.refund_amount');
 
         return (float) ($paid - $refund);
+    }
+
+    private function calculateComprehensiveProfit(Carbon $start, Carbon $end): array
+    {
+        // 1. Doanh Thu = Tổng đơn đã thanh toán - Hoàn tiền (đã bao gồm giảm giá)
+        $revenue = $this->calculateNetRevenueByRange($start, $end);
+
+        // 2. FIX ISSUE #1: Tính Giảm giá RIÊNG (để tracking, không trừ từ revenue)
+        // Revenue đã = total_amount (khách trả sau giảm giá), nên KHÔNG trừ lại
+        $discounts = DB::table('orders')
+            ->join('payments', 'payments.order_id', '=', 'orders.id')
+            ->where('orders.status', 'completed')
+            ->where('payments.status', 'paid')
+            ->whereBetween('payments.paid_at', [$start, $end])
+            ->sum('orders.discount_amount') ?? 0;
+
+        // 3. Giá vốn hàng bán (COGS)
+        // FIX: order_items.cost_price đã là TỔNG chi phí, không phải đơn vị
+        // Nên chỉ cần SUM trực tiếp, không nhân quantity
+        $cogs = DB::table('order_items')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->join('payments', 'payments.order_id', '=', 'orders.id')
+            ->where('orders.status', 'completed')
+            ->where('payments.status', 'paid')
+            ->whereBetween('payments.paid_at', [$start, $end])
+            ->sum('order_items.cost_price') ?? 0;
+
+        // 4. Chi phí vận chuyển
+        $shippingCost = DB::table('orders')
+            ->join('payments', 'payments.order_id', '=', 'orders.id')
+            ->where('orders.status', 'completed')
+            ->where('payments.status', 'paid')
+            ->whereBetween('payments.paid_at', [$start, $end])
+            ->sum('orders.shipping_fee') ?? 0;
+
+        // 5. Tiền nhân công (tính theo TỈ LỆ ca làm trong khoảng thời gian)
+        $totalMonthlySalary = Salary::where('month', $start->month)
+            ->where('year', $start->year)
+            ->sum('final_salary') ?? 0;
+
+        // Tính số ca trong range và trong tháng
+        $shiftsInRange = Attendance::whereBetween('work_date', [$start, $end])->count();
+        $totalShiftsInMonth = Attendance::whereRaw('MONTH(work_date) = ? AND YEAR(work_date) = ?', [$start->month, $start->year])->count();
+
+        // Tính ratio và áp dụng vào salary
+        $salaryRatio = ($totalShiftsInMonth > 0) ? ($shiftsInRange / $totalShiftsInMonth) : 1;
+        $staffCost = $totalMonthlySalary * $salaryRatio;
+
+        // 6. FIX ISSUE #3: Hao hụt hàng - Dùng import_items.created_at thay vì product_variants.created_at
+        // Lý do: product_variants.created_at là ngày tạo biến thể, không phải ngày nhập
+        $inventoryShrinkage = DB::table('import_items')
+            ->join('product_variants', 'product_variants.id', '=', 'import_items.product_variant_id')
+            ->where('import_items.remaining_quantity', '>', 0)
+            ->whereDate('product_variants.expired_at', '<', $end)
+            ->whereBetween('import_items.created_at', [$start, $end])  // FIX: Dùng import_items.created_at
+            ->sum(DB::raw('import_items.remaining_quantity * import_items.unit_price')) ?? 0;
+
+        // 7. Tính tổn thất từ hàng hủy (inventory writeoff)
+        $writeoffCost = DB::table('inventory_writeoffs')
+            ->whereBetween('created_at', [$start, $end])
+            ->sum('total_cost') ?? 0;
+
+        // FIX ISSUE #2: CÔNG THỨC LỢI NHUẬN ĐÚNG
+        // Lợi nhuận gộp = Doanh thu - Vốn hàng (KHÔNG trừ giảm giá ở đây)
+        $grossProfit = $revenue - $cogs;
+
+        // Lợi nhuận vận hành = Lợi nhuận gộp - Chi phí vận chuyển
+        $operatingProfit = $grossProfit - $shippingCost;
+
+        // Lợi nhuận ròng = Lợi nhuận vận hành - Chi phí nhân công - Hao hụt - Hủy hàng
+        $netProfit = $operatingProfit - $staffCost - $inventoryShrinkage - $writeoffCost;
+
+        return [
+            'revenue' => $revenue,
+            'discounts' => $discounts,  // Tracking riêng, không dùng để tính lợi nhuận
+            'cogs' => $cogs,
+            'shipping_cost' => $shippingCost,
+            'staff_cost' => $staffCost,
+            'inventory_shrinkage' => $inventoryShrinkage,
+            'writeoff_cost' => $writeoffCost,
+            'gross_profit' => $grossProfit,  // Revenue - COGS
+            'operating_profit' => $operatingProfit,  // Gross Profit - Shipping
+            'net_profit' => $netProfit,  // Operating Profit - All Expenses
+        ];
     }
 
     public function revenueStatistics(Request $request)
@@ -541,6 +881,116 @@ class DashboardController extends Controller
         $reportData = $this->buildRevenueReportData($request);
 
         return view('admin.revenue_statistics', $reportData);
+    }
+
+    public function revenueTodayDetail(Request $request)
+    {
+        $today = Carbon::today();
+        $todayStart = $today->copy()->startOfDay();
+        $todayEnd = $today->copy()->endOfDay();
+
+        // Doanh thu theo giờ trong ngày hôm nay
+        $hourlyRevenue = [];
+        for ($hour = 0; $hour < 24; $hour++) {
+            $hourStart = $todayStart->copy()->addHours($hour);
+            $hourEnd = $hourStart->copy()->addMinutes(59)->addSeconds(59);
+
+            $revenue = $this->calculateNetRevenueByRange($hourStart, $hourEnd);
+            $hourlyRevenue[] = [
+                'hour' => str_pad($hour, 2, '0', STR_PAD_LEFT) . ':00',
+                'revenue' => $revenue
+            ];
+        }
+
+        // Tổng doanh thu hôm nay
+        $todayTotalRevenue = $this->calculateNetRevenueByRange($todayStart, $todayEnd);
+
+        // Chi tiết các đơn hàng hoàn thành hôm nay
+        $completedOrdersToday = Order::query()
+            ->join('payments', 'payments.order_id', '=', 'orders.id')
+            ->with(['customer.user', 'payment'])
+            ->where('orders.status', 'completed')
+            ->where('payments.status', 'paid')
+            ->whereBetween('payments.paid_at', [$todayStart, $todayEnd])
+            ->orderByDesc('payments.paid_at')
+            ->get();
+
+        // Thống kê theo phương thức thanh toán
+        $paymentMethodStats = Order::query()
+            ->join('payments', 'payments.order_id', '=', 'orders.id')
+            ->where('orders.status', 'completed')
+            ->where('payments.status', 'paid')
+            ->whereBetween('payments.paid_at', [$todayStart, $todayEnd])
+            ->selectRaw('payments.method, COUNT(*) as count, SUM(orders.total_amount) as total')
+            ->groupBy('payments.method')
+            ->get();
+
+        // Top sản phẩm bán hôm nay
+        $topProducts = DB::table('order_items')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->join('payments', 'payments.order_id', '=', 'orders.id')
+            ->join('product_variants', 'product_variants.id', '=', 'order_items.product_variant_id')
+            ->join('products', 'products.id', '=', 'product_variants.product_id')
+            ->where('payments.status', 'paid')
+            ->whereBetween('payments.paid_at', [$todayStart, $todayEnd])
+            ->selectRaw('products.id, products.name, products.image')
+            ->selectRaw('SUM(order_items.quantity) as sold_qty')
+            ->selectRaw('SUM(order_items.subtotal) as total_revenue')
+            ->selectRaw('SUM(COALESCE(order_items.cost_price, 0) * order_items.quantity) as total_cogs')
+            ->groupBy('products.id', 'products.name', 'products.image')
+            ->orderByDesc('sold_qty')
+            ->limit(5)
+            ->get();
+
+        // Tính COGS tổng hôm nay
+        $totalCogs = DB::table('order_items')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->join('payments', 'payments.order_id', '=', 'orders.id')
+            ->where('orders.status', 'completed')
+            ->where('payments.status', 'paid')
+            ->whereBetween('payments.paid_at', [$todayStart, $todayEnd])
+            ->sum(DB::raw('COALESCE(order_items.cost_price, 0) * order_items.quantity'));
+
+        // Tính shipping fee tổng
+        $totalShipping = Order::query()
+            ->whereHas('payment', function ($query) use ($todayStart, $todayEnd) {
+                $query->where('status', 'paid')
+                    ->whereBetween('paid_at', [$todayStart, $todayEnd]);
+            })
+            ->where('status', 'completed')
+            ->sum('shipping_fee');
+
+        // Tính refund hôm nay
+        $refundAmount = Payment::query()
+            ->where('refund_status', 'completed')
+            ->whereBetween('refund_at', [$todayStart, $todayEnd])
+            ->sum('refund_amount');
+
+        // Gross sales
+        $grossSale = Order::query()
+            ->whereHas('payment', function ($query) use ($todayStart, $todayEnd) {
+                $query->where('status', 'paid')
+                    ->whereBetween('paid_at', [$todayStart, $todayEnd]);
+            })
+            ->where('status', 'completed')
+            ->sum('total_amount');
+
+        $netRevenue = $grossSale - $refundAmount;
+
+        return view('admin.revenue_today_detail', [
+            'today' => $today,
+            'todayTotalRevenue' => $todayTotalRevenue,
+            'hourlyRevenue' => $hourlyRevenue,
+            'completedOrdersToday' => $completedOrdersToday,
+            'paymentMethodStats' => $paymentMethodStats,
+            'topProducts' => $topProducts,
+            'grossSale' => $grossSale,
+            'refundAmount' => $refundAmount,
+            'netRevenue' => $netRevenue,
+            'totalCogs' => $totalCogs,
+            'totalShipping' => $totalShipping,
+            'profit' => $netRevenue - $totalCogs,
+        ]);
     }
 
     public function exportRevenueExcel(Request $request)
@@ -575,35 +1025,90 @@ class DashboardController extends Controller
         $weeklyRevenue = $this->buildWeeklyRevenueSeriesByMonth($monthStart, $monthEnd);
         $paymentMethod = $this->buildPaymentMethodSeries($monthStart, $monthEnd);
 
-        $grossSale = Payment::where('status', 'paid')
-            ->whereBetween('paid_at', [$monthStart, $monthEnd])
-            ->sum('amount');
-        $refundAmount = Payment::where('refund_status', 'completed')
-            ->whereBetween('refund_at', [$monthStart, $monthEnd])
-            ->sum('refund_amount');
+        // Calculate revenue based on ORDER COMPLETION (updated_at), not payment date
+        $grossSale = DB::table('orders')
+            ->join('payments', 'payments.order_id', '=', 'orders.id')
+            ->where('orders.status', 'completed')
+            ->where('payments.status', 'paid')
+            ->whereBetween('orders.updated_at', [$monthStart, $monthEnd])
+            ->sum('orders.total_amount');
+
+        $refundAmount = Payment::query()
+            ->join('orders', 'orders.id', '=', 'payments.order_id')
+            ->where('payments.refund_status', 'completed')
+            ->whereBetween('orders.updated_at', [$monthStart, $monthEnd])
+            ->sum('payments.refund_amount');
+
         $netRevenue = $grossSale - $refundAmount;
 
-        $shippingCost = Order::query()
-            ->whereHas('payment', function ($query) {
-                $query->where('status', 'paid');
-            })
-            ->whereBetween('created_at', [$monthStart, $monthEnd])
-            ->sum('shipping_fee');
+        $shippingCost = DB::table('orders')
+            ->join('payments', 'payments.order_id', '=', 'orders.id')
+            ->where('orders.status', 'completed')
+            ->where('payments.status', 'paid')
+            ->whereBetween('orders.updated_at', [$monthStart, $monthEnd])
+            ->sum('orders.shipping_fee');
 
         $salaryCost = Salary::where('month', $monthStart->month)
             ->where('year', $monthStart->year)
-            ->sum('total_salary');
-        $importCost = Import::whereBetween('import_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
-            ->sum('total_amount');
+            ->sum('final_salary') ?? 0;
+
+        // Calculate discount from completed paid orders
+        $discounts = DB::table('orders')
+            ->join('payments', 'payments.order_id', '=', 'orders.id')
+            ->where('orders.status', 'completed')
+            ->where('payments.status', 'paid')
+            ->whereBetween('orders.updated_at', [$monthStart, $monthEnd])
+            ->sum('orders.discount_amount') ?? 0;
+
+        // Fix: Calculate import cost from import_items instead of imports.total_amount (which is 0)
+        $importCost = DB::table('import_items')
+            ->join('imports', 'imports.id', '=', 'import_items.import_id')
+            ->whereBetween('imports.import_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+            ->selectRaw('SUM(import_items.quantity * import_items.unit_price) as total')
+            ->first()
+            ->total ?? 0;
 
         $cogs = DB::table('order_items')
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->join('payments', 'payments.order_id', '=', 'orders.id')
+            ->where('orders.status', 'completed')
             ->where('payments.status', 'paid')
-            ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
+            ->whereBetween('orders.updated_at', [$monthStart, $monthEnd])
             ->sum(DB::raw('COALESCE(order_items.cost_price, 0) * order_items.quantity'));
 
-        $estimatedProfit = $netRevenue - $cogs - $salaryCost - $shippingCost;
+        // Chết kho hết hạn + thiệt hại hoàn trả hư hỏng
+        $writeoffCost = DB::table('inventory_writeoffs')
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->where('reason', 'expired')
+            ->sum('total_cost');
+
+        $damagedLoss = DB::table('inventory_writeoffs')
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->where('reason', 'damaged')
+            ->sum('total_cost');
+
+        $totalWriteoffCost = $writeoffCost + $damagedLoss;
+
+        // Writeoff detail rows for the report view
+        $writeoffDetails = DB::table('inventory_writeoffs')
+            ->join('product_variants', 'product_variants.id', '=', 'inventory_writeoffs.product_variant_id')
+            ->join('products', 'products.id', '=', 'product_variants.product_id')
+            ->whereBetween('inventory_writeoffs.created_at', [$monthStart, $monthEnd])
+            ->selectRaw('products.name as product_name, product_variants.sku as sku, inventory_writeoffs.reason, SUM(inventory_writeoffs.quantity_written_off) as total_qty, SUM(inventory_writeoffs.total_cost) as total_cost')
+            ->groupBy('products.name', 'product_variants.sku', 'inventory_writeoffs.reason')
+            ->orderByDesc('total_cost')
+            ->get()
+            ->map(function ($item) {
+                $item->reason_label = match ($item->reason) {
+                    'expired'  => 'Hết hạn',
+                    'damaged'  => 'Hư hỏng',
+                    default    => 'Khác',
+                };
+                return $item;
+            });
+
+        // FIX: Tính lợi nhuận ước tính (đã thêm discount)
+        $estimatedProfit = $netRevenue - $discounts - $cogs - $salaryCost - $shippingCost - $totalWriteoffCost;
 
         $customersWithPaidOrders = DB::table('orders')
             ->join('payments', 'payments.order_id', '=', 'orders.id')
@@ -678,10 +1183,11 @@ class DashboardController extends Controller
             return $item;
         });
 
-        $importsBySupplier = DB::table('imports')
+        $importsBySupplier = DB::table('import_items')
+            ->join('imports', 'imports.id', '=', 'import_items.import_id')
             ->join('suppliers', 'suppliers.id', '=', 'imports.supplier_id')
             ->whereBetween('imports.import_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
-            ->selectRaw('suppliers.name as supplier_name, COUNT(imports.id) as import_count, SUM(imports.total_amount) as total_value')
+            ->selectRaw('suppliers.name as supplier_name, COUNT(DISTINCT imports.id) as import_count, SUM(import_items.quantity * import_items.unit_price) as total_value')
             ->groupBy('suppliers.name')
             ->orderByDesc('total_value')
             ->get();
@@ -701,9 +1207,9 @@ class DashboardController extends Controller
             ->join('staffs', 'staffs.user_id', '=', 'salaries.staff_id')
             ->where('salaries.month', $monthStart->month)
             ->where('salaries.year', $monthStart->year)
-            ->selectRaw('COALESCE(staffs.position, "khac") as department, COUNT(DISTINCT salaries.staff_id) as staff_count, SUM(salaries.total_salary) as total_salary')
+            ->selectRaw('COALESCE(staffs.position, "khac") as department, COUNT(DISTINCT salaries.staff_id) as staff_count, SUM(salaries.final_salary) as final_salary')
             ->groupBy('department')
-            ->orderByDesc('total_salary')
+            ->orderByDesc('final_salary')
             ->get()
             ->map(function ($item) {
                 $item->department_label = $this->translateDepartment($item->department);
@@ -731,33 +1237,80 @@ class DashboardController extends Controller
         $topMarginHigh = $productMarginBase->sortByDesc('margin_rate')->take(5)->values();
         $topMarginLow = $productMarginBase->sortBy('margin_rate')->take(5)->values();
 
+        // --- Thanh lý hàng sắp hết hạn / hết hạn ---
+        $today = Carbon::today();
+        $expiringSoonDays = 30;
+        $expiringSoonRate = 0.8;
+        $expiredRate = 0.4;
+
+        $liquidationExpiringSoon = DB::table('import_items')
+            ->join('product_variants', 'product_variants.id', '=', 'import_items.product_variant_id')
+            ->where('import_items.remaining_quantity', '>', 0)
+            ->whereDate('product_variants.expired_at', '>=', $today)
+            ->whereDate('product_variants.expired_at', '<=', $today->copy()->addDays($expiringSoonDays))
+            ->selectRaw('SUM(import_items.remaining_quantity) as total_qty')
+            ->selectRaw('SUM(import_items.remaining_quantity * import_items.unit_price) as total_cost')
+            ->selectRaw('SUM(import_items.remaining_quantity * product_variants.price) as total_retail_value')
+            ->first();
+
+        $liquidationExpired = DB::table('import_items')
+            ->join('product_variants', 'product_variants.id', '=', 'import_items.product_variant_id')
+            ->where('import_items.remaining_quantity', '>', 0)
+            ->whereDate('product_variants.expired_at', '<', $today)
+            ->selectRaw('SUM(import_items.remaining_quantity) as total_qty')
+            ->selectRaw('SUM(import_items.remaining_quantity * import_items.unit_price) as total_cost')
+            ->selectRaw('SUM(import_items.remaining_quantity * product_variants.price) as total_retail_value')
+            ->first();
+
+        $liquidationSummary = [
+            'expiring_days' => $expiringSoonDays,
+            'expiring_soon_qty' => (int) ($liquidationExpiringSoon->total_qty ?? 0),
+            'expiring_soon_cost' => (float) ($liquidationExpiringSoon->total_cost ?? 0),
+            'expiring_soon_retail' => (float) ($liquidationExpiringSoon->total_retail_value ?? 0),
+            'expiring_soon_recovery' => (float) ($liquidationExpiringSoon->total_retail_value ?? 0) * $expiringSoonRate,
+            'expiring_soon_rate' => $expiringSoonRate,
+            'expired_qty' => (int) ($liquidationExpired->total_qty ?? 0),
+            'expired_cost' => (float) ($liquidationExpired->total_cost ?? 0),
+            'expired_retail' => (float) ($liquidationExpired->total_retail_value ?? 0),
+            'expired_recovery' => (float) ($liquidationExpired->total_retail_value ?? 0) * $expiredRate,
+            'expired_rate' => $expiredRate,
+        ];
+
+        $liquidationSummary['expiring_soon_profit'] = $liquidationSummary['expiring_soon_recovery'] - $liquidationSummary['expiring_soon_cost'];
+        $liquidationSummary['expired_profit'] = $liquidationSummary['expired_recovery'] - $liquidationSummary['expired_cost'];
+
         $revenueSummary = [
-            'gross_sale' => $grossSale,
-            'refund_amount' => $refundAmount,
-            'net_revenue' => $netRevenue,
-            'shipping_cost' => $shippingCost,
-            'salary_cost' => $salaryCost,
-            'import_cost' => $importCost,
-            'cogs' => $cogs,
-            'estimated_profit' => $estimatedProfit,
-            'returning_customer_rate' => $returningCustomerRate,
-            'ship_to_revenue_rate' => $netRevenue > 0 ? round(($shippingCost / $netRevenue) * 100, 2) : 0,
+            'gross_sale'               => $grossSale,
+            'refund_amount'            => $refundAmount,
+            'net_revenue'              => $netRevenue,
+            'shipping_cost'            => $shippingCost,
+            'salary_cost'              => $salaryCost,
+            'import_cost'              => $importCost,
+            'cogs'                     => $cogs,
+            'writeoff_cost'            => $writeoffCost,
+            'damaged_loss'             => $damagedLoss,
+            'total_writeoff_cost'      => $totalWriteoffCost,
+            'estimated_profit'         => $estimatedProfit,
+            'returning_customer_rate'  => $returningCustomerRate,
+            'ship_to_revenue_rate'     => $netRevenue > 0 ? round(($shippingCost / $netRevenue) * 100, 2) : 0,
         ];
 
         return [
-            'selectedMonth' => $selectedMonth,
-            'revenueSummary' => $revenueSummary,
-            'monthlyFinance' => $monthlyFinance,
-            'weeklyRevenue' => $weeklyRevenue,
-            'paymentMethod' => $paymentMethod,
-            'refundByMethod' => $refundByMethod,
-            'refundByReason' => $refundByReason,
-            'cancelByReason' => $cancelByReason,
+            'selectedMonth'     => $selectedMonth,
+            'revenueSummary'    => $revenueSummary,
+            'monthlyFinance'    => $monthlyFinance,
+            'weeklyRevenue'     => $weeklyRevenue,
+            'paymentMethod'     => $paymentMethod,
+            'refundByMethod'    => $refundByMethod,
+            'refundByReason'    => $refundByReason,
+            'cancelByReason'    => $cancelByReason,
             'importsBySupplier' => $importsBySupplier,
             'importsByCategory' => $importsByCategory,
+            'liquidationSummary' => $liquidationSummary,
             'salaryByDepartment' => $salaryByDepartment,
-            'topMarginHigh' => $topMarginHigh,
-            'topMarginLow' => $topMarginLow,
+            'topMarginHigh'     => $topMarginHigh,
+            'topMarginLow'      => $topMarginLow,
+            'writeoffDetails'   => $writeoffDetails,
             'monthLabel' => $monthLabel,
             'generatedAt' => now(),
         ];
@@ -765,10 +1318,11 @@ class DashboardController extends Controller
 
     private function resolveMonthRange(?string $monthInput): array
     {
-        $monthString = $monthInput ?: now()->format('Y-m');
+        $monthString = trim((string) ($monthInput ?: now()->format('Y-m')));
 
         try {
-            $monthStart = Carbon::createFromFormat('Y-m', $monthString)->startOfMonth();
+            // Parse with explicit day=01 to avoid overflow (e.g. 2026-02 on day 30 becoming March).
+            $monthStart = Carbon::createFromFormat('!Y-m-d', $monthString . '-01')->startOfMonth();
         } catch (\Throwable $exception) {
             $monthStart = now()->startOfMonth();
             $monthString = $monthStart->format('Y-m');
@@ -818,7 +1372,9 @@ class DashboardController extends Controller
             $dayEnd = $cursor->copy()->endOfDay();
 
             $labels[] = $cursor->format('d/m');
-            $values[] = $this->calculateNetRevenueByRange($dayStart, $dayEnd);
+            // Calculate revenue based on ORDER COMPLETION (updated_at), not creation date
+            // This is the final state - completed orders reflect actual revenue received
+            $values[] = $this->calculateDailyRevenueByUpdatedDate($dayStart, $dayEnd);
 
             $cursor->addDay();
         }
@@ -827,6 +1383,27 @@ class DashboardController extends Controller
             'labels' => $labels,
             'values' => $values,
         ];
+    }
+
+    private function calculateDailyRevenueByUpdatedDate(Carbon $start, Carbon $end): float
+    {
+        // Calculate revenue based on ORDER COMPLETION DATE (updated_at)
+        // This represents when the order actually reached 'completed' status
+        // Ensures accurate revenue reporting: only completed orders count
+        $paid = DB::table('orders')
+            ->join('payments', 'payments.order_id', '=', 'orders.id')
+            ->where('orders.status', 'completed')
+            ->where('payments.status', 'paid')
+            ->whereBetween('orders.updated_at', [$start->startOfDay(), $end->endOfDay()])
+            ->sum('orders.total_amount');
+
+        $refund = Payment::query()
+            ->join('orders', 'orders.id', '=', 'payments.order_id')
+            ->where('payments.refund_status', 'completed')
+            ->whereBetween('orders.updated_at', [$start->startOfDay(), $end->endOfDay()])
+            ->sum('payments.refund_amount');
+
+        return (float) ($paid - $refund);
     }
 
     private function getTopProductsByPeriod(Carbon $startDate, Carbon $endDate)
@@ -838,10 +1415,12 @@ class DashboardController extends Controller
             ->join('products', 'products.id', '=', 'product_variants.product_id')
             ->where('payments.status', 'paid')
             ->whereBetween('orders.created_at', [$startDate, $endDate])
-            ->selectRaw('products.id as product_id, products.name as product_name')
+            ->selectRaw('products.id as product_id, products.name as product_name, products.image as product_image')
             ->selectRaw('SUM(order_items.quantity) as sold_qty')
             ->selectRaw('SUM(COALESCE(order_items.subtotal, order_items.quantity * order_items.price)) as total_revenue')
-            ->groupBy('products.id', 'products.name')
+            ->selectRaw('SUM(COALESCE(order_items.cost_price, 0) * order_items.quantity) as total_cogs')
+            ->selectRaw('SUM(COALESCE(order_items.subtotal, order_items.quantity * order_items.price)) - SUM(COALESCE(order_items.cost_price, 0) * order_items.quantity) as total_profit')
+            ->groupBy('products.id', 'products.name', 'products.image')
             ->orderByDesc('sold_qty')
             ->orderByDesc('total_revenue')
             ->limit(5)
@@ -953,7 +1532,7 @@ class DashboardController extends Controller
             'shipping' => 'Đang giao',
             'completed' => 'Hoàn thành',
             'cancelled' => 'Đã hủy',
-            'refund_requested' => 'Yêu cầu hoàn tiền',
+            'refund_requested' => 'Yêu cầu hoàn hàng',
             'refunded' => 'Đã hoàn tiền',
             'unknown' => 'Không xác định',
         ];
@@ -965,25 +1544,25 @@ class DashboardController extends Controller
 
     private function buildPaymentMethodSeries(?Carbon $startDate = null, ?Carbon $endDate = null): array
     {
-        $query = Payment::query();
+        // Count by payment method based on order completion (updated_at), not payment date
+        $query = DB::table('payments')
+            ->join('orders', 'orders.id', '=', 'payments.order_id');
 
         if ($startDate && $endDate) {
-            $query->where(function ($builder) use ($startDate, $endDate) {
-                $builder->whereBetween('paid_at', [$startDate, $endDate])
-                    ->orWhereBetween('created_at', [$startDate, $endDate]);
-            });
+            $query->whereBetween('orders.updated_at', [$startDate, $endDate]);
         }
 
         $stats = $query
-            ->selectRaw('method, COUNT(*) as total_count, SUM(CASE WHEN status = "paid" THEN amount ELSE 0 END) as total_revenue')
-            ->groupBy('method')
-            ->orderBy('method')
+            ->where('payments.status', 'paid')
+            ->selectRaw('payments.method, COUNT(*) as total_count, SUM(orders.total_amount) as total_revenue')
+            ->groupBy('payments.method')
+            ->orderBy('payments.method')
             ->get();
 
         return [
-            'labels' => $stats->pluck('method')->map(fn($method) => $this->translatePaymentMethod($method))->values(),
-            'counts' => $stats->pluck('total_count')->map(fn($value) => (int) $value)->values(),
-            'revenues' => $stats->pluck('total_revenue')->map(fn($value) => (float) $value)->values(),
+            'labels' => collect($stats)->pluck('method')->map(fn($method) => $this->translatePaymentMethod($method))->values(),
+            'counts' => collect($stats)->pluck('total_count')->map(fn($value) => (int) $value)->values(),
+            'revenues' => collect($stats)->pluck('total_revenue')->map(fn($value) => (float) $value)->values(),
         ];
     }
 
@@ -1030,23 +1609,27 @@ class DashboardController extends Controller
         $reasonMap = [
             'wrong_product' => 'Giao sai sản phẩm',
             'wrong_item' => 'Giao sai mặt hàng',
+            'product_defect' => 'Sản phẩm lỗi',
             'damaged_product' => 'Sản phẩm bị hư hỏng',
             'damaged' => 'Sản phẩm bị hư hỏng',
             'delivery_too_long' => 'Giao hàng quá lâu',
             'late_delivery' => 'Giao hàng chậm',
             'changed_mind' => 'Khách đổi ý',
+            'refund_request_retroactive' => 'Giao sai sản phẩm',
             'duplicate_order' => 'Đặt trùng đơn',
             'out_of_stock' => 'Hết hàng',
             'quality_issue' => 'Chất lượng không đạt',
             'payment_issue' => 'Lỗi thanh toán',
             'hh' => 'Hàng hỏng',
+            'other' => 'Khác',
             'Không có lý do' => 'Không có lý do',
         ];
 
         $key = trim((string) $reason);
         $normalizedKey = strtolower($key);
 
-        return $reasonMap[$key] ?? $reasonMap[$normalizedKey] ?? ($key !== '' ? ucfirst(str_replace('_', ' ', $key)) : 'Không có lý do');
+        // If reason not in mapping, return the DB value unchanged so UI matches stored data exactly
+        return $reasonMap[$key] ?? $reasonMap[$normalizedKey] ?? ($key !== '' ? $key : 'Không có lý do');
     }
 
     public function recentOrders()

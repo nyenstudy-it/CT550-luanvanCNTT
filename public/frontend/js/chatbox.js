@@ -21,6 +21,9 @@
     var storeBadge = document.getElementById("store-chatbox-badge");
 
     var history = [];
+    var storeUnreadPollTimer = null;
+    var storeUnreadRequestActive = false;
+    var STORE_UNREAD_POLL_DELAY = 30000;
 
     function escapeHtml(text) {
         return String(text)
@@ -137,6 +140,7 @@
 
         storePanel.hidden = !isOpen;
         if (isOpen) {
+            stopStoreUnreadPolling();
             setPanelOpen(false);
             loadStoreMessages();
             updateStoreUnreadCount(0);
@@ -145,7 +149,32 @@
             }
             // Mark chat notifications as read when opening chat
             markChatNotificationsAsRead();
+        } else {
+            fetchStoreUnreadCount();
         }
+    }
+
+    function stopStoreUnreadPolling() {
+        if (storeUnreadPollTimer) {
+            window.clearTimeout(storeUnreadPollTimer);
+            storeUnreadPollTimer = null;
+        }
+    }
+
+    function scheduleStoreUnreadPolling(delay) {
+        if (!window.chatboxConfig.storeUnreadEndpoint || !storePanel) {
+            return;
+        }
+
+        stopStoreUnreadPolling();
+
+        if (document.hidden || !storePanel.hidden) {
+            return;
+        }
+
+        storeUnreadPollTimer = window.setTimeout(function () {
+            fetchStoreUnreadCount();
+        }, typeof delay === "number" ? delay : STORE_UNREAD_POLL_DELAY);
     }
 
     function markChatNotificationsAsRead() {
@@ -188,10 +217,21 @@
             return;
         }
 
+        if (document.hidden) {
+            stopStoreUnreadPolling();
+            return;
+        }
+
         if (!storePanel.hidden) {
             updateStoreUnreadCount(0);
             return;
         }
+
+        if (storeUnreadRequestActive) {
+            return;
+        }
+
+        storeUnreadRequestActive = true;
 
         fetch(window.chatboxConfig.storeUnreadEndpoint, {
             headers: {
@@ -209,6 +249,10 @@
                 updateStoreUnreadCount(
                     data && data.unread_count ? data.unread_count : 0,
                 );
+            })
+            .finally(function () {
+                storeUnreadRequestActive = false;
+                scheduleStoreUnreadPolling();
             })
             .catch(function () {
                 // Keep current badge state when polling fails.
@@ -250,13 +294,22 @@
             }
         }, 4000);
 
-        setInterval(fetchStoreUnreadCount, 5000);
-
         if (window.chatboxConfig.openStoreChatOnLoad) {
             setStorePanelOpen(true);
         } else {
             fetchStoreUnreadCount();
         }
+
+        document.addEventListener("visibilitychange", function () {
+            if (document.hidden) {
+                stopStoreUnreadPolling();
+                return;
+            }
+
+            if (storePanel.hidden) {
+                fetchStoreUnreadCount();
+            }
+        });
     }
 
     function sendMessage(rawMessage) {

@@ -28,14 +28,6 @@
             <h5 class="mb-0 fw-semibold">Thông tin cá nhân</h5>
         </div>
 
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
-                <i class="fa fa-check-circle"></i>
-                <span>{{ session('success') }}</span>
-                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
-            </div>
-        @endif
-
         <div class="row g-4 align-items-start">
 
             {{-- ===================== LEFT: Profile card ===================== --}}

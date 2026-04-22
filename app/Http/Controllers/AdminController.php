@@ -40,7 +40,6 @@ class AdminController extends Controller
             return back()->withErrors(['email' => 'Tài khoản đã bị khóa']);
         }
 
-        // admin + nhân viên mới được vào admin area
         if (!in_array($user->role, ['admin', 'staff'])) {
             Auth::logout();
             return back()->withErrors(['email' => 'Không có quyền truy cập']);
@@ -64,8 +63,9 @@ class AdminController extends Controller
         $query = Staff::with('user');
 
         if ($request->keyword) {
-            $query->whereHas('user', function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->keyword . '%');
+            $escaped = addcslashes($request->keyword, '\\%_');
+            $query->whereHas('user', function ($q) use ($escaped) {
+                $q->where('name', 'like', '%' . $escaped . '%');
             });
         }
 
@@ -318,7 +318,7 @@ class AdminController extends Controller
                 ->with('success', 'Xóa nhân viên thành công');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Có lỗi xảy ra');
+            return back()->with('error', $e->getMessage() ?: 'Có lỗi xảy ra');
         }
     }
 }

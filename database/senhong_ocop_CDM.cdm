@@ -1,0 +1,1536 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE Model SYSTEM "CDM.dtd">
+<Model Name="senhong_ocop" Code="senhong_ocop" TargetModel="WebSphere" Version="16.1.2.4" SyntaxVersion="16.1-0">
+  <Description>SENHONG OCOP SYSTEM - Conceptual Data Model (CDM)
+Database: senhong_ocop (MySQL)
+Created: April 16, 2026
+Purpose: Complete ERD for OCOP Shop Management System
+Modules: User Mgmt, Attendance &amp; HR, Supply Chain, E-Commerce, Promotions, Content Management</Description>
+  <DiagramLayout ScaleFactor="100" XMargin="50" YMargin="50" />
+
+  <!-- ================================================== -->
+  <!-- 1. USER MANAGEMENT ENTITIES -->
+  <!-- ================================================== -->
+  
+  <Entity Name="users" Code="users" DefinitionPrm="0">
+    <Description>System users (admin, staff, customer, supplier)</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique user identifier</Description>
+      </Attribute>
+      <Attribute Name="name" Code="name" DataType="varchar(255)" Mandatory="1">
+        <Description>User full name</Description>
+      </Attribute>
+      <Attribute Name="email" Code="email" DataType="varchar(255)" Mandatory="1" Searchable="1">
+        <Description>User email address (unique)</Description>
+      </Attribute>
+      <Attribute Name="email_verified_at" Code="email_verified_at" DataType="timestamp" Mandatory="0">
+        <Description>Email verification timestamp</Description>
+      </Attribute>
+      <Attribute Name="password" Code="password" DataType="varchar(255)" Mandatory="1">
+        <Description>Hashed password</Description>
+      </Attribute>
+      <Attribute Name="phone" Code="phone" DataType="varchar(20)" Mandatory="0" Searchable="1">
+        <Description>Phone number (unique)</Description>
+      </Attribute>
+      <Attribute Name="avatar" Code="avatar" DataType="varchar(255)" Mandatory="0">
+        <Description>Avatar image URL</Description>
+      </Attribute>
+      <Attribute Name="role" Code="role" DataType="enum('admin','staff','customer','supplier')" Mandatory="1">
+        <Description>User role (enum)</Description>
+      </Attribute>
+      <Attribute Name="is_active" Code="is_active" DataType="tinyint(1)" Mandatory="1" Default="1">
+        <Description>Active status (1=active, 0=inactive)</Description>
+      </Attribute>
+      <Attribute Name="lock_expires_at" Code="lock_expires_at" DataType="timestamp" Mandatory="0">
+        <Description>Account lock expiration timestamp</Description>
+      </Attribute>
+      <Attribute Name="lock_enabled_by" Code="lock_enabled_by" DataType="bigint(20)" Mandatory="0">
+        <Description>User ID who locked this account</Description>
+      </Attribute>
+      <Attribute Name="remember_token" Code="remember_token" DataType="varchar(100)" Mandatory="0">
+        <Description>Remember me token</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_users" Code="pk_users">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+    <UniqueKey Name="uk_email" Code="uk_email">
+      <UniqueKeyAttribute Name="email" />
+    </UniqueKey>
+    <UniqueKey Name="uk_phone" Code="uk_phone">
+      <UniqueKeyAttribute Name="phone" />
+    </UniqueKey>
+  </Entity>
+
+  <Entity Name="staffs" Code="staffs" DefinitionPrm="0">
+    <Description>Staff profile information (employees)</Description>
+    <Attributes>
+      <Attribute Name="user_id" Code="user_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to users table</Description>
+      </Attribute>
+      <Attribute Name="phone" Code="phone" DataType="varchar(20)" Mandatory="0">
+        <Description>Staff phone number</Description>
+      </Attribute>
+      <Attribute Name="date_of_birth" Code="date_of_birth" DataType="date" Mandatory="0">
+        <Description>Date of birth</Description>
+      </Attribute>
+      <Attribute Name="address" Code="address" DataType="text" Mandatory="0">
+        <Description>Residential address</Description>
+      </Attribute>
+      <Attribute Name="position" Code="position" DataType="enum('manager','staff','leader','director')" Mandatory="1" Default="staff">
+        <Description>Position/role in organization</Description>
+      </Attribute>
+      <Attribute Name="start_date" Code="start_date" DataType="date" Mandatory="0">
+        <Description>Employment start date</Description>
+      </Attribute>
+      <Attribute Name="probation_start" Code="probation_start" DataType="date" Mandatory="0">
+        <Description>Probation period start date</Description>
+      </Attribute>
+      <Attribute Name="probation_end" Code="probation_end" DataType="date" Mandatory="0">
+        <Description>Probation period end date</Description>
+      </Attribute>
+      <Attribute Name="employment_status" Code="employment_status" DataType="enum('probation','official','resigned')" Mandatory="1" Default="probation">
+        <Description>Employment status</Description>
+      </Attribute>
+      <Attribute Name="probation_hourly_wage" Code="probation_hourly_wage" DataType="decimal(10,2)" Mandatory="0">
+        <Description>Hourly wage during probation</Description>
+      </Attribute>
+      <Attribute Name="official_hourly_wage" Code="official_hourly_wage" DataType="decimal(10,2)" Mandatory="0">
+        <Description>Hourly wage after probation</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_staffs" Code="pk_staffs">
+      <IdentifierAttribute Name="user_id" />
+    </Identifier>
+  </Entity>
+
+  <Entity Name="customers" Code="customers" DefinitionPrm="0">
+    <Description>Customer profile information</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique customer identifier</Description>
+      </Attribute>
+      <Attribute Name="user_id" Code="user_id" DataType="bigint(20)" Mandatory="0" SearchKey="1">
+        <Description>Foreign key to users table (optional)</Description>
+      </Attribute>
+      <Attribute Name="phone" Code="phone" DataType="varchar(20)" Mandatory="0">
+        <Description>Customer phone number</Description>
+      </Attribute>
+      <Attribute Name="date_of_birth" Code="date_of_birth" DataType="date" Mandatory="0">
+        <Description>Date of birth</Description>
+      </Attribute>
+      <Attribute Name="address" Code="address" DataType="text" Mandatory="0">
+        <Description>Residential address</Description>
+      </Attribute>
+      <Attribute Name="is_default_address" Code="is_default_address" DataType="tinyint(1)" Mandatory="1" Default="0">
+        <Description>Is this the default address?</Description>
+      </Attribute>
+      <Attribute Name="province_code" Code="province_code" DataType="varchar(5)" Mandatory="0">
+        <Description>Province code (location hierarchy)</Description>
+      </Attribute>
+      <Attribute Name="district_code" Code="district_code" DataType="varchar(5)" Mandatory="0">
+        <Description>District code (location hierarchy)</Description>
+      </Attribute>
+      <Attribute Name="ward_code" Code="ward_code" DataType="varchar(5)" Mandatory="0">
+        <Description>Ward code (location hierarchy)</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_customers" Code="pk_customers">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+    <UniqueKey Name="uk_user_id" Code="uk_user_id">
+      <UniqueKeyAttribute Name="user_id" />
+    </UniqueKey>
+  </Entity>
+
+  <!-- ================================================== -->
+  <!-- 2. ATTENDANCE &amp; HR MANAGEMENT -->
+  <!-- ================================================== -->
+
+  <Entity Name="attendances" Code="attendances" DefinitionPrm="0">
+    <Description>Daily attendance tracking with 5 scenarios (late, early leave, etc.)</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique attendance record</Description>
+      </Attribute>
+      <Attribute Name="staff_id" Code="staff_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to staffs table</Description>
+      </Attribute>
+      <Attribute Name="work_date" Code="work_date" DataType="date" Mandatory="1" SearchKey="1">
+        <Description>Work date</Description>
+      </Attribute>
+      <Attribute Name="shift" Code="shift" DataType="enum('morning','afternoon')" Mandatory="1" SearchKey="1">
+        <Description>Work shift (morning/afternoon)</Description>
+      </Attribute>
+      <Attribute Name="expected_check_in" Code="expected_check_in" DataType="time" Mandatory="1">
+        <Description>Expected check-in time</Description>
+      </Attribute>
+      <Attribute Name="expected_check_out" Code="expected_check_out" DataType="time" Mandatory="1">
+        <Description>Expected check-out time</Description>
+      </Attribute>
+      <Attribute Name="check_in" Code="check_in" DataType="time" Mandatory="0">
+        <Description>Actual check-in time</Description>
+      </Attribute>
+      <Attribute Name="check_in_ip" Code="check_in_ip" DataType="varchar(45)" Mandatory="0">
+        <Description>IP address at check-in</Description>
+      </Attribute>
+      <Attribute Name="check_in_latitude" Code="check_in_latitude" DataType="decimal(10,7)" Mandatory="0">
+        <Description>GPS latitude at check-in</Description>
+      </Attribute>
+      <Attribute Name="check_in_longitude" Code="check_in_longitude" DataType="decimal(10,7)" Mandatory="0">
+        <Description>GPS longitude at check-in</Description>
+      </Attribute>
+      <Attribute Name="check_in_network_type" Code="check_in_network_type" DataType="varchar(50)" Mandatory="0">
+        <Description>Network type at check-in (WiFi/Mobile/etc)</Description>
+      </Attribute>
+      <Attribute Name="check_in_distance_meters" Code="check_in_distance_meters" DataType="decimal(8,2)" Mandatory="0">
+        <Description>Distance from office in meters at check-in</Description>
+      </Attribute>
+      <Attribute Name="check_in_verification_method" Code="check_in_verification_method" DataType="varchar(20)" Mandatory="0">
+        <Description>Verification method used for check-in</Description>
+      </Attribute>
+      <Attribute Name="check_out" Code="check_out" DataType="time" Mandatory="0">
+        <Description>Actual check-out time</Description>
+      </Attribute>
+      <Attribute Name="check_out_ip" Code="check_out_ip" DataType="varchar(45)" Mandatory="0">
+        <Description>IP address at check-out</Description>
+      </Attribute>
+      <Attribute Name="check_out_latitude" Code="check_out_latitude" DataType="decimal(10,7)" Mandatory="0">
+        <Description>GPS latitude at check-out</Description>
+      </Attribute>
+      <Attribute Name="check_out_longitude" Code="check_out_longitude" DataType="decimal(10,7)" Mandatory="0">
+        <Description>GPS longitude at check-out</Description>
+      </Attribute>
+      <Attribute Name="check_out_network_type" Code="check_out_network_type" DataType="varchar(50)" Mandatory="0">
+        <Description>Network type at check-out</Description>
+      </Attribute>
+      <Attribute Name="check_out_distance_meters" Code="check_out_distance_meters" DataType="decimal(8,2)" Mandatory="0">
+        <Description>Distance from office in meters at check-out</Description>
+      </Attribute>
+      <Attribute Name="check_out_verification_method" Code="check_out_verification_method" DataType="varchar(20)" Mandatory="0">
+        <Description>Verification method used for check-out</Description>
+      </Attribute>
+      <Attribute Name="is_late" Code="is_late" DataType="tinyint(1)" Mandatory="1" Default="0">
+        <Description>Is staff late? (Scenario 1)</Description>
+      </Attribute>
+      <Attribute Name="is_early_leave" Code="is_early_leave" DataType="tinyint(1)" Mandatory="1" Default="0">
+        <Description>Did staff leave early? (Scenario 2)</Description>
+      </Attribute>
+      <Attribute Name="is_completed" Code="is_completed" DataType="tinyint(1)" Mandatory="1" Default="0">
+        <Description>Is attendance record completed?</Description>
+      </Attribute>
+      <Attribute Name="is_auto_checkout_forced" Code="is_auto_checkout_forced" DataType="tinyint(1)" Mandatory="1" Default="0">
+        <Description>Was auto check-out forced? (Scenario 5)</Description>
+      </Attribute>
+      <Attribute Name="early_leave_reason" Code="early_leave_reason" DataType="text" Mandatory="0">
+        <Description>Reason for early leave</Description>
+      </Attribute>
+      <Attribute Name="early_leave_status" Code="early_leave_status" DataType="enum('pending','approved','rejected')" Mandatory="1" Default="pending">
+        <Description>Status of early leave request</Description>
+      </Attribute>
+      <Attribute Name="early_leave_pay_percent" Code="early_leave_pay_percent" DataType="int" Mandatory="1" Default="100">
+        <Description>Pay percentage for early leave (0-100)</Description>
+      </Attribute>
+      <Attribute Name="early_leave_approved_by" Code="early_leave_approved_by" DataType="bigint(20)" Mandatory="0">
+        <Description>Staff ID who approved early leave</Description>
+      </Attribute>
+      <Attribute Name="early_leave_approved_at" Code="early_leave_approved_at" DataType="timestamp" Mandatory="0">
+        <Description>Timestamp when early leave was approved</Description>
+      </Attribute>
+      <Attribute Name="scenario_type" Code="scenario_type" DataType="tinyint(3)" Mandatory="0">
+        <Description>Attendance scenario type (1-5)</Description>
+      </Attribute>
+      <Attribute Name="worked_minutes" Code="worked_minutes" DataType="int" Mandatory="0">
+        <Description>Total minutes worked</Description>
+      </Attribute>
+      <Attribute Name="salary_amount" Code="salary_amount" DataType="decimal(12,2)" Mandatory="0">
+        <Description>Salary amount for this attendance record</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_attendances" Code="pk_attendances">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+    <UniqueKey Name="uk_staff_date_shift" Code="uk_staff_date_shift">
+      <UniqueKeyAttribute Name="staff_id" />
+      <UniqueKeyAttribute Name="work_date" />
+      <UniqueKeyAttribute Name="shift" />
+    </UniqueKey>
+  </Entity>
+
+  <Entity Name="salaries" Code="salaries" DefinitionPrm="0">
+    <Description>Monthly salary calculation with bonuses and penalties</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique salary record</Description>
+      </Attribute>
+      <Attribute Name="staff_id" Code="staff_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to staffs table</Description>
+      </Attribute>
+      <Attribute Name="month" Code="month" DataType="int(2)" Mandatory="0">
+        <Description>Month (1-12)</Description>
+      </Attribute>
+      <Attribute Name="year" Code="year" DataType="int(4)" Mandatory="0">
+        <Description>Year (YYYY)</Description>
+      </Attribute>
+      <Attribute Name="total_hours" Code="total_hours" DataType="decimal(8,2)" Mandatory="0">
+        <Description>Total hours worked in month</Description>
+      </Attribute>
+      <Attribute Name="total_amount" Code="total_amount" DataType="decimal(12,2)" Mandatory="0">
+        <Description>Total salary before bonus/penalty</Description>
+      </Attribute>
+      <Attribute Name="bonus" Code="bonus" DataType="decimal(12,2)" Mandatory="1" Default="0">
+        <Description>Bonus amount</Description>
+      </Attribute>
+      <Attribute Name="penalty" Code="penalty" DataType="decimal(12,2)" Mandatory="1" Default="0">
+        <Description>Penalty amount</Description>
+      </Attribute>
+      <Attribute Name="absent_count" Code="absent_count" DataType="int" Mandatory="1" Default="0">
+        <Description>Number of absent days</Description>
+      </Attribute>
+      <Attribute Name="absent_amount" Code="absent_amount" DataType="decimal(12,2)" Mandatory="1" Default="0">
+        <Description>Amount deducted for absences</Description>
+      </Attribute>
+      <Attribute Name="final_amount" Code="final_amount" DataType="decimal(12,2)" Mandatory="0">
+        <Description>Final salary (total + bonus - penalty - absent_amount)</Description>
+      </Attribute>
+      <Attribute Name="status" Code="status" DataType="enum('draft','approved','paid')" Mandatory="1" Default="draft">
+        <Description>Salary status</Description>
+      </Attribute>
+      <Attribute Name="notes" Code="notes" DataType="text" Mandatory="0">
+        <Description>Additional notes about salary</Description>
+      </Attribute>
+      <Attribute Name="paid_at" Code="paid_at" DataType="timestamp" Mandatory="0">
+        <Description>Timestamp when salary was paid</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_salaries" Code="pk_salaries">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+    <UniqueKey Name="uk_staff_month_year" Code="uk_staff_month_year">
+      <UniqueKeyAttribute Name="staff_id" />
+      <UniqueKeyAttribute Name="month" />
+      <UniqueKeyAttribute Name="year" />
+    </UniqueKey>
+  </Entity>
+
+  <!-- ================================================== -->
+  <!-- 3. SUPPLIER &amp; INVENTORY -->
+  <!-- ================================================== -->
+
+  <Entity Name="suppliers" Code="suppliers" DefinitionPrm="0">
+    <Description>Supplier information</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique supplier identifier</Description>
+      </Attribute>
+      <Attribute Name="name" Code="name" DataType="varchar(255)" Mandatory="1" Searchable="1">
+        <Description>Supplier name</Description>
+      </Attribute>
+      <Attribute Name="email" Code="email" DataType="varchar(255)" Mandatory="0">
+        <Description>Supplier email</Description>
+      </Attribute>
+      <Attribute Name="phone" Code="phone" DataType="varchar(20)" Mandatory="0">
+        <Description>Supplier phone</Description>
+      </Attribute>
+      <Attribute Name="address" Code="address" DataType="text" Mandatory="0">
+        <Description>Supplier address</Description>
+      </Attribute>
+      <Attribute Name="city" Code="city" DataType="varchar(100)" Mandatory="0">
+        <Description>City</Description>
+      </Attribute>
+      <Attribute Name="province_code" Code="province_code" DataType="varchar(5)" Mandatory="0">
+        <Description>Province code</Description>
+      </Attribute>
+      <Attribute Name="tax_code" Code="tax_code" DataType="varchar(20)" Mandatory="0">
+        <Description>Tax identification code</Description>
+      </Attribute>
+      <Attribute Name="contact_person" Code="contact_person" DataType="varchar(255)" Mandatory="0">
+        <Description>Contact person name</Description>
+      </Attribute>
+      <Attribute Name="is_active" Code="is_active" DataType="tinyint(1)" Mandatory="1" Default="1">
+        <Description>Is supplier active?</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_suppliers" Code="pk_suppliers">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+  </Entity>
+
+  <Entity Name="category_products" Code="category_products" DefinitionPrm="0">
+    <Description>Product categories</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique category identifier</Description>
+      </Attribute>
+      <Attribute Name="name" Code="name" DataType="varchar(255)" Mandatory="1" Searchable="1">
+        <Description>Category name (unique)</Description>
+      </Attribute>
+      <Attribute Name="description" Code="description" DataType="text" Mandatory="0">
+        <Description>Category description</Description>
+      </Attribute>
+      <Attribute Name="image_url" Code="image_url" DataType="varchar(255)" Mandatory="0">
+        <Description>Category image URL</Description>
+      </Attribute>
+      <Attribute Name="slug" Code="slug" DataType="varchar(255)" Mandatory="0">
+        <Description>URL slug (unique)</Description>
+      </Attribute>
+      <Attribute Name="display_order" Code="display_order" DataType="int" Mandatory="1" Default="0">
+        <Description>Display order in UI</Description>
+      </Attribute>
+      <Attribute Name="is_active" Code="is_active" DataType="tinyint(1)" Mandatory="1" Default="1">
+        <Description>Is category active?</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_category_products" Code="pk_category_products">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+    <UniqueKey Name="uk_category_name" Code="uk_category_name">
+      <UniqueKeyAttribute Name="name" />
+    </UniqueKey>
+    <UniqueKey Name="uk_category_slug" Code="uk_category_slug">
+      <UniqueKeyAttribute Name="slug" />
+    </UniqueKey>
+  </Entity>
+
+  <Entity Name="products" Code="products" DefinitionPrm="0">
+    <Description>Product master data</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique product identifier</Description>
+      </Attribute>
+      <Attribute Name="category_id" Code="category_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to category_products</Description>
+      </Attribute>
+      <Attribute Name="name" Code="name" DataType="varchar(255)" Mandatory="1" Searchable="1">
+        <Description>Product name</Description>
+      </Attribute>
+      <Attribute Name="type" Code="type" DataType="enum('simple','bundle','variable')" Mandatory="1" Default="simple">
+        <Description>Product type</Description>
+      </Attribute>
+      <Attribute Name="description" Code="description" DataType="longtext" Mandatory="0">
+        <Description>Product description</Description>
+      </Attribute>
+      <Attribute Name="origin" Code="origin" DataType="varchar(100)" Mandatory="0">
+        <Description>Product origin/source</Description>
+      </Attribute>
+      <Attribute Name="is_active" Code="is_active" DataType="tinyint(1)" Mandatory="1" Default="1">
+        <Description>Is product active?</Description>
+      </Attribute>
+      <Attribute Name="is_featured" Code="is_featured" DataType="tinyint(1)" Mandatory="1" Default="0">
+        <Description>Is product featured?</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_products" Code="pk_products">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+  </Entity>
+
+  <Entity Name="product_variants" Code="product_variants" DefinitionPrm="0">
+    <Description>Product variants (size, color, volume, etc.)</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique variant identifier</Description>
+      </Attribute>
+      <Attribute Name="product_id" Code="product_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to products</Description>
+      </Attribute>
+      <Attribute Name="sku" Code="sku" DataType="varchar(50)" Mandatory="1" SearchKey="1">
+        <Description>Stock keeping unit (unique)</Description>
+      </Attribute>
+      <Attribute Name="name" Code="name" DataType="varchar(255)" Mandatory="0">
+        <Description>Variant name</Description>
+      </Attribute>
+      <Attribute Name="size" Code="size" DataType="varchar(50)" Mandatory="0">
+        <Description>Size attribute</Description>
+      </Attribute>
+      <Attribute Name="color" Code="color" DataType="varchar(50)" Mandatory="0">
+        <Description>Color attribute</Description>
+      </Attribute>
+      <Attribute Name="weight" Code="weight" DataType="decimal(8,2)" Mandatory="0">
+        <Description>Weight in kg</Description>
+      </Attribute>
+      <Attribute Name="unit" Code="unit" DataType="varchar(20)" Mandatory="0">
+        <Description>Unit of measurement</Description>
+      </Attribute>
+      <Attribute Name="cost_price" Code="cost_price" DataType="decimal(12,2)" Mandatory="0">
+        <Description>Cost price</Description>
+      </Attribute>
+      <Attribute Name="selling_price" Code="selling_price" DataType="decimal(12,2)" Mandatory="1">
+        <Description>Selling price</Description>
+      </Attribute>
+      <Attribute Name="display_price" Code="display_price" DataType="decimal(12,2)" Mandatory="0">
+        <Description>Display price (may differ from selling price)</Description>
+      </Attribute>
+      <Attribute Name="thickness" Code="thickness" DataType="int" Mandatory="0">
+        <Description>Thickness (for specific products)</Description>
+      </Attribute>
+      <Attribute Name="is_active" Code="is_active" DataType="tinyint(1)" Mandatory="1" Default="1">
+        <Description>Is variant active?</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_product_variants" Code="pk_product_variants">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+    <UniqueKey Name="uk_sku" Code="uk_sku">
+      <UniqueKeyAttribute Name="sku" />
+    </UniqueKey>
+  </Entity>
+
+  <Entity Name="product_images" Code="product_images" DefinitionPrm="0">
+    <Description>Product image gallery</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique image identifier</Description>
+      </Attribute>
+      <Attribute Name="product_id" Code="product_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to products</Description>
+      </Attribute>
+      <Attribute Name="product_variant_id" Code="product_variant_id" DataType="bigint(20)" Mandatory="0" SearchKey="1">
+        <Description>Foreign key to product_variants (optional)</Description>
+      </Attribute>
+      <Attribute Name="path" Code="path" DataType="varchar(255)" Mandatory="1">
+        <Description>Image file path/URL</Description>
+      </Attribute>
+      <Attribute Name="is_primary" Code="is_primary" DataType="tinyint(1)" Mandatory="1" Default="0">
+        <Description>Is this the primary image?</Description>
+      </Attribute>
+      <Attribute Name="display_order" Code="display_order" DataType="int" Mandatory="1" Default="0">
+        <Description>Display order</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_product_images" Code="pk_product_images">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+  </Entity>
+
+  <Entity Name="imports" Code="imports" DefinitionPrm="0">
+    <Description>Inventory import records from suppliers</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique import record</Description>
+      </Attribute>
+      <Attribute Name="supplier_id" Code="supplier_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to suppliers</Description>
+      </Attribute>
+      <Attribute Name="staff_id" Code="staff_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to staffs (who recorded import)</Description>
+      </Attribute>
+      <Attribute Name="import_date" Code="import_date" DataType="date" Mandatory="1" SearchKey="1">
+        <Description>Import date</Description>
+      </Attribute>
+      <Attribute Name="notes" Code="notes" DataType="text" Mandatory="0">
+        <Description>Import notes</Description>
+      </Attribute>
+      <Attribute Name="status" Code="status" DataType="enum('draft','imported','cancelled')" Mandatory="1" Default="draft">
+        <Description>Import status</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_imports" Code="pk_imports">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+  </Entity>
+
+  <Entity Name="import_items" Code="import_items" DefinitionPrm="0">
+    <Description>Individual items in each import</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique import item</Description>
+      </Attribute>
+      <Attribute Name="import_id" Code="import_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to imports</Description>
+      </Attribute>
+      <Attribute Name="product_variant_id" Code="product_variant_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to product_variants</Description>
+      </Attribute>
+      <Attribute Name="quantity" Code="quantity" DataType="int" Mandatory="1">
+        <Description>Quantity imported</Description>
+      </Attribute>
+      <Attribute Name="remaining_quantity" Code="remaining_quantity" DataType="int" Mandatory="1" Default="0">
+        <Description>Remaining quantity (FIFO tracking)</Description>
+      </Attribute>
+      <Attribute Name="cost_price" Code="cost_price" DataType="decimal(12,2)" Mandatory="0">
+        <Description>Cost price per unit</Description>
+      </Attribute>
+      <Attribute Name="manufacturing_date" Code="manufacturing_date" DataType="date" Mandatory="0">
+        <Description>Manufacturing date</Description>
+      </Attribute>
+      <Attribute Name="expiry_date" Code="expiry_date" DataType="date" Mandatory="0">
+        <Description>Expiry date (critical for OCOP products)</Description>
+      </Attribute>
+      <Attribute Name="batch_number" Code="batch_number" DataType="varchar(100)" Mandatory="0">
+        <Description>Batch number</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_import_items" Code="pk_import_items">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+  </Entity>
+
+  <Entity Name="inventories" Code="inventories" DefinitionPrm="0">
+    <Description>Real-time stock tracking per product variant</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique inventory record</Description>
+      </Attribute>
+      <Attribute Name="product_variant_id" Code="product_variant_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to product_variants (unique)</Description>
+      </Attribute>
+      <Attribute Name="total_quantity" Code="total_quantity" DataType="int" Mandatory="1" Default="0">
+        <Description>Total quantity in stock</Description>
+      </Attribute>
+      <Attribute Name="available_quantity" Code="available_quantity" DataType="int" Mandatory="1" Default="0">
+        <Description>Available quantity (excludes reserved)</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_inventories" Code="pk_inventories">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+    <UniqueKey Name="uk_product_variant" Code="uk_product_variant">
+      <UniqueKeyAttribute Name="product_variant_id" />
+    </UniqueKey>
+  </Entity>
+
+  <Entity Name="inventory_writeoffs" Code="inventory_writeoffs" DefinitionPrm="0">
+    <Description>Inventory writeoff records (expired, damaged, lost)</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique writeoff record</Description>
+      </Attribute>
+      <Attribute Name="product_variant_id" Code="product_variant_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to product_variants</Description>
+      </Attribute>
+      <Attribute Name="import_item_id" Code="import_item_id" DataType="bigint(20)" Mandatory="0" SearchKey="1">
+        <Description>Foreign key to import_items (which batch)</Description>
+      </Attribute>
+      <Attribute Name="quantity" Code="quantity" DataType="int" Mandatory="1">
+        <Description>Quantity written off</Description>
+      </Attribute>
+      <Attribute Name="reason" Code="reason" DataType="enum('expired','damaged','lost','other')" Mandatory="1" Default="damaged">
+        <Description>Reason for writeoff</Description>
+      </Attribute>
+      <Attribute Name="notes" Code="notes" DataType="text" Mandatory="0">
+        <Description>Additional notes</Description>
+      </Attribute>
+      <Attribute Name="writeoff_date" Code="writeoff_date" DataType="date" Mandatory="1" Default="CURRENT_DATE">
+        <Description>Date of writeoff</Description>
+      </Attribute>
+      <Attribute Name="approved_by" Code="approved_by" DataType="bigint(20)" Mandatory="0">
+        <Description>Staff ID who approved writeoff</Description>
+      </Attribute>
+      <Attribute Name="approved_at" Code="approved_at" DataType="timestamp" Mandatory="0">
+        <Description>Approval timestamp</Description>
+      </Attribute>
+      <Attribute Name="status" Code="status" DataType="enum('pending','approved','rejected')" Mandatory="1" Default="pending">
+        <Description>Writeoff status</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_inventory_writeoffs" Code="pk_inventory_writeoffs">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+  </Entity>
+
+  <!-- ================================================== -->
+  <!-- 4. E-COMMERCE: ORDERS &amp; PAYMENTS -->
+  <!-- ================================================== -->
+
+  <Entity Name="orders" Code="orders" DefinitionPrm="0">
+    <Description>Customer orders</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique order identifier</Description>
+      </Attribute>
+      <Attribute Name="order_number" Code="order_number" DataType="varchar(50)" Mandatory="1" SearchKey="1">
+        <Description>Order number (unique)</Description>
+      </Attribute>
+      <Attribute Name="customer_id" Code="customer_id" DataType="bigint(20)" Mandatory="0" SearchKey="1">
+        <Description>Foreign key to customers (optional for guest orders)</Description>
+      </Attribute>
+      <Attribute Name="total_amount" Code="total_amount" DataType="decimal(12,2)" Mandatory="1">
+        <Description>Total amount before discount/shipping</Description>
+      </Attribute>
+      <Attribute Name="shipping_fee" Code="shipping_fee" DataType="decimal(12,2)" Mandatory="1" Default="0">
+        <Description>Shipping fee</Description>
+      </Attribute>
+      <Attribute Name="discount" Code="discount" DataType="decimal(12,2)" Mandatory="1" Default="0">
+        <Description>Discount amount</Description>
+      </Attribute>
+      <Attribute Name="final_amount" Code="final_amount" DataType="decimal(12,2)" Mandatory="1">
+        <Description>Final amount (total + shipping - discount)</Description>
+      </Attribute>
+      <Attribute Name="status" Code="status" DataType="enum('pending','processing','shipped','delivered','cancelled','refunded','completed')" Mandatory="1" Default="pending">
+        <Description>Order status</Description>
+      </Attribute>
+      <Attribute Name="previous_status" Code="previous_status" DataType="varchar(50)" Mandatory="0">
+        <Description>Previous order status</Description>
+      </Attribute>
+      <Attribute Name="shipping_method" Code="shipping_method" DataType="varchar(100)" Mandatory="0">
+        <Description>Shipping method/courier</Description>
+      </Attribute>
+      <Attribute Name="shipping_address" Code="shipping_address" DataType="text" Mandatory="0">
+        <Description>Shipping address</Description>
+      </Attribute>
+      <Attribute Name="shipping_city" Code="shipping_city" DataType="varchar(100)" Mandatory="0">
+        <Description>Shipping city</Description>
+      </Attribute>
+      <Attribute Name="shipping_province_code" Code="shipping_province_code" DataType="varchar(5)" Mandatory="0">
+        <Description>Shipping province code</Description>
+      </Attribute>
+      <Attribute Name="shipping_name" Code="shipping_name" DataType="varchar(255)" Mandatory="0">
+        <Description>Recipient name</Description>
+      </Attribute>
+      <Attribute Name="shipping_phone" Code="shipping_phone" DataType="varchar(20)" Mandatory="0">
+        <Description>Recipient phone</Description>
+      </Attribute>
+      <Attribute Name="notes" Code="notes" DataType="text" Mandatory="0">
+        <Description>Order notes</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_orders" Code="pk_orders">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+    <UniqueKey Name="uk_order_number" Code="uk_order_number">
+      <UniqueKeyAttribute Name="order_number" />
+    </UniqueKey>
+  </Entity>
+
+  <Entity Name="order_items" Code="order_items" DefinitionPrm="0">
+    <Description>Individual items in each order</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique order item</Description>
+      </Attribute>
+      <Attribute Name="order_id" Code="order_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to orders</Description>
+      </Attribute>
+      <Attribute Name="product_variant_id" Code="product_variant_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to product_variants</Description>
+      </Attribute>
+      <Attribute Name="quantity" Code="quantity" DataType="int" Mandatory="1">
+        <Description>Quantity ordered</Description>
+      </Attribute>
+      <Attribute Name="unit_price" Code="unit_price" DataType="decimal(12,2)" Mandatory="0">
+        <Description>Unit price at time of order</Description>
+      </Attribute>
+      <Attribute Name="display_price" Code="display_price" DataType="decimal(12,2)" Mandatory="0">
+        <Description>Display price</Description>
+      </Attribute>
+      <Attribute Name="total_price" Code="total_price" DataType="decimal(12,2)" Mandatory="0">
+        <Description>Total price (unit_price * quantity)</Description>
+      </Attribute>
+      <Attribute Name="batch_number" Code="batch_number" DataType="varchar(100)" Mandatory="0">
+        <Description>Batch number (for FIFO tracking)</Description>
+      </Attribute>
+      <Attribute Name="manufacturing_date" Code="manufacturing_date" DataType="date" Mandatory="0">
+        <Description>Manufacturing date</Description>
+      </Attribute>
+      <Attribute Name="expiry_date" Code="expiry_date" DataType="date" Mandatory="0">
+        <Description>Expiry date</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_order_items" Code="pk_order_items">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+    <UniqueKey Name="uk_order_variant" Code="uk_order_variant">
+      <UniqueKeyAttribute Name="order_id" />
+      <UniqueKeyAttribute Name="product_variant_id" />
+    </UniqueKey>
+  </Entity>
+
+  <Entity Name="order_cancellations" Code="order_cancellations" DefinitionPrm="0">
+    <Description>Order cancellation records</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique cancellation record</Description>
+      </Attribute>
+      <Attribute Name="order_id" Code="order_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to orders (unique)</Description>
+      </Attribute>
+      <Attribute Name="reason" Code="reason" DataType="varchar(255)" Mandatory="0">
+        <Description>Cancellation reason</Description>
+      </Attribute>
+      <Attribute Name="cancelled_by" Code="cancelled_by" DataType="varchar(50)" Mandatory="0">
+        <Description>Who cancelled (customer/staff/system)</Description>
+      </Attribute>
+      <Attribute Name="cancelled_at" Code="cancelled_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Cancellation timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_order_cancellations" Code="pk_order_cancellations">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+    <UniqueKey Name="uk_order_cancel" Code="uk_order_cancel">
+      <UniqueKeyAttribute Name="order_id" />
+    </UniqueKey>
+  </Entity>
+
+  <Entity Name="payments" Code="payments" DefinitionPrm="0">
+    <Description>Payment records for orders</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique payment record</Description>
+      </Attribute>
+      <Attribute Name="order_id" Code="order_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to orders</Description>
+      </Attribute>
+      <Attribute Name="amount" Code="amount" DataType="decimal(12,2)" Mandatory="1">
+        <Description>Payment amount</Description>
+      </Attribute>
+      <Attribute Name="payment_method" Code="payment_method" DataType="enum('cash','bank_transfer','credit_card','e_wallet','other')" Mandatory="1" Default="cash">
+        <Description>Payment method</Description>
+      </Attribute>
+      <Attribute Name="payment_gateway" Code="payment_gateway" DataType="varchar(100)" Mandatory="0">
+        <Description>Payment gateway used (Stripe, PayPal, etc.)</Description>
+      </Attribute>
+      <Attribute Name="transaction_id" Code="transaction_id" DataType="varchar(255)" Mandatory="0">
+        <Description>Transaction ID (unique)</Description>
+      </Attribute>
+      <Attribute Name="status" Code="status" DataType="enum('pending','completed','failed','refunded','cancelled')" Mandatory="1" Default="pending">
+        <Description>Payment status</Description>
+      </Attribute>
+      <Attribute Name="refund_amount" Code="refund_amount" DataType="decimal(12,2)" Mandatory="0">
+        <Description>Refund amount (if applicable)</Description>
+      </Attribute>
+      <Attribute Name="refund_reason" Code="refund_reason" DataType="text" Mandatory="0">
+        <Description>Reason for refund</Description>
+      </Attribute>
+      <Attribute Name="refunded_at" Code="refunded_at" DataType="timestamp" Mandatory="0">
+        <Description>Refund timestamp</Description>
+      </Attribute>
+      <Attribute Name="notes" Code="notes" DataType="text" Mandatory="0">
+        <Description>Payment notes</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_payments" Code="pk_payments">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+    <UniqueKey Name="uk_transaction_id" Code="uk_transaction_id">
+      <UniqueKeyAttribute Name="transaction_id" />
+    </UniqueKey>
+  </Entity>
+
+  <Entity Name="order_returns" Code="order_returns" DefinitionPrm="0">
+    <Description>Order return/refund requests</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique return record</Description>
+      </Attribute>
+      <Attribute Name="order_id" Code="order_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to orders</Description>
+      </Attribute>
+      <Attribute Name="reason" Code="reason" DataType="varchar(255)" Mandatory="0">
+        <Description>Return reason</Description>
+      </Attribute>
+      <Attribute Name="description" Code="description" DataType="text" Mandatory="0">
+        <Description>Detailed description of return</Description>
+      </Attribute>
+      <Attribute Name="status" Code="status" DataType="enum('pending','approved','rejected','returned','refunded')" Mandatory="1" Default="pending">
+        <Description>Return status</Description>
+      </Attribute>
+      <Attribute Name="refund_amount" Code="refund_amount" DataType="decimal(12,2)" Mandatory="0">
+        <Description>Refund amount</Description>
+      </Attribute>
+      <Attribute Name="requested_at" Code="requested_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Request timestamp</Description>
+      </Attribute>
+      <Attribute Name="approved_at" Code="approved_at" DataType="timestamp" Mandatory="0">
+        <Description>Approval timestamp</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_order_returns" Code="pk_order_returns">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+  </Entity>
+
+  <Entity Name="order_return_images" Code="order_return_images" DefinitionPrm="0">
+    <Description>Images for return requests</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique image record</Description>
+      </Attribute>
+      <Attribute Name="order_return_id" Code="order_return_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to order_returns</Description>
+      </Attribute>
+      <Attribute Name="image_path" Code="image_path" DataType="varchar(255)" Mandatory="0">
+        <Description>Image file path/URL</Description>
+      </Attribute>
+      <Attribute Name="uploaded_at" Code="uploaded_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Upload timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_order_return_images" Code="pk_order_return_images">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+  </Entity>
+
+  <Entity Name="wishlists" Code="wishlists" DefinitionPrm="0">
+    <Description>Customer wishlist (saved items)</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique wishlist entry</Description>
+      </Attribute>
+      <Attribute Name="customer_id" Code="customer_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to customers</Description>
+      </Attribute>
+      <Attribute Name="product_variant_id" Code="product_variant_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to product_variants</Description>
+      </Attribute>
+      <Attribute Name="added_at" Code="added_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>When item was added to wishlist</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_wishlists" Code="pk_wishlists">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+    <UniqueKey Name="uk_customer_variant" Code="uk_customer_variant">
+      <UniqueKeyAttribute Name="customer_id" />
+      <UniqueKeyAttribute Name="product_variant_id" />
+    </UniqueKey>
+  </Entity>
+
+  <!-- ================================================== -->
+  <!-- 5. PROMOTIONS &amp; DISCOUNTS -->
+  <!-- ================================================== -->
+
+  <Entity Name="discounts" Code="discounts" DefinitionPrm="0">
+    <Description>Discount/promotion codes</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique discount record</Description>
+      </Attribute>
+      <Attribute Name="code" Code="code" DataType="varchar(50)" Mandatory="1" SearchKey="1">
+        <Description>Discount code (unique)</Description>
+      </Attribute>
+      <Attribute Name="description" Code="description" DataType="text" Mandatory="0">
+        <Description>Discount description</Description>
+      </Attribute>
+      <Attribute Name="discount_type" Code="discount_type" DataType="enum('percentage','fixed_amount')" Mandatory="1" Default="percentage">
+        <Description>Discount type</Description>
+      </Attribute>
+      <Attribute Name="discount_value" Code="discount_value" DataType="decimal(12,2)" Mandatory="1">
+        <Description>Discount value (% or amount)</Description>
+      </Attribute>
+      <Attribute Name="max_discount_amount" Code="max_discount_amount" DataType="decimal(12,2)" Mandatory="0">
+        <Description>Maximum discount amount capping</Description>
+      </Attribute>
+      <Attribute Name="min_order_amount" Code="min_order_amount" DataType="decimal(12,2)" Mandatory="0">
+        <Description>Minimum order amount to apply discount</Description>
+      </Attribute>
+      <Attribute Name="usage_limit" Code="usage_limit" DataType="int" Mandatory="0">
+        <Description>Total usage limit</Description>
+      </Attribute>
+      <Attribute Name="usage_count" Code="usage_count" DataType="int" Mandatory="1" Default="0">
+        <Description>Current usage count</Description>
+      </Attribute>
+      <Attribute Name="start_date" Code="start_date" DataType="date" Mandatory="0">
+        <Description>Discount start date</Description>
+      </Attribute>
+      <Attribute Name="end_date" Code="end_date" DataType="date" Mandatory="0">
+        <Description>Discount end date</Description>
+      </Attribute>
+      <Attribute Name="audience" Code="audience" DataType="enum('all','new_customers','loyal_customers','specific')" Mandatory="1" Default="all">
+        <Description>Target audience</Description>
+      </Attribute>
+      <Attribute Name="is_active" Code="is_active" DataType="tinyint(1)" Mandatory="1" Default="1">
+        <Description>Is discount active?</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_discounts" Code="pk_discounts">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+    <UniqueKey Name="uk_code" Code="uk_code">
+      <UniqueKeyAttribute Name="code" />
+    </UniqueKey>
+  </Entity>
+
+  <Entity Name="discount_usages" Code="discount_usages" DefinitionPrm="0">
+    <Description>Discount usage tracking</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique usage record</Description>
+      </Attribute>
+      <Attribute Name="discount_id" Code="discount_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to discounts</Description>
+      </Attribute>
+      <Attribute Name="order_id" Code="order_id" DataType="bigint(20)" Mandatory="0" SearchKey="1">
+        <Description>Foreign key to orders (which order used this)</Description>
+      </Attribute>
+      <Attribute Name="customer_id" Code="customer_id" DataType="bigint(20)" Mandatory="0" SearchKey="1">
+        <Description>Foreign key to customers (which customer used)</Description>
+      </Attribute>
+      <Attribute Name="used_at" Code="used_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Usage timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_discount_usages" Code="pk_discount_usages">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+  </Entity>
+
+  <Entity Name="discount_product" Code="discount_product" DefinitionPrm="0">
+    <Description>Mapping of discounts to specific products</Description>
+    <Attributes>
+      <Attribute Name="discount_id" Code="discount_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to discounts</Description>
+      </Attribute>
+      <Attribute Name="product_id" Code="product_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to products</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_discount_product" Code="pk_discount_product">
+      <IdentifierAttribute Name="discount_id" />
+      <IdentifierAttribute Name="product_id" />
+    </Identifier>
+  </Entity>
+
+  <!-- ================================================== -->
+  <!-- 6. CONTENT MANAGEMENT &amp; REVIEWS -->
+  <!-- ================================================== -->
+
+  <Entity Name="blogs" Code="blogs" DefinitionPrm="0">
+    <Description>Blog posts and articles</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique blog post</Description>
+      </Attribute>
+      <Attribute Name="title" Code="title" DataType="varchar(255)" Mandatory="1" Searchable="1">
+        <Description>Blog post title</Description>
+      </Attribute>
+      <Attribute Name="slug" Code="slug" DataType="varchar(255)" Mandatory="1" SearchKey="1">
+        <Description>URL slug (unique)</Description>
+      </Attribute>
+      <Attribute Name="summary" Code="summary" DataType="text" Mandatory="0">
+        <Description>Blog post summary</Description>
+      </Attribute>
+      <Attribute Name="content" Code="content" DataType="longtext" Mandatory="0">
+        <Description>Blog post full content</Description>
+      </Attribute>
+      <Attribute Name="image" Code="image" DataType="varchar(255)" Mandatory="0">
+        <Description>Featured image URL</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_blogs" Code="pk_blogs">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+    <UniqueKey Name="uk_slug" Code="uk_slug">
+      <UniqueKeyAttribute Name="slug" />
+    </UniqueKey>
+  </Entity>
+
+  <Entity Name="blog_blocks" Code="blog_blocks" DefinitionPrm="0">
+    <Description>Content blocks within blog posts</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique blog block</Description>
+      </Attribute>
+      <Attribute Name="blog_id" Code="blog_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to blogs</Description>
+      </Attribute>
+      <Attribute Name="type" Code="type" DataType="enum('text','image')" Mandatory="1" Default="text">
+        <Description>Block type (text/image)</Description>
+      </Attribute>
+      <Attribute Name="content" Code="content" DataType="text" Mandatory="0">
+        <Description>Block content</Description>
+      </Attribute>
+      <Attribute Name="image" Code="image" DataType="varchar(255)" Mandatory="0">
+        <Description>Image URL (if image block)</Description>
+      </Attribute>
+      <Attribute Name="position" Code="position" DataType="int" Mandatory="0">
+        <Description>Block display order</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_blog_blocks" Code="pk_blog_blocks">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+  </Entity>
+
+  <Entity Name="reviews" Code="reviews" DefinitionPrm="0">
+    <Description>Product reviews and ratings</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique review record</Description>
+      </Attribute>
+      <Attribute Name="customer_id" Code="customer_id" DataType="bigint(20)" Mandatory="0" SearchKey="1">
+        <Description>Foreign key to customers</Description>
+      </Attribute>
+      <Attribute Name="product_id" Code="product_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to products</Description>
+      </Attribute>
+      <Attribute Name="order_item_id" Code="order_item_id" DataType="bigint(20)" Mandatory="0" SearchKey="1">
+        <Description>Foreign key to order_items</Description>
+      </Attribute>
+      <Attribute Name="rating" Code="rating" DataType="int" Mandatory="1">
+        <Description>Rating (1-5 stars)</Description>
+      </Attribute>
+      <Attribute Name="title" Code="title" DataType="varchar(255)" Mandatory="0">
+        <Description>Review title</Description>
+      </Attribute>
+      <Attribute Name="comment" Code="comment" DataType="text" Mandatory="0">
+        <Description>Review comment</Description>
+      </Attribute>
+      <Attribute Name="anonymous" Code="anonymous" DataType="tinyint(1)" Mandatory="1" Default="0">
+        <Description>Is review anonymous?</Description>
+      </Attribute>
+      <Attribute Name="status" Code="status" DataType="enum('pending','approved','rejected')" Mandatory="1" Default="pending">
+        <Description>Review status</Description>
+      </Attribute>
+      <Attribute Name="helpful_count" Code="helpful_count" DataType="int" Mandatory="1" Default="0">
+        <Description>Number of people who found review helpful</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_reviews" Code="pk_reviews">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+  </Entity>
+
+  <Entity Name="review_likes" Code="review_likes" DefinitionPrm="0">
+    <Description>Likes on product reviews</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique like record</Description>
+      </Attribute>
+      <Attribute Name="review_id" Code="review_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to reviews</Description>
+      </Attribute>
+      <Attribute Name="customer_id" Code="customer_id" DataType="bigint(20)" Mandatory="0" SearchKey="1">
+        <Description>Foreign key to customers (who liked)</Description>
+      </Attribute>
+      <Attribute Name="liked_at" Code="liked_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>When review was liked</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_review_likes" Code="pk_review_likes">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+    <UniqueKey Name="uk_review_customer_like" Code="uk_review_customer_like">
+      <UniqueKeyAttribute Name="review_id" />
+      <UniqueKeyAttribute Name="customer_id" />
+    </UniqueKey>
+  </Entity>
+
+  <Entity Name="review_replies" Code="review_replies" DefinitionPrm="0">
+    <Description>Staff replies to product reviews</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique reply record</Description>
+      </Attribute>
+      <Attribute Name="review_id" Code="review_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to reviews</Description>
+      </Attribute>
+      <Attribute Name="staff_id" Code="staff_id" DataType="bigint(20)" Mandatory="0" SearchKey="1">
+        <Description>Foreign key to staffs (who replied)</Description>
+      </Attribute>
+      <Attribute Name="comment" Code="comment" DataType="text" Mandatory="1">
+        <Description>Reply comment</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_review_replies" Code="pk_review_replies">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+  </Entity>
+
+  <Entity Name="contacts" Code="contacts" DefinitionPrm="0">
+    <Description>Contact form submissions</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique contact record</Description>
+      </Attribute>
+      <Attribute Name="name" Code="name" DataType="varchar(255)" Mandatory="0">
+        <Description>Sender name</Description>
+      </Attribute>
+      <Attribute Name="email" Code="email" DataType="varchar(255)" Mandatory="0">
+        <Description>Sender email</Description>
+      </Attribute>
+      <Attribute Name="message" Code="message" DataType="text" Mandatory="0">
+        <Description>Contact message</Description>
+      </Attribute>
+      <Attribute Name="status" Code="status" DataType="enum('pending','read')" Mandatory="1" Default="pending">
+        <Description>Contact message status</Description>
+      </Attribute>
+      <Attribute Name="reply" Code="reply" DataType="text" Mandatory="0">
+        <Description>Staff reply</Description>
+      </Attribute>
+      <Attribute Name="replied_at" Code="replied_at" DataType="timestamp" Mandatory="0">
+        <Description>When the message was replied</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_contacts" Code="pk_contacts">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+  </Entity>
+
+  <Entity Name="customer_messages" Code="customer_messages" DefinitionPrm="0">
+    <Description>Customer messages/inquiries</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique message record</Description>
+      </Attribute>
+      <Attribute Name="customer_id" Code="customer_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to customers</Description>
+      </Attribute>
+      <Attribute Name="product_id" Code="product_id" DataType="bigint(20)" Mandatory="0" SearchKey="1">
+        <Description>Foreign key to products (optional)</Description>
+      </Attribute>
+      <Attribute Name="staff_id" Code="staff_id" DataType="bigint(20)" Mandatory="0" SearchKey="1">
+        <Description>Foreign key to staffs (assigned staff)</Description>
+      </Attribute>
+      <Attribute Name="message" Code="message" DataType="text" Mandatory="1">
+        <Description>Message content</Description>
+      </Attribute>
+      <Attribute Name="is_read" Code="is_read" DataType="tinyint(1)" Mandatory="1" Default="0">
+        <Description>Has message been read?</Description>
+      </Attribute>
+      <Attribute Name="read_at" Code="read_at" DataType="timestamp" Mandatory="0">
+        <Description>When message was read</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+      <Attribute Name="updated_at" Code="updated_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+        <Description>Record last update timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_customer_messages" Code="pk_customer_messages">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+  </Entity>
+
+  <Entity Name="notifications" Code="notifications" DefinitionPrm="0">
+    <Description>System notifications for users</Description>
+    <Attributes>
+      <Attribute Name="id" Code="id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Primary key - Unique notification</Description>
+      </Attribute>
+      <Attribute Name="user_id" Code="user_id" DataType="bigint(20)" Mandatory="1" SearchKey="1">
+        <Description>Foreign key to users</Description>
+      </Attribute>
+      <Attribute Name="type" Code="type" DataType="varchar(100)" Mandatory="0">
+        <Description>Notification type</Description>
+      </Attribute>
+      <Attribute Name="message" Code="message" DataType="text" Mandatory="0">
+        <Description>Notification message</Description>
+      </Attribute>
+      <Attribute Name="read_at" Code="read_at" DataType="timestamp" Mandatory="0">
+        <Description>When notification was read</Description>
+      </Attribute>
+      <Attribute Name="created_at" Code="created_at" DataType="timestamp" Mandatory="1" Default="CURRENT_TIMESTAMP">
+        <Description>Record creation timestamp</Description>
+      </Attribute>
+    </Attributes>
+    <Identifier Name="pk_notifications" Code="pk_notifications">
+      <IdentifierAttribute Name="id" />
+    </Identifier>
+  </Entity>
+
+  <!-- ================================================== -->
+  <!-- RELATIONSHIPS (Foreign Keys) -->
+  <!-- ================================================== -->
+
+  <Reference Name="ref_staffs_users" Code="ref_staffs_users" SourceEntity="staffs" TargetEntity="users" SourceEntityRole="contains" TargetEntityRole="is relied on by">
+    <ReferenceAttribute Name="user_id" SourceAttribute="user_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_customers_users" Code="ref_customers_users" SourceEntity="customers" TargetEntity="users">
+    <ReferenceAttribute Name="user_id" SourceAttribute="user_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_attendances_staffs" Code="ref_attendances_staffs" SourceEntity="attendances" TargetEntity="staffs">
+    <ReferenceAttribute Name="staff_id" SourceAttribute="staff_id" TargetAttribute="user_id" />
+  </Reference>
+
+  <Reference Name="ref_attendances_approved_by" Code="ref_attendances_approved_by" SourceEntity="attendances" TargetEntity="staffs">
+    <ReferenceAttribute Name="early_leave_approved_by" SourceAttribute="early_leave_approved_by" TargetAttribute="user_id" />
+  </Reference>
+
+  <Reference Name="ref_salaries_staffs" Code="ref_salaries_staffs" SourceEntity="salaries" TargetEntity="staffs">
+    <ReferenceAttribute Name="staff_id" SourceAttribute="staff_id" TargetAttribute="user_id" />
+  </Reference>
+
+  <Reference Name="ref_products_category" Code="ref_products_category" SourceEntity="products" TargetEntity="category_products">
+    <ReferenceAttribute Name="category_id" SourceAttribute="category_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_variants_products" Code="ref_variants_products" SourceEntity="product_variants" TargetEntity="products">
+    <ReferenceAttribute Name="product_id" SourceAttribute="product_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_product_images_products" Code="ref_product_images_products" SourceEntity="product_images" TargetEntity="products">
+    <ReferenceAttribute Name="product_id" SourceAttribute="product_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_product_images_variants" Code="ref_product_images_variants" SourceEntity="product_images" TargetEntity="product_variants">
+    <ReferenceAttribute Name="product_variant_id" SourceAttribute="product_variant_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_imports_suppliers" Code="ref_imports_suppliers" SourceEntity="imports" TargetEntity="suppliers">
+    <ReferenceAttribute Name="supplier_id" SourceAttribute="supplier_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_imports_staffs" Code="ref_imports_staffs" SourceEntity="imports" TargetEntity="staffs">
+    <ReferenceAttribute Name="staff_id" SourceAttribute="staff_id" TargetAttribute="user_id" />
+  </Reference>
+
+  <Reference Name="ref_import_items_imports" Code="ref_import_items_imports" SourceEntity="import_items" TargetEntity="imports">
+    <ReferenceAttribute Name="import_id" SourceAttribute="import_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_import_items_variants" Code="ref_import_items_variants" SourceEntity="import_items" TargetEntity="product_variants">
+    <ReferenceAttribute Name="product_variant_id" SourceAttribute="product_variant_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_inventories_variants" Code="ref_inventories_variants" SourceEntity="inventories" TargetEntity="product_variants">
+    <ReferenceAttribute Name="product_variant_id" SourceAttribute="product_variant_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_writeoffs_variants" Code="ref_writeoffs_variants" SourceEntity="inventory_writeoffs" TargetEntity="product_variants">
+    <ReferenceAttribute Name="product_variant_id" SourceAttribute="product_variant_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_writeoffs_import_items" Code="ref_writeoffs_import_items" SourceEntity="inventory_writeoffs" TargetEntity="import_items">
+    <ReferenceAttribute Name="import_item_id" SourceAttribute="import_item_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_writeoffs_approved_by" Code="ref_writeoffs_approved_by" SourceEntity="inventory_writeoffs" TargetEntity="staffs">
+    <ReferenceAttribute Name="approved_by" SourceAttribute="approved_by" TargetAttribute="user_id" />
+  </Reference>
+
+  <Reference Name="ref_orders_customers" Code="ref_orders_customers" SourceEntity="orders" TargetEntity="customers">
+    <ReferenceAttribute Name="customer_id" SourceAttribute="customer_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_order_items_orders" Code="ref_order_items_orders" SourceEntity="order_items" TargetEntity="orders">
+    <ReferenceAttribute Name="order_id" SourceAttribute="order_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_order_items_variants" Code="ref_order_items_variants" SourceEntity="order_items" TargetEntity="product_variants">
+    <ReferenceAttribute Name="product_variant_id" SourceAttribute="product_variant_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_order_cancellations" Code="ref_order_cancellations" SourceEntity="order_cancellations" TargetEntity="orders">
+    <ReferenceAttribute Name="order_id" SourceAttribute="order_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_payments_orders" Code="ref_payments_orders" SourceEntity="payments" TargetEntity="orders">
+    <ReferenceAttribute Name="order_id" SourceAttribute="order_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_order_returns_orders" Code="ref_order_returns_orders" SourceEntity="order_returns" TargetEntity="orders">
+    <ReferenceAttribute Name="order_id" SourceAttribute="order_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_order_return_images" Code="ref_order_return_images" SourceEntity="order_return_images" TargetEntity="order_returns">
+    <ReferenceAttribute Name="order_return_id" SourceAttribute="order_return_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_wishlists_customers" Code="ref_wishlists_customers" SourceEntity="wishlists" TargetEntity="customers">
+    <ReferenceAttribute Name="customer_id" SourceAttribute="customer_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_wishlists_variants" Code="ref_wishlists_variants" SourceEntity="wishlists" TargetEntity="product_variants">
+    <ReferenceAttribute Name="product_variant_id" SourceAttribute="product_variant_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_discount_usages_discounts" Code="ref_discount_usages_discounts" SourceEntity="discount_usages" TargetEntity="discounts">
+    <ReferenceAttribute Name="discount_id" SourceAttribute="discount_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_discount_usages_orders" Code="ref_discount_usages_orders" SourceEntity="discount_usages" TargetEntity="orders">
+    <ReferenceAttribute Name="order_id" SourceAttribute="order_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_discount_usages_customers" Code="ref_discount_usages_customers" SourceEntity="discount_usages" TargetEntity="customers">
+    <ReferenceAttribute Name="customer_id" SourceAttribute="customer_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_discount_product_discounts" Code="ref_discount_product_discounts" SourceEntity="discount_product" TargetEntity="discounts">
+    <ReferenceAttribute Name="discount_id" SourceAttribute="discount_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_discount_product_products" Code="ref_discount_product_products" SourceEntity="discount_product" TargetEntity="products">
+    <ReferenceAttribute Name="product_id" SourceAttribute="product_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_blog_blocks" Code="ref_blog_blocks" SourceEntity="blog_blocks" TargetEntity="blogs">
+    <ReferenceAttribute Name="blog_id" SourceAttribute="blog_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_reviews_customers" Code="ref_reviews_customers" SourceEntity="reviews" TargetEntity="customers">
+    <ReferenceAttribute Name="customer_id" SourceAttribute="customer_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_reviews_products" Code="ref_reviews_products" SourceEntity="reviews" TargetEntity="products">
+    <ReferenceAttribute Name="product_id" SourceAttribute="product_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_reviews_order_items" Code="ref_reviews_order_items" SourceEntity="reviews" TargetEntity="order_items">
+    <ReferenceAttribute Name="order_item_id" SourceAttribute="order_item_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_review_likes_reviews" Code="ref_review_likes_reviews" SourceEntity="review_likes" TargetEntity="reviews">
+    <ReferenceAttribute Name="review_id" SourceAttribute="review_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_review_likes_customers" Code="ref_review_likes_customers" SourceEntity="review_likes" TargetEntity="customers">
+    <ReferenceAttribute Name="customer_id" SourceAttribute="customer_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_review_replies_reviews" Code="ref_review_replies_reviews" SourceEntity="review_replies" TargetEntity="reviews">
+    <ReferenceAttribute Name="review_id" SourceAttribute="review_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_review_replies_staffs" Code="ref_review_replies_staffs" SourceEntity="review_replies" TargetEntity="staffs">
+    <ReferenceAttribute Name="staff_id" SourceAttribute="staff_id" TargetAttribute="user_id" />
+  </Reference>
+
+  <Reference Name="ref_customer_messages_customers" Code="ref_customer_messages_customers" SourceEntity="customer_messages" TargetEntity="customers">
+    <ReferenceAttribute Name="customer_id" SourceAttribute="customer_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_customer_messages_products" Code="ref_customer_messages_products" SourceEntity="customer_messages" TargetEntity="products">
+    <ReferenceAttribute Name="product_id" SourceAttribute="product_id" TargetAttribute="id" />
+  </Reference>
+
+  <Reference Name="ref_customer_messages_staffs" Code="ref_customer_messages_staffs" SourceEntity="customer_messages" TargetEntity="staffs">
+    <ReferenceAttribute Name="staff_id" SourceAttribute="staff_id" TargetAttribute="user_id" />
+  </Reference>
+
+  <Reference Name="ref_notifications_users" Code="ref_notifications_users" SourceEntity="notifications" TargetEntity="users">
+    <ReferenceAttribute Name="user_id" SourceAttribute="user_id" TargetAttribute="id" />
+  </Reference>
+
+</Model>

@@ -43,16 +43,33 @@ class WishlistController extends Controller
             ->where('product_id', $productId)
             ->first();
 
+        $isAddedToWishlist = false;
+        $message = '';
+
         if ($exist) {
             $exist->delete();
-            return back()->with('success', 'Đã xoá khỏi yêu thích');
+            $isAddedToWishlist = false;
+            $message = 'Đã xoá khỏi yêu thích';
+        } else {
+            Wishlist::create([
+                'user_id' => $userId,
+                'product_id' => $productId
+            ]);
+            $isAddedToWishlist = true;
+            $message = 'Đã thêm vào yêu thích';
         }
 
-        Wishlist::create([
-            'user_id' => $userId,
-            'product_id' => $productId
-        ]);
+        // If AJAX request, return JSON
+        if (request()->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'isAddedToWishlist' => $isAddedToWishlist,
+                'productId' => $productId
+            ]);
+        }
 
-        return back()->with('success', 'Đã thêm vào yêu thích');
+        // Otherwise, redirect with flash message
+        return back()->with('success', $message);
     }
 }

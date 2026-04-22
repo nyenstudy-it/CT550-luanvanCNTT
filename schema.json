@@ -1,0 +1,3115 @@
+{
+    "allowed_networks": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "cidr": {
+                "type": "varchar(100)",
+                "nullable": "NO",
+                "key": "UNI",
+                "extra": "",
+                "default": null
+            },
+            "label": {
+                "type": "varchar(255)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": []
+    },
+    "attendances": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "staff_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "work_date": {
+                "type": "date",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "shift": {
+                "type": "enum('morning','afternoon')",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "expected_check_in": {
+                "type": "time",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "expected_check_out": {
+                "type": "time",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "check_in": {
+                "type": "time",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "check_in_ip": {
+                "type": "varchar(45)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "check_in_network_type": {
+                "type": "varchar(50)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "check_in_verification_method": {
+                "type": "varchar(20)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "is_late": {
+                "type": "tinyint(1)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0"
+            },
+            "is_early_leave": {
+                "type": "tinyint(1)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0"
+            },
+            "early_leave_reason": {
+                "type": "text",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "early_leave_status": {
+                "type": "enum('pending','approved','rejected')",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "'pending'"
+            },
+            "early_leave_pay_percent": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "100"
+            },
+            "early_leave_approved_by": {
+                "type": "bigint(20) unsigned",
+                "nullable": "YES",
+                "key": "MUL",
+                "extra": "",
+                "default": "NULL"
+            },
+            "early_leave_approved_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "is_auto_checkout_forced": {
+                "type": "tinyint(1)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0"
+            },
+            "scenario_type": {
+                "type": "tinyint(3) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": "0"
+            },
+            "is_completed": {
+                "type": "tinyint(1)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0"
+            },
+            "salary_amount": {
+                "type": "decimal(12,2)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "check_out": {
+                "type": "time",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "worked_minutes": {
+                "type": "int(11)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "early_leave_approved_by",
+                "references_table": "staffs",
+                "references_column": "user_id"
+            },
+            {
+                "column": "staff_id",
+                "references_table": "staffs",
+                "references_column": "user_id"
+            }
+        ]
+    },
+    "blogs": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "title": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "slug": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "UNI",
+                "extra": "",
+                "default": null
+            },
+            "summary": {
+                "type": "text",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "content": {
+                "type": "longtext",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "image": {
+                "type": "varchar(255)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": []
+    },
+    "blog_blocks": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "blog_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "type": {
+                "type": "enum('text','image')",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "content": {
+                "type": "text",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "image": {
+                "type": "varchar(255)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "position": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "blog_id",
+                "references_table": "blogs",
+                "references_column": "id"
+            }
+        ]
+    },
+    "cache": {
+        "columns": {
+            "key": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "",
+                "default": null
+            },
+            "value": {
+                "type": "mediumtext",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "expiration": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            }
+        },
+        "primary_keys": [
+            "key"
+        ],
+        "foreign_keys": []
+    },
+    "cache_locks": {
+        "columns": {
+            "key": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "",
+                "default": null
+            },
+            "owner": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "expiration": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            }
+        },
+        "primary_keys": [
+            "key"
+        ],
+        "foreign_keys": []
+    },
+    "category_products": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "name": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "description": {
+                "type": "text",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "image_url": {
+                "type": "varchar(255)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": []
+    },
+    "contacts": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "name": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "email": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "message": {
+                "type": "text",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "reply": {
+                "type": "text",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "reply_by": {
+                "type": "bigint(20) unsigned",
+                "nullable": "YES",
+                "key": "MUL",
+                "extra": "",
+                "default": "NULL"
+            },
+            "replied_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "status": {
+                "type": "enum('pending','read','replied')",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "reply_by",
+                "references_table": "users",
+                "references_column": "id"
+            }
+        ]
+    },
+    "customers": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "user_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "UNI",
+                "extra": "",
+                "default": null
+            },
+            "phone": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "address": {
+                "type": "text",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "province": {
+                "type": "varchar(255)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "district": {
+                "type": "varchar(255)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "ward": {
+                "type": "varchar(255)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "is_default_address": {
+                "type": "tinyint(1)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0"
+            },
+            "date_of_birth": {
+                "type": "date",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "gender": {
+                "type": "enum('male','female','other')",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "user_id",
+                "references_table": "users",
+                "references_column": "id"
+            }
+        ]
+    },
+    "customer_messages": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "customer_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "product_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "YES",
+                "key": "MUL",
+                "extra": "",
+                "default": "NULL"
+            },
+            "staff_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "YES",
+                "key": "MUL",
+                "extra": "",
+                "default": "NULL"
+            },
+            "message": {
+                "type": "text",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "sender_type": {
+                "type": "enum('customer','staff','admin')",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": "'customer'"
+            },
+            "is_read": {
+                "type": "tinyint(1)",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": "0"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "MUL",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "customer_id",
+                "references_table": "users",
+                "references_column": "id"
+            },
+            {
+                "column": "product_id",
+                "references_table": "products",
+                "references_column": "id"
+            },
+            {
+                "column": "staff_id",
+                "references_table": "users",
+                "references_column": "id"
+            }
+        ]
+    },
+    "discounts": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "code": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "UNI",
+                "extra": "",
+                "default": null
+            },
+            "type": {
+                "type": "enum('percent','fixed')",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "value": {
+                "type": "decimal(10,2)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "min_order_value": {
+                "type": "decimal(10,2)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "max_discount": {
+                "type": "decimal(10,2)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "audience": {
+                "type": "varchar(30)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "'all'"
+            },
+            "usage_limit": {
+                "type": "int(11)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "used_count": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0"
+            },
+            "start_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "end_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "is_active": {
+                "type": "tinyint(1)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "1"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": []
+    },
+    "discount_product": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "discount_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "product_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "discount_id",
+                "references_table": "discounts",
+                "references_column": "id"
+            },
+            {
+                "column": "product_id",
+                "references_table": "products",
+                "references_column": "id"
+            }
+        ]
+    },
+    "discount_usages": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "discount_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "user_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "order_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "discount_id",
+                "references_table": "discounts",
+                "references_column": "id"
+            },
+            {
+                "column": "order_id",
+                "references_table": "orders",
+                "references_column": "id"
+            },
+            {
+                "column": "user_id",
+                "references_table": "users",
+                "references_column": "id"
+            }
+        ]
+    },
+    "failed_jobs": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "uuid": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "UNI",
+                "extra": "",
+                "default": null
+            },
+            "connection": {
+                "type": "text",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "queue": {
+                "type": "text",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "payload": {
+                "type": "longtext",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "exception": {
+                "type": "longtext",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "failed_at": {
+                "type": "timestamp",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "current_timestamp()"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": []
+    },
+    "imports": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "supplier_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "import_date": {
+                "type": "date",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "total_amount": {
+                "type": "decimal(15,2)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0.00"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "staff_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "staff_id",
+                "references_table": "staffs",
+                "references_column": "user_id"
+            },
+            {
+                "column": "supplier_id",
+                "references_table": "suppliers",
+                "references_column": "id"
+            }
+        ]
+    },
+    "import_items": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "import_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "product_variant_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "manufacture_date": {
+                "type": "date",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "expired_at": {
+                "type": "date",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "quantity": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "remaining_quantity": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0"
+            },
+            "unit_price": {
+                "type": "decimal(15,2)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "import_id",
+                "references_table": "imports",
+                "references_column": "id"
+            },
+            {
+                "column": "product_variant_id",
+                "references_table": "product_variants",
+                "references_column": "id"
+            }
+        ]
+    },
+    "inventories": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "product_variant_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "UNI",
+                "extra": "",
+                "default": null
+            },
+            "quantity": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "product_variant_id",
+                "references_table": "product_variants",
+                "references_column": "id"
+            }
+        ]
+    },
+    "inventory_writeoffs": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "product_variant_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "import_item_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "quantity_written_off": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "unit_cost": {
+                "type": "decimal(15,2)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0.00"
+            },
+            "total_cost": {
+                "type": "decimal(15,2)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0.00"
+            },
+            "reason": {
+                "type": "enum('expired','damaged','other')",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "'expired'"
+            },
+            "note": {
+                "type": "varchar(255)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "written_off_by": {
+                "type": "bigint(20) unsigned",
+                "nullable": "YES",
+                "key": "MUL",
+                "extra": "",
+                "default": "NULL"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "import_item_id",
+                "references_table": "import_items",
+                "references_column": "id"
+            },
+            {
+                "column": "product_variant_id",
+                "references_table": "product_variants",
+                "references_column": "id"
+            },
+            {
+                "column": "written_off_by",
+                "references_table": "users",
+                "references_column": "id"
+            }
+        ]
+    },
+    "jobs": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "queue": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "payload": {
+                "type": "longtext",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "attempts": {
+                "type": "tinyint(3) unsigned",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "reserved_at": {
+                "type": "int(10) unsigned",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "available_at": {
+                "type": "int(10) unsigned",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "created_at": {
+                "type": "int(10) unsigned",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": []
+    },
+    "job_batches": {
+        "columns": {
+            "id": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "",
+                "default": null
+            },
+            "name": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "total_jobs": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "pending_jobs": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "failed_jobs": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "failed_job_ids": {
+                "type": "longtext",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "options": {
+                "type": "mediumtext",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "cancelled_at": {
+                "type": "int(11)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "created_at": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "finished_at": {
+                "type": "int(11)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": []
+    },
+    "migrations": {
+        "columns": {
+            "id": {
+                "type": "int(10) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "migration": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "batch": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": []
+    },
+    "notifications": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "type": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "title": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "content": {
+                "type": "text",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "user_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "related_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "is_read": {
+                "type": "tinyint(1)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": []
+    },
+    "orders": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "customer_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "receiver_name": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "receiver_phone": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "shipping_address": {
+                "type": "text",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "note": {
+                "type": "text",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "total_amount": {
+                "type": "decimal(15,2)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "shipping_fee": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0"
+            },
+            "discount_amount": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0"
+            },
+            "discount_code": {
+                "type": "varchar(255)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "status": {
+                "type": "enum('pending','confirmed','shipping','completed','cancelled','refund_requested','refunded')",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "'pending'"
+            },
+            "previous_status": {
+                "type": "varchar(255)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "customer_id",
+                "references_table": "users",
+                "references_column": "id"
+            }
+        ]
+    },
+    "order_cancellations": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "order_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "cancelled_by": {
+                "type": "enum('customer','staff','admin')",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "reason": {
+                "type": "varchar(255)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "cancelled_at": {
+                "type": "timestamp",
+                "nullable": "NO",
+                "key": "",
+                "extra": "on update current_timestamp()",
+                "default": "current_timestamp()"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "order_id",
+                "references_table": "orders",
+                "references_column": "id"
+            }
+        ]
+    },
+    "order_items": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "order_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "product_variant_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "quantity": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "price": {
+                "type": "decimal(15,2)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "subtotal": {
+                "type": "decimal(12,2)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "cost_price": {
+                "type": "decimal(12,2)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "batch_details": {
+                "type": "longtext",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "order_id",
+                "references_table": "orders",
+                "references_column": "id"
+            },
+            {
+                "column": "product_variant_id",
+                "references_table": "product_variants",
+                "references_column": "id"
+            }
+        ]
+    },
+    "order_returns": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "order_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "reason": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "status": {
+                "type": "enum('requested','approved','rejected','given_to_shipper','goods_received','inspected_defective','inspected_good','refunded')",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "'requested'"
+            },
+            "inspected_by": {
+                "type": "bigint(20) unsigned",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "inspected_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "inspection_notes": {
+                "type": "text",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "inspection_result": {
+                "type": "enum('good','defective')",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "approved_by": {
+                "type": "bigint(20) unsigned",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "approved_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "rejection_reason": {
+                "type": "text",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "description": {
+                "type": "text",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "order_id",
+                "references_table": "orders",
+                "references_column": "id"
+            }
+        ]
+    },
+    "order_return_images": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "order_return_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "image_path": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "order_return_id",
+                "references_table": "order_returns",
+                "references_column": "id"
+            }
+        ]
+    },
+    "password_reset_tokens": {
+        "columns": {
+            "email": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "",
+                "default": null
+            },
+            "token": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "email"
+        ],
+        "foreign_keys": []
+    },
+    "payments": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "order_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "method": {
+                "type": "enum('COD','VNPAY','MOMO','BANK_TRANSFER')",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "amount": {
+                "type": "decimal(12,2)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "refund_amount": {
+                "type": "decimal(10,2)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "refund_status": {
+                "type": "varchar(255)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "refund_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "transaction_code": {
+                "type": "varchar(255)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "status": {
+                "type": "enum('pending','paid','failed')",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "'pending'"
+            },
+            "paid_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "order_id",
+                "references_table": "orders",
+                "references_column": "id"
+            }
+        ]
+    },
+    "products": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "category_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "supplier_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "name": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "description": {
+                "type": "text",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "usage_instructions": {
+                "type": "text",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "storage_instructions": {
+                "type": "text",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "ocop_star": {
+                "type": "tinyint(3) unsigned",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "ocop_year": {
+                "type": "smallint(5) unsigned",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "image": {
+                "type": "varchar(255)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "status": {
+                "type": "enum('active','inactive')",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "'active'"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "category_id",
+                "references_table": "category_products",
+                "references_column": "id"
+            },
+            {
+                "column": "supplier_id",
+                "references_table": "suppliers",
+                "references_column": "id"
+            }
+        ]
+    },
+    "product_images": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "product_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "YES",
+                "key": "MUL",
+                "extra": "",
+                "default": "NULL"
+            },
+            "product_variant_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "YES",
+                "key": "MUL",
+                "extra": "",
+                "default": "NULL"
+            },
+            "image_path": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "is_primary": {
+                "type": "tinyint(1)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "product_id",
+                "references_table": "products",
+                "references_column": "id"
+            },
+            {
+                "column": "product_variant_id",
+                "references_table": "product_variants",
+                "references_column": "id"
+            }
+        ]
+    },
+    "product_variants": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "product_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "sku": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "UNI",
+                "extra": "",
+                "default": null
+            },
+            "volume": {
+                "type": "varchar(50)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "weight": {
+                "type": "varchar(50)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "color": {
+                "type": "varchar(50)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "size": {
+                "type": "varchar(50)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "price": {
+                "type": "decimal(10,2)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "manufacture_date": {
+                "type": "date",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "expired_at": {
+                "type": "date",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "is_active": {
+                "type": "tinyint(1)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "1"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "product_id",
+                "references_table": "products",
+                "references_column": "id"
+            }
+        ]
+    },
+    "reviews": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "product_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "customer_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "order_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "YES",
+                "key": "MUL",
+                "extra": "",
+                "default": "NULL"
+            },
+            "rating": {
+                "type": "tinyint(4)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "5"
+            },
+            "content": {
+                "type": "text",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "is_anonymous": {
+                "type": "tinyint(1)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "status": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "'pending'"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "order_id",
+                "references_table": "orders",
+                "references_column": "id"
+            },
+            {
+                "column": "product_id",
+                "references_table": "products",
+                "references_column": "id"
+            },
+            {
+                "column": "customer_id",
+                "references_table": "users",
+                "references_column": "id"
+            }
+        ]
+    },
+    "review_likes": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "review_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "customer_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "customer_id",
+                "references_table": "customers",
+                "references_column": "id"
+            },
+            {
+                "column": "review_id",
+                "references_table": "reviews",
+                "references_column": "id"
+            }
+        ]
+    },
+    "review_replies": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "review_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "parent_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "YES",
+                "key": "MUL",
+                "extra": "",
+                "default": "NULL"
+            },
+            "user_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "YES",
+                "key": "MUL",
+                "extra": "",
+                "default": "NULL"
+            },
+            "author_name": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "is_admin": {
+                "type": "tinyint(1)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0"
+            },
+            "content": {
+                "type": "text",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "status": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "'approved'"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "parent_id",
+                "references_table": "review_replies",
+                "references_column": "id"
+            },
+            {
+                "column": "review_id",
+                "references_table": "reviews",
+                "references_column": "id"
+            },
+            {
+                "column": "user_id",
+                "references_table": "users",
+                "references_column": "id"
+            }
+        ]
+    },
+    "salaries": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "staff_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "month": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "year": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "total_minutes": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0"
+            },
+            "total_hours": {
+                "type": "decimal(8,2)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0.00"
+            },
+            "total_salary": {
+                "type": "decimal(12,2)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0.00"
+            },
+            "late_count": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0"
+            },
+            "early_leave_count": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0"
+            },
+            "absent_count": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "penalty_amount": {
+                "type": "decimal(12,2)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0.00"
+            },
+            "bonus_amount": {
+                "type": "decimal(12,2)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0.00"
+            },
+            "final_salary": {
+                "type": "decimal(12,2)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "0.00"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "staff_id",
+                "references_table": "staffs",
+                "references_column": "user_id"
+            }
+        ]
+    },
+    "sessions": {
+        "columns": {
+            "id": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "",
+                "default": null
+            },
+            "user_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "YES",
+                "key": "MUL",
+                "extra": "",
+                "default": "NULL"
+            },
+            "ip_address": {
+                "type": "varchar(45)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "user_agent": {
+                "type": "text",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "payload": {
+                "type": "longtext",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "last_activity": {
+                "type": "int(11)",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": []
+    },
+    "staffs": {
+        "columns": {
+            "user_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "",
+                "default": null
+            },
+            "phone": {
+                "type": "varchar(255)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "date_of_birth": {
+                "type": "date",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "address": {
+                "type": "text",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "position": {
+                "type": "enum('cashier','warehouse','order_staff')",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "start_date": {
+                "type": "date",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "probation_start": {
+                "type": "date",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "probation_end": {
+                "type": "date",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "employment_status": {
+                "type": "enum('probation','official','resigned')",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "'probation'"
+            },
+            "probation_hourly_wage": {
+                "type": "decimal(10,2)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "official_hourly_wage": {
+                "type": "decimal(10,2)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "current_timestamp()"
+            }
+        },
+        "primary_keys": [
+            "user_id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "user_id",
+                "references_table": "users",
+                "references_column": "id"
+            }
+        ]
+    },
+    "suppliers": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "name": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "phone": {
+                "type": "varchar(255)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "address": {
+                "type": "varchar(255)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "description": {
+                "type": "text",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": []
+    },
+    "users": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "name": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "email": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "UNI",
+                "extra": "",
+                "default": null
+            },
+            "email_verified_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "password": {
+                "type": "varchar(255)",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": null
+            },
+            "avatar": {
+                "type": "varchar(255)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "role": {
+                "type": "enum('admin','staff','customer')",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "'customer'"
+            },
+            "status": {
+                "type": "enum('active','locked')",
+                "nullable": "NO",
+                "key": "",
+                "extra": "",
+                "default": "'active'"
+            },
+            "locked_reason": {
+                "type": "varchar(255)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "locked_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "remember_token": {
+                "type": "varchar(100)",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": []
+    },
+    "wishlists": {
+        "columns": {
+            "id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "PRI",
+                "extra": "auto_increment",
+                "default": null
+            },
+            "user_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "product_id": {
+                "type": "bigint(20) unsigned",
+                "nullable": "NO",
+                "key": "MUL",
+                "extra": "",
+                "default": null
+            },
+            "created_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            },
+            "updated_at": {
+                "type": "timestamp",
+                "nullable": "YES",
+                "key": "",
+                "extra": "",
+                "default": "NULL"
+            }
+        },
+        "primary_keys": [
+            "id"
+        ],
+        "foreign_keys": [
+            {
+                "column": "product_id",
+                "references_table": "products",
+                "references_column": "id"
+            },
+            {
+                "column": "user_id",
+                "references_table": "users",
+                "references_column": "id"
+            }
+        ]
+    }
+}

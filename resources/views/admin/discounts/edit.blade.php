@@ -7,6 +7,10 @@
                 <div class="bg-light rounded h-100 p-4">
                     <h6 class="mb-4">Chỉnh sửa mã giảm giá</h6>
 
+                    @php
+                        $audienceOptions = \App\Models\Discount::audienceOptions();
+                    @endphp
+
                     <form method="POST" action="{{ route('admin.discounts.update', $discount->id) }}">
                         @csrf
 
@@ -23,12 +27,37 @@
                         <div class="row mb-3">
                             <label class="col-sm-2 col-form-label">Loại</label>
                             <div class="col-sm-10">
-                                <select name="type" class="form-select" required>
+                                <select name="type" id="discountType" class="form-select" required>
                                     <option value="percent" {{ old('type', $discount->type) == 'percent' ? 'selected' : '' }}>
                                         Phần trăm (%)</option>
                                     <option value="fixed" {{ old('type', $discount->type) == 'fixed' ? 'selected' : '' }}>Tiền
                                         cố định</option>
                                 </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3" id="maxDiscountWrap" style="display: none;">
+                            <label class="col-sm-2 col-form-label">Giảm tối đa</label>
+                            <div class="col-sm-10">
+                                <input type="number" name="max_discount" class="form-control" min="0" step="0.01"
+                                    value="{{ old('max_discount', $discount->max_discount) }}"
+                                    placeholder="Ví dụ: 100000 cho mã giảm phần trăm tối đa 100.000 đ">
+                                <small class="text-muted">Chỉ áp dụng cho mã giảm theo phần trăm.</small>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label class="col-sm-2 col-form-label">Đối tượng áp dụng</label>
+                            <div class="col-sm-10">
+                                <select name="audience" class="form-select" required>
+                                    @foreach($audienceOptions as $audienceValue => $audienceLabel)
+                                        <option value="{{ $audienceValue }}" {{ old('audience', $discount->audience ?? 'all') === $audienceValue ? 'selected' : '' }}>
+                                            {{ $audienceLabel }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted">Khách mới là khách chưa có đơn hoàn thành. Khách quay lại là khách
+                                    đã có ít nhất 1 đơn hoàn thành.</small>
                             </div>
                         </div>
 
@@ -126,15 +155,23 @@
 
     @push('scripts')
         <script>
-            document.addEventListener('DOMContentLoaded', function() {
+            document.addEventListener('DOMContentLoaded', function () {
+                const typeEl = document.getElementById('discountType');
                 const scopeEl = document.getElementById('discountScope');
+                const maxDiscountWrap = document.getElementById('maxDiscountWrap');
                 const productWrap = document.getElementById('productSelectWrap');
+
+                function toggleMaxDiscount() {
+                    maxDiscountWrap.style.display = typeEl.value === 'percent' ? '' : 'none';
+                }
 
                 function toggleProductSelect() {
                     productWrap.style.display = scopeEl.value === 'product' ? '' : 'none';
                 }
 
+                typeEl.addEventListener('change', toggleMaxDiscount);
                 scopeEl.addEventListener('change', toggleProductSelect);
+                toggleMaxDiscount();
                 toggleProductSelect();
             });
         </script>

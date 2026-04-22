@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
+    <title>DASHBOARD- SEN HỒNG OCOP</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta content="" name="keywords">
+    <meta content="" name="description">
+
+    <!-- Favicon -->
+    <link href="img/favicon.ico" rel="icon">
+
+    <!-- Google Web Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Icon Font Stylesheet -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Libraries Stylesheet -->
+    <link href="<?php echo e(asset('backend/lib/owlcarousel/assets/owl.carousel.min.css')); ?>" rel="stylesheet">
+    <link href="<?php echo e(asset('backend/lib/tempusdominus/css/tempusdominus-bootstrap-4.min.css')); ?>" rel="stylesheet" />
+
+    <!-- Customized Bootstrap Stylesheet -->
+    <link href="<?php echo e(asset('backend/css/bootstrap.min.css')); ?>" rel="stylesheet">
+    <!-- Template Stylesheet -->
+    <link href="<?php echo e(asset('backend/css/style.css')); ?>" rel="stylesheet">
+
+    <style>
+        /* Unified list action buttons across admin lists */
+        .content .btn.btn-sm,
+        .content .btn-group .btn.btn-sm {
+            font-weight: 600;
+        }
+
+        .content .btn-outline-primary,
+        .content .btn-outline-info,
+        .content .btn-outline-success,
+        .content .btn-outline-warning,
+        .content .btn-outline-danger,
+        .content .btn-outline-secondary {
+            color: #fff;
+        }
+
+        .content .btn-outline-primary,
+        .content .btn-primary {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+
+        .content .btn-outline-info,
+        .content .btn-info {
+            background-color: #0dcaf0;
+            border-color: #0dcaf0;
+            color: #fff;
+        }
+
+        .content .btn-outline-success,
+        .content .btn-success {
+            background-color: #198754;
+            border-color: #198754;
+        }
+
+        .content .btn-outline-warning,
+        .content .btn-warning {
+            background-color: #ffc107;
+            border-color: #ffc107;
+            color: #212529;
+        }
+
+        .content .btn-outline-danger,
+        .content .btn-danger {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+
+        .content .btn-outline-secondary,
+        .content .btn-secondary {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+
+        /* Keep the same color on hover/focus for consistency */
+        .content .btn-outline-primary:hover,
+        .content .btn-primary:hover,
+        .content .btn-outline-primary:focus,
+        .content .btn-primary:focus {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+            color: #fff;
+        }
+
+        .content .btn-outline-info:hover,
+        .content .btn-info:hover,
+        .content .btn-outline-info:focus,
+        .content .btn-info:focus {
+            background-color: #0dcaf0;
+            border-color: #0dcaf0;
+            color: #fff;
+        }
+
+        .content .btn-outline-success:hover,
+        .content .btn-success:hover,
+        .content .btn-outline-success:focus,
+        .content .btn-success:focus {
+            background-color: #198754;
+            border-color: #198754;
+            color: #fff;
+        }
+
+        .content .btn-outline-warning:hover,
+        .content .btn-warning:hover,
+        .content .btn-outline-warning:focus,
+        .content .btn-warning:focus {
+            background-color: #ffc107;
+            border-color: #ffc107;
+            color: #212529;
+        }
+
+        .content .btn-outline-danger:hover,
+        .content .btn-danger:hover,
+        .content .btn-outline-danger:focus,
+        .content .btn-danger:focus {
+            background-color: #dc3545;
+            border-color: #dc3545;
+            color: #fff;
+        }
+
+        .content .btn-outline-secondary:hover,
+        .content .btn-secondary:hover,
+        .content .btn-outline-secondary:focus,
+        .content .btn-secondary:focus {
+            background-color: #6c757d;
+            border-color: #6c757d;
+            color: #fff;
+        }
+
+        .content .badge {
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 999px;
+            padding: 6px 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <?php
+        $adminCanChat = auth()->check() && in_array(auth()->user()->role, ['admin', 'staff'], true);
+    ?>
+    <div class="container-xxl position-relative bg-white d-flex p-0">
+        <!-- Spinner Start -->
+        <div id="spinner"
+            class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
+            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>
+        <!-- Spinner End -->
+
+        
+        <?php echo $__env->make('admin.layouts.sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+
+        
+        <div class="content d-flex flex-column vh-100 overflow-auto">
+
+            
+            <?php echo $__env->make('admin.layouts.navbar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+
+            
+            <main class="flex-grow-1">
+                <?php echo $__env->make('admin.partials.alert', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+                <?php echo $__env->yieldContent('content'); ?>
+            </main>
+            <!-- Footer Start -->
+            <?php echo $__env->make('admin.layouts.footer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+
+        </div>
+        <!-- Back to Top -->
+        <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"><i class="bi bi-arrow-up"></i></a>
+
+        <?php if($adminCanChat): ?>
+            <button type="button" class="admin-chat-float-btn js-open-admin-chat" data-customer-id=""
+                title="Mở chat khách hàng" aria-label="Mở chat khách hàng">
+                <i class="fa fa-comments"></i>
+            </button>
+        <?php endif; ?>
+    </div>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+    <script src="<?php echo e(asset('backend/lib/chart/chart.min.js')); ?>"></script>
+    <script src="<?php echo e(asset('backend/lib/easing/easing.min.js')); ?>"></script>
+    <script src="<?php echo e(asset('backend/lib/waypoints/waypoints.min.js')); ?>"></script>
+    <script src="<?php echo e(asset('backend/lib/owlcarousel/owl.carousel.min.js')); ?>"></script>
+    <script src="<?php echo e(asset('backend/lib/tempusdominus/js/moment.min.js')); ?>"></script>
+    <script src="<?php echo e(asset('backend/lib/tempusdominus/js/moment-timezone.min.js')); ?>"></script>
+    <script src="<?php echo e(asset('backend/lib/tempusdominus/js/tempusdominus-bootstrap-4.min.js')); ?>"></script>
+
+
+    <!-- Template Javascript -->
+    <script src="<?php echo e(asset('backend/js/main.js')); ?>"></script>
+
+    <script>
+        window.adminNotify = function (level, message) {
+            const text = (message || '').toString().trim();
+            if (!text) {
+                return;
+            }
+
+            const typeMap = {
+                success: 'success',
+                error: 'danger',
+                danger: 'danger',
+                warning: 'warning',
+                info: 'info'
+            };
+
+            const iconMap = {
+                success: 'fa-check-circle',
+                danger: 'fa-exclamation-circle',
+                warning: 'fa-exclamation-triangle',
+                info: 'fa-info-circle'
+            };
+
+            const normalizedLevel = (level || 'info').toString().toLowerCase();
+            const bootstrapType = typeMap[normalizedLevel] || 'info';
+            const iconClass = iconMap[bootstrapType] || 'fa-info-circle';
+
+            const container = document.querySelector('main.flex-grow-1') || document.querySelector('main');
+            if (!container) {
+                return;
+            }
+
+            const alertEl = document.createElement('div');
+            alertEl.className = 'alert alert-' + bootstrapType + ' alert-dismissible fade show d-flex align-items-center gap-2';
+            alertEl.setAttribute('role', 'alert');
+            alertEl.innerHTML =
+                '<i class="fa ' + iconClass + '"></i>' +
+                '<span></span>' +
+                '<button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>';
+
+            alertEl.querySelector('span').textContent = text;
+            container.prepend(alertEl);
+        };
+    </script>
+
+    <?php echo $__env->yieldPushContent('scripts'); ?>
+    <script>
+        setTimeout(() => {
+            document.querySelectorAll('.alert').forEach(el => el.remove());
+        }, 5000);
+    </script>
+
+    <style>
+        .admin-chat-float-btn {
+            position: fixed;
+            right: 22px;
+            bottom: 92px;
+            width: 50px;
+            height: 50px;
+            border: none;
+            border-radius: 999px;
+            background: #0d6efd;
+            color: #fff;
+            box-shadow: 0 8px 22px rgba(13, 110, 253, 0.38);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1040;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .admin-chat-float-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 26px rgba(13, 110, 253, 0.44);
+        }
+
+        .admin-chat-float-btn i {
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        @media (max-width: 767.98px) {
+            .admin-chat-float-btn {
+                right: 14px;
+                bottom: 86px;
+                width: 46px;
+                height: 46px;
+            }
+        }
+    </style>
+
+</body>
+
+</html><?php /**PATH C:\xampp\htdocs\luanvan\resources\views/admin/layouts/layout_admin.blade.php ENDPATH**/ ?>

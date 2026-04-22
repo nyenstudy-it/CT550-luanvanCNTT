@@ -48,7 +48,10 @@ class ForgotPasswordController extends Controller
     {
         $request->validate([
             'email' => 'required|email',
-            'password' => 'required|confirmed|min:6'
+            'password' => 'required|confirmed|min:8|regex:/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/'
+        ], [
+            'password.regex' => 'Mật khẩu phải chứa tối thiểu 8 ký tự, bao gồm: chữ hoa, chữ thường, số và ký tự đặc biệt (@$!%*?&)',
+            'password.min' => 'Mật khẩu phải có ít nhất 8 ký tự'
         ]);
 
         $status = Password::reset(

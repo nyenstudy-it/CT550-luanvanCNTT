@@ -39,9 +39,10 @@ class BlogController extends Controller
         if ($request->filled('keyword')) {
             $keyword = trim((string) $request->keyword);
             $query->where(function ($q) use ($keyword) {
-                $q->where('title', 'like', '%' . $keyword . '%')
-                    ->orWhere('slug', 'like', '%' . $keyword . '%')
-                    ->orWhere('summary', 'like', '%' . $keyword . '%');
+                $escaped = addcslashes($keyword, '\\%_');
+                $q->where('title', 'like', '%' . $escaped . '%')
+                    ->orWhere('slug', 'like', '%' . $escaped . '%')
+                    ->orWhere('summary', 'like', '%' . $escaped . '%');
             });
         }
 

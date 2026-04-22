@@ -66,6 +66,15 @@ class User extends Authenticatable
     {
         return $this->status === 'active';
     }
+    /**
+     * Backward-compatibility accessor: many callers expect `$model->user_id`.
+     * Return the primary `id` so code using `->customer->user_id` continues working
+     * when `customer()` resolves to a `User` instance.
+     */
+    public function getUserIdAttribute()
+    {
+        return $this->id;
+    }
     public function orders()
     {
         // Orders are stored against `customers.id` (customers.user_id -> users.id).

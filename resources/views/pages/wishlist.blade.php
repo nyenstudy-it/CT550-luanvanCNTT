@@ -57,19 +57,18 @@
                                 <div class="product-card shadow-sm rounded position-relative overflow-hidden">
 
                                     <!-- XÓA -->
-                                    <form action="{{ route('wishlist.toggle', $product->id) }}" method="POST"
-                                        class="position-absolute top-2 end-2 remove-btn">
-                                        @csrf
-                                        <button type="submit" class="btn btn-sm btn-light p-1">
-                                            <i class="fa fa-times text-danger"></i>
-                                        </button>
-                                    </form>
+                                    <button type="button"
+                                        class="btn btn-sm btn-light p-1 position-absolute top-2 end-2 remove-wishlist-btn"
+                                        data-product-id="{{ $product->id }}" title="Xóa yêu thích">
+                                        <i class="fa fa-times text-danger"></i>
+                                    </button>
 
                                     <!-- ẢNH -->
                                     <a href="{{ route('products.show', $product->id) }}">
                                         <div class="product-card-img text-center p-3 bg-light">
                                             <img src="{{ $image }}" alt="{{ $product->name }}" class="img-fluid"
-                                                style="max-height:180px; object-fit:contain;">
+                                                style="max-height:180px; object-fit:contain;"
+                                                onerror="this.src='{{ asset('frontend/images/product/product-1.jpg') }}';">
                                         </div>
                                     </a>
 
@@ -128,5 +127,67 @@
 
         </div>
     </section>
+
+    <script>
+        // Define popup function to support additional options
+        function popup(icon, title, text, additionalOptions) {
+            if (window.ocopPopup && typeof window.ocopPopup.fire === 'function') {
+                return window.ocopPopup.fire(Object.assign({
+                    icon: icon,
+                    title: title,
+                    text: text,
+                    confirmButtonColor: '#7fad39'
+                }, additionalOptions || {}));
+            }
+
+            if (typeof Swal !== 'undefined') {
+                return Swal.fire(Object.assign({
+                    icon: icon,
+                    title: title,
+                    text: text,
+                    confirmButtonColor: '#7fad39'
+                }, additionalOptions || {}));
+            }
+
+            return Promise.resolve({ isConfirmed: false, isDismissed: true });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // ================= REMOVE WISHLIST AJAX =================
+            document.querySelectorAll('.remove-wishlist-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const productId = this.getAttribute('data-product-id');
+                    const btn = this;
+
+                    fetch("{{ route('wishlist.toggle', '') }}" + '/' + productId, {
+                        method: "POST",
+                        headers: {
+                            "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                            "X-Requested-With": "XMLHttpRequest"
+                        }
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                popup('success', 'Thành công', 'Đã xoá khỏi yêu thích', {
+                                    confirmButtonText: 'Đóng'
+                                }).then(() => setTimeout(() => location.reload(), 500));
+                            } else {
+                                popup('error', 'Lỗi', data.message || 'Có lỗi xảy ra', {
+                                    confirmButtonText: 'Đóng'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error("Error:", error);
+                            const errorMsg = error.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
+                            popup('error', 'Lỗi', errorMsg, {
+                                confirmButtonText: 'Đóng'
+                            });
+                        });
+                });
+            });
+        });
+    </script>
 
 @endsection

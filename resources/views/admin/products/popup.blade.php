@@ -29,18 +29,6 @@
         </p>
 
         <p>
-            <b>Ngày SX:</b>
-            {{ $product->manufacture_date
-    ? \Carbon\Carbon::parse($product->manufacture_date)->format('d/m/Y')
-    : '—' }}
-            |
-            <b>HSD:</b>
-            {{ $product->expiry_date
-    ? \Carbon\Carbon::parse($product->expiry_date)->format('d/m/Y')
-    : '—' }}
-        </p>
-
-        <p>
             <b>OCOP:</b>
             {{ $product->ocop_star ?? '—' }} ⭐
             ({{ $product->ocop_year ?? '—' }})

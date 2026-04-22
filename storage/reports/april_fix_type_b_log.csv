@@ -1,0 +1,8 @@
+order_id,order_status,return_status,current_refund_status,action,notes
+214,completed,requested,pending,"Rollback refund_status to 'pending'","Return workflow incomplete (status: requested). Admin must approve return and shipper must pickup before refund completes."
+240,completed,requested,pending,"Rollback refund_status to 'pending'","Return workflow incomplete (status: requested). Admin must approve return and shipper must pickup before refund completes."
+262,completed,requested,pending,"Rollback refund_status to 'pending'","Return workflow incomplete (status: requested). Admin must approve return and shipper must pickup before refund completes."
+263,completed,requested,pending,"Rollback refund_status to 'pending'","Return workflow incomplete (status: requested). Admin must approve return and shipper must pickup before refund completes."
+281,completed,requested,pending,"Rollback refund_status to 'pending'","Return workflow incomplete (status: requested). Admin must approve return and shipper must pickup before refund completes."
+294,completed,requested,pending,"Rollback refund_status to 'pending'","Return workflow incomplete (status: requested). Admin must approve return and shipper must pickup before refund completes."
+299,completed,requested,pending,"Rollback refund_status to 'pending'","Return workflow incomplete (status: requested). Admin must approve return and shipper must pickup before refund completes."

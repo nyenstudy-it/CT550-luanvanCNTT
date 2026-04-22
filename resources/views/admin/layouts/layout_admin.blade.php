@@ -20,7 +20,6 @@
     <!-- Icon Font Stylesheet -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
 
     <!-- Libraries Stylesheet -->
     <link href="{{ asset('backend/lib/owlcarousel/assets/owl.carousel.min.css') }}" rel="stylesheet">
@@ -207,6 +206,51 @@
 
     <!-- Template Javascript -->
     <script src="{{ asset('backend/js/main.js') }}"></script>
+
+    <script>
+        window.adminNotify = function (level, message) {
+            const text = (message || '').toString().trim();
+            if (!text) {
+                return;
+            }
+
+            const typeMap = {
+                success: 'success',
+                error: 'danger',
+                danger: 'danger',
+                warning: 'warning',
+                info: 'info'
+            };
+
+            const iconMap = {
+                success: 'fa-check-circle',
+                danger: 'fa-exclamation-circle',
+                warning: 'fa-exclamation-triangle',
+                info: 'fa-info-circle'
+            };
+
+            const normalizedLevel = (level || 'info').toString().toLowerCase();
+            const bootstrapType = typeMap[normalizedLevel] || 'info';
+            const iconClass = iconMap[bootstrapType] || 'fa-info-circle';
+
+            const container = document.querySelector('main.flex-grow-1') || document.querySelector('main');
+            if (!container) {
+                return;
+            }
+
+            const alertEl = document.createElement('div');
+            alertEl.className = 'alert alert-' + bootstrapType + ' alert-dismissible fade show d-flex align-items-center gap-2';
+            alertEl.setAttribute('role', 'alert');
+            alertEl.innerHTML =
+                '<i class="fa ' + iconClass + '"></i>' +
+                '<span></span>' +
+                '<button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>';
+
+            alertEl.querySelector('span').textContent = text;
+            container.prepend(alertEl);
+        };
+    </script>
+
     @stack('scripts')
     <script>
         setTimeout(() => {

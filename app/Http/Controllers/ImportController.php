@@ -94,8 +94,8 @@ class ImportController extends Controller
                     $manufactureDate = !empty($item['manufacture_date']) ? $item['manufacture_date'] : null;
                     $expiredAt = !empty($item['expired_at']) ? $item['expired_at'] : null;
 
-                    if ($manufactureDate && $expiredAt && strtotime($expiredAt) < strtotime($manufactureDate)) {
-                        throw new \Exception('Hạn sử dụng phải lớn hơn hoặc bằng ngày sản xuất cho từng biến thể nhập.');
+                    if ($manufactureDate && $expiredAt && strtotime($expiredAt) <= strtotime($manufactureDate)) {
+                        throw new \Exception('Hạn sử dụng phải lớn hơn ngày sản xuất cho từng biến thể nhập.');
                     }
 
                     $variant = ProductVariant::with('product')
@@ -105,7 +105,7 @@ class ImportController extends Controller
                         throw new \Exception('Biến thể không thuộc nhà phân phối đã chọn');
                     }
 
-                    // 🔥 TẠO BATCH (QUAN TRỌNG)
+                    // Tạo lô nhập (batch) để phục vụ FIFO và quản lý hạn dùng theo từng lần nhập.
                     ImportItem::create([
                         'import_id' => $import->id,
                         'product_variant_id' => $variant->id,
@@ -116,12 +116,13 @@ class ImportController extends Controller
                         'unit_price' => $item['unit_price'],
                     ]);
 
-                    $variant->update([
-                        'manufacture_date' => $manufactureDate,
-                        'expired_at' => $expiredAt,
-                    ]);
+                    // Không lưu ngày sản xuất/hạn dùng ở ProductVariant để tránh ghi đè giữa các lần nhập.
+                    // Thông tin ngày được quản lý ở ImportItem (theo batch).
+                    // $variant->update([
+                    //     'manufacture_date' => $manufactureDate,
+                    //     'expired_at' => $expiredAt,
+                    // ]);
 
-                    // 🔥 CẬP NHẬT TỔNG TỒN
                     $inventory = Inventory::firstOrCreate(
                         ['product_variant_id' => $variant->id],
                         ['quantity' => 0]

@@ -27,33 +27,33 @@ class NotificationController extends Controller
     public function adminIndex()
     {
         $user = Auth::user();
-        $notificationsQuery = Notification::query()->latest();
 
-        if ($user->role !== 'admin') {
-            $notificationsQuery->where('user_id', $user->id);
-        }
+        // Get total count
+        $totalQuery = Notification::query()
+            ->where('user_id', $user->id);
+        $totalNotifications = $totalQuery->count();
 
-        $notifications = $notificationsQuery->paginate(5);
+        // Get paginated notifications
+        $notificationsQuery = Notification::query()
+            ->where('user_id', $user->id)
+            ->latest();
+        $notifications = $notificationsQuery->paginate(10);
 
-        $unreadCountQuery = Notification::query()->where('is_read', false);
-        if ($user->role !== 'admin') {
-            $unreadCountQuery->where('user_id', $user->id);
-        }
-
+        // Get unread count
+        $unreadCountQuery = Notification::query()
+            ->where('user_id', $user->id)
+            ->where('is_read', false);
         $unreadCount = $unreadCountQuery->count();
 
-        return view('admin.notifications.index', compact('notifications', 'unreadCount'));
+        return view('admin.notifications.index', compact('notifications', 'unreadCount', 'totalNotifications'));
     }
 
     public function read(Request $request, $id)
     {
         $user = Auth::user();
 
-        $notificationQuery = Notification::where('id', $id);
-
-        if ($user->role !== 'admin') {
-            $notificationQuery->where('user_id', $user->id);
-        }
+        $notificationQuery = Notification::where('id', $id)
+            ->where('user_id', $user->id);
 
         $notification = $notificationQuery->first();
 
@@ -98,18 +98,15 @@ class NotificationController extends Controller
     public function getDropdown()
     {
         $user = Auth::user();
-        $notificationsQuery = Notification::query()->latest();
-
-        if ($user->role !== 'admin') {
-            $notificationsQuery->where('user_id', $user->id);
-        }
+        $notificationsQuery = Notification::query()
+            ->where('user_id', $user->id)
+            ->latest();
 
         $notifications = $notificationsQuery->limit(3)->get();
 
-        $unreadCountQuery = Notification::query()->where('is_read', false);
-        if ($user->role !== 'admin') {
-            $unreadCountQuery->where('user_id', $user->id);
-        }
+        $unreadCountQuery = Notification::query()
+            ->where('user_id', $user->id)
+            ->where('is_read', false);
 
         $unreadCount = $unreadCountQuery->count();
 
@@ -122,11 +119,9 @@ class NotificationController extends Controller
     public function markAllAsRead(Request $request)
     {
         $user = Auth::user();
-        $query = Notification::query()->where('is_read', false);
-
-        if ($user->role !== 'admin') {
-            $query->where('user_id', $user->id);
-        }
+        $query = Notification::query()
+            ->where('user_id', $user->id)
+            ->where('is_read', false);
 
         $query->update(['is_read' => true]);
 

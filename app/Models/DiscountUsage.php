@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Models;
+
 use App\Models\Customer;
 use App\Models\Discount;
 
@@ -19,9 +20,14 @@ class DiscountUsage extends Model
         return $this->belongsTo(Discount::class);
     }
 
+    /**
+     * NOTE: DB migration stores `user_id` (references `users.id`).
+     * Keep method name `customer()` for backward compatibility but
+     * return the related `User` model based on `user_id`.
+     */
     public function customer()
     {
-        return $this->belongsTo(Customer::class);
+        return $this->belongsTo(\App\Models\User::class, 'user_id');
     }
     public function order()
     {

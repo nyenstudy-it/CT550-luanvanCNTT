@@ -46,5 +46,9 @@ class ProductVariant extends Model
         return $this->hasOne(ProductImage::class)
             ->where('is_primary', 1);
     }
-    
+
+    public function importItems()
+    {
+        return $this->hasMany(ImportItem::class, 'product_variant_id');
+    }
 }

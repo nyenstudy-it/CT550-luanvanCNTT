@@ -36,6 +36,8 @@ class Notification extends Model
             'new_order' => 'Có đơn hàng mới cần xử lý',
             'new_import' => 'Có phiếu nhập kho mới',
             'new_review' => 'Có đánh giá mới từ khách hàng',
+            'review_approved' => 'Đánh giá của bạn đã được duyệt',
+            'review_rejected' => 'Đánh giá của bạn đã bị từ chối',
             'attendance_check_in' => 'Nhân viên vừa chấm công vào ca',
             'cashier_stats_update' => 'Dữ liệu thống kê thu ngân vừa được cập nhật',
             'chat_customer_message' => 'Khách hàng vừa gửi tin nhắn mới',
@@ -43,9 +45,11 @@ class Notification extends Model
             'order_success' => 'Đặt hàng thành công',
             'order_cancel' => 'Đơn hàng đã bị huỷ',
             'order_completed' => 'Đơn hàng đã giao thành công',
-            'refund_request' => 'Yêu cầu hoàn tiền đang được xử lý',
+            'order_payment_success' => 'Thanh toán đơn hàng thành công',
+            'refund_request' => 'Yêu cầu hoàn hàng đang được xử lý',
             'order_refund' => 'Đơn hàng đã được hoàn tiền',
-            'refund_rejected' => 'Yêu cầu hoàn tiền đã bị từ chối',
+            'refund_rejected' => 'Yêu cầu hoàn hàng đã bị từ chối',
+            'return_shipped' => 'Khách hàng đã gửi hàng hoàn',
             'order_status_change' => $this->normalizeOrderStatusMessage($content),
             'inventory_out_of_stock' => 'Sản phẩm đã hết hàng',
             'inventory_low_stock' => 'Sản phẩm sắp hết hàng',
@@ -72,8 +76,8 @@ class Notification extends Model
             return 'Đơn hàng đã giao thành công';
         }
 
-        if (str_contains($text, 'hoàn tiền') && str_contains($text, 'xử lý')) {
-            return 'Yêu cầu hoàn tiền đang được xử lý';
+        if ((str_contains($text, 'hoàn tiền') || str_contains($text, 'hoàn hàng')) && str_contains($text, 'xử lý')) {
+            return 'Yêu cầu hoàn hàng đang được xử lý';
         }
 
         if (str_contains($text, 'đã được hoàn tiền') || str_contains($text, 'refunded')) {
@@ -98,6 +102,7 @@ class Notification extends Model
             'order_status_change',
             'order_cancel',
             'order_completed',
+            'order_payment_success',
             'refund_request',
             'order_refund',
             'refund_rejected',
@@ -137,6 +142,12 @@ class Notification extends Model
                 : route('customer.notifications');
         }
 
+        if (in_array($this->type, ['review_approved', 'review_rejected'])) {
+            return in_array($user->role, ['admin', 'staff', 'order_staff', 'warehouse'])
+                ? route('admin.reviews')
+                : route('customer.notifications');
+        }
+
         if ($this->type === 'attendance_check_in') {
             return in_array($user->role, ['admin', 'staff', 'order_staff', 'warehouse'])
                 ? route('admin.attendances.index')
@@ -159,6 +170,12 @@ class Notification extends Model
             return $user->role === 'customer'
                 ? route('pages.trangchu', ['open_store_chat' => 1])
                 : route('admin.dashboard', ['open_admin_chat' => 1]);
+        }
+
+        if ($this->type === 'return_shipped') {
+            return in_array($user->role, ['admin', 'staff', 'order_staff', 'warehouse'])
+                ? route('admin.orders.detail', $this->related_id)
+                : route('customer.notifications');
         }
 
         // DEFAULT

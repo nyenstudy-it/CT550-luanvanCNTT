@@ -44,8 +44,7 @@
                             </div>
                             <div class="voucher-body">
                                 <p class="voucher-value">
-                                    <strong>Giảm:</strong> {{ $discount->value }}
-                                    {{ $discount->type == 'percent' ? '%' : 'VND' }}
+                                    <strong>Giảm:</strong> {{ $discount->value_label }}
                                 </p>
                                 <p class="voucher-date">
                                     <strong>Thời hạn:</strong>
@@ -63,6 +62,9 @@
                                     @else
                                         {{ $discount->products->count() }} sản phẩm
                                     @endif
+                                </p>
+                                <p class="voucher-date mb-0">
+                                    <strong>Đối tượng:</strong> {{ $discount->audience_label }}
                                 </p>
                             </div>
                             <div class="voucher-footer">

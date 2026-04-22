@@ -17,8 +17,10 @@ use App\Http\Controllers\DiscountController;
 use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\AdminContactController;
 use App\Http\Controllers\ReviewController;
-use \App\Http\Controllers\CommentController;
+use App\Http\Controllers\ReviewLikeController;
+use App\Http\Controllers\ReviewReplyController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\StaffController;
@@ -27,12 +29,13 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\SalaryController;
+
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\AdminReviewController;
 use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\CustomerChatController;
 use Illuminate\Support\Facades\Route;
-use Termwind\Components\Raw;
+use Illuminate\Support\Facades\DB;
 
 // Trang chủ khách hàng
 Route::get('/', [HomeController::class, 'index'])->name('pages.home');
@@ -104,28 +107,22 @@ Route::middleware(['auth', 'role:customer'])->group(function () {
         ->name('momo.payment');
 
     Route::post('/payment/momo-process/{orderId}', [PaymentController::class, 'momoProcess'])
-        ->name('momo.process');
+        ->name('momo.process'); 
 
-    Route::get('/payment/momo-return', [PaymentController::class, 'momoReturn'])
-        ->name('momo.return');
     Route::get('/momo/pay/{orderId}', [PaymentController::class, 'momo'])
         ->name('momo.pay');
 
     Route::get('/payment/vnpay/{orderId}', [PaymentController::class, 'vnpay'])
         ->name('vnpay.payment');
 
-    Route::get('/payment/vnpay-return', [PaymentController::class, 'vnpayReturn'])
-        ->name('vnpay.return');
-
     Route::get('/vnpay/pay/{orderId}', [PaymentController::class, 'vnpay'])
         ->name('vnpay.pay');
 
     Route::post('/order/{id}/refund-request', [OrderController::class, 'requestRefund'])
-        ->middleware('auth');
-
-    Route::post('/order/{id}/refund', [OrderController::class, 'requestRefund'])
         ->name('orders.refund');
 
+    Route::post('/return/{returnId}/mark-given-to-shipper', [OrderController::class, 'markReturnGivenToShipper'])
+        ->name('returns.markGivenToShipper');
 
     Route::get('/notifications', [NotificationController::class, 'customerIndex'])->name('customer.notifications');
     Route::get('/notifications/read/{id}', [NotificationController::class, 'read'])->name('customer.notifications.read');
@@ -139,12 +136,22 @@ Route::middleware(['auth', 'role:customer'])->group(function () {
     Route::get('product/{product}/review/{order?}', [ReviewController::class, 'reviewForm'])->name('reviews.form');
     Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
     Route::post('/reviews/{review}/like', [\App\Http\Controllers\ReviewLikeController::class, 'toggle'])->name('reviews.like');
+    Route::post('/reviews/{review}/reply', [\App\Http\Controllers\ReviewReplyController::class, 'store'])->name('reviews.reply');
+    Route::get('/order/{order}/batch-review', [ReviewController::class, 'batchForm'])->name('reviews.batch-form');
+    Route::post('/reviews/batch-store', [ReviewController::class, 'batchStore'])->name('reviews.batch-store');
 
     // Chat với cửa hàng
     Route::get('/chat', [CustomerChatController::class, 'getMessages'])->name('customer.chat');
     Route::post('/chat/send', [CustomerChatController::class, 'sendMessage'])->name('customer.chat.send');
     Route::get('/chat/unread-count', [CustomerChatController::class, 'unreadCount'])->name('customer.chat.unreadCount');
 });
+
+// Payment gateway callbacks must be public to support return flow even when customer session expires.
+Route::get('/payment/momo-return', [PaymentController::class, 'momoReturn'])
+    ->name('momo.return');
+
+Route::get('/payment/vnpay-return', [PaymentController::class, 'vnpayReturn'])
+    ->name('vnpay.return');
 
 //Đăng ký ADMIN/STAFF (chỉ admin)
 Route::get('/admin/register', [AdminController::class, 'register'])
@@ -179,16 +186,26 @@ Route::middleware(['auth', 'role:admin'])
         Route::post('/staff/{id}/unlock', [AdminController::class, 'staffUnlock'])
             ->name('admin.staff.unlock');
 
-        Route::get('/attendances/pending',[AttendanceController::class, 'pending']
-            )->name('admin.attendances.pending');
-        Route::post('/attendances/{attendance}/approve-late',[AttendanceController::class, 'approveLate']
-            )->name('admin.attendances.approveLate');
-        Route::post('/attendances/{attendance}/reject-late',[AttendanceController::class, 'rejectLate']
-            )->name('admin.attendances.rejectLate');
-        Route::post('/attendances/{attendance}/approve-early',[AttendanceController::class, 'approveEarly']
-            )->name('admin.attendances.approveEarly');
-        Route::post('/attendances/{attendance}/reject-early',[AttendanceController::class, 'rejectEarly']
-            )->name('admin.attendances.rejectEarly');
+        // Contact Management Routes (NEW)
+        Route::get('/contacts', [AdminContactController::class, 'index'])->name('admin.contacts.index');
+        Route::get('/contacts/{contact}', [AdminContactController::class, 'show'])->name('admin.contacts.show');
+        Route::post('/contacts/{contact}/reply', [AdminContactController::class, 'reply'])->name('admin.contacts.reply');
+        Route::post('/contacts/{contact}/mark-read', [AdminContactController::class, 'markAsRead'])->name('admin.contacts.markAsRead');
+        Route::delete('/contacts/{contact}', [AdminContactController::class, 'destroy'])->name('admin.contacts.destroy');
+        Route::get('/contacts-statistics', [AdminContactController::class, 'statistics'])->name('admin.contacts.statistics');
+
+        Route::get(
+            '/attendances/pending',
+            [AttendanceController::class, 'pending']
+        )->name('admin.attendances.pending');
+        Route::post(
+            '/attendances/{attendance}/approve-early',
+            [AttendanceController::class, 'approveEarly']
+        )->name('admin.attendances.approveEarly');
+        Route::post(
+            '/attendances/{attendance}/reject-early',
+            [AttendanceController::class, 'rejectEarly']
+        )->name('admin.attendances.rejectEarly');
         Route::get('/attendances', [AttendanceController::class, 'index'])
             ->name('admin.attendances.index');
         Route::get('/attendances/create', [AttendanceController::class, 'create'])
@@ -201,10 +218,31 @@ Route::middleware(['auth', 'role:admin'])
             ->name('admin.attendances.update');
         Route::delete('/attendances/{attendance}', [AttendanceController::class, 'destroy'])
             ->name('admin.attendances.destroy');
-        Route::get('/salaries',[SalaryController::class, 'index']
-            )->name('admin.salaries.index');
-        Route::get('/salaries/calculate/{staffId}/{month}/{year}',[SalaryController::class, 'calculateMonthly']
-            )->name('admin.salaries.calculate');
+
+        Route::get(
+            '/salaries',
+            [SalaryController::class, 'index']
+        )->name('admin.salaries.index');
+        Route::get(
+            '/salaries/monthly/{month}/{year}',
+            [SalaryController::class, 'monthlySalary']
+        )->name('admin.salaries.monthly');
+        Route::get(
+            '/salaries/calculate/{staffId}/{month}/{year}',
+            [SalaryController::class, 'calculateMonthly']
+        )->name('admin.salaries.calculate');
+
+        // 🟢 NEW: Manual trigger for auto-closing unclosed attendances
+        Route::post(
+            '/attendances/trigger-auto-close',
+            function () {
+                \Illuminate\Support\Facades\Artisan::call('attendance:auto-close');
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Auto-close command triggered. Check logs for details.'
+                ]);
+            }
+        )->name('admin.attendances.triggerAutoClose');
     });
 
 //  ADMIN + TẤT CẢ STAFF (dashboard, profile, thông báo)
@@ -229,6 +267,8 @@ Route::middleware(['auth', 'can.position:cashier'])
     ->group(function () {
         Route::get('/revenue-statistics', [DashboardController::class, 'revenueStatistics'])
             ->name('admin.revenue.stats');
+        Route::get('/revenue-today', [DashboardController::class, 'revenueTodayDetail'])
+            ->name('admin.revenue.today');
         Route::get('/revenue-statistics/export-excel', [DashboardController::class, 'exportRevenueExcel'])
             ->name('admin.revenue.export.excel');
         Route::get('/revenue-statistics/export-pdf', [DashboardController::class, 'exportRevenuePdf'])
@@ -286,6 +326,10 @@ Route::middleware(['auth', 'can.position:warehouse'])
         Route::get('/inventories', [InventoryController::class, 'list'])->name('admin.inventories.list');
         Route::get('/inventories/{variantId}/batches', [InventoryController::class, 'batchPopup'])
             ->name('admin.inventories.batches');
+        Route::post('/inventories/{variantId}/writeoff-expired', [InventoryController::class, 'writeoffExpired'])
+            ->name('admin.inventories.writeoff');
+        Route::post('/inventories/{variantId}/writeoff-direct', [InventoryController::class, 'writeoffDirect'])
+            ->name('admin.inventories.writeoff-direct');
     });
 
 // ADMIN + THU NGÂN + NHÂN VIÊN XỬ LÝ ĐƠN (cashier, order_staff) Khách hàng, Đơn hàng
@@ -305,6 +349,26 @@ Route::middleware(['auth', 'can.position:cashier,order_staff'])
         Route::delete('/customers/{id}', [CustomerController::class, 'destroy'])
             ->name('admin.customers.destroy');
 
+        // KHÓA TÀI KHOẢN VÌ ĐÁNH GIÁ TIÊU CỰC
+        Route::get('/customers-flagged-negative-reviews', [CustomerController::class, 'negativereviewflagged'])
+            ->name('admin.customers.flagged-negative-reviews');
+        Route::post('/customers/{id}/lock-negative-review', [CustomerController::class, 'lockForNegativeReview'])
+            ->name('admin.customers.lock-negative-review');
+        Route::get('/customers-negative-reviews-list', [CustomerController::class, 'customerNegativeReviews'])
+            ->name('admin.customers.negative-reviews');
+
+        //ĐỀ XUẤT KHÓA KHÁCH HÀNG
+        Route::get('/suggest-lock-negative-reviewers', [AdminReviewController::class, 'suggestLockNegativeReviewers'])
+            ->name('admin.suggest-lock-negative-reviewers');
+        Route::get('/api/suggest-lock-negative-reviewers', [AdminReviewController::class, 'apiSuggestLockNegativeReviewers'])
+            ->name('admin.api.suggest-lock-negative-reviewers');
+        Route::get('/suggest-lock-refund-requests', [CustomerController::class, 'suggestLockRefundRequests'])
+            ->name('admin.suggest-lock-refund-requests');
+        Route::get('/api/suggest-lock-refund-requests', [CustomerController::class, 'apiSuggestLockRefundRequests'])
+            ->name('admin.api.suggest-lock-refund-requests');
+        Route::get('/api/refund-details/{customerId}', [CustomerController::class, 'apiRefundDetails'])
+            ->name('admin.api.refundDetails');
+
         Route::get('/orders', [AdminOrderController::class, 'index'])
             ->name('admin.orders');
         Route::get('/orders/{id}', [AdminOrderController::class, 'show'])
@@ -313,10 +377,81 @@ Route::middleware(['auth', 'can.position:cashier,order_staff'])
             ->name('admin.orders.updateStatus');
         Route::post('/orders/cancel/{id}', [AdminOrderController::class, 'cancel'])
             ->name('admin.orders.cancel');
-        Route::post('/orders/{id}/approve-refund', [AdminOrderController::class, 'approveRefund'])
-            ->name('admin.orders.approveRefund');
-        Route::post('/orders/{id}/reject-refund', [AdminOrderController::class, 'rejectRefund'])
-            ->name('admin.orders.rejectRefund');
+        // NEW: Admin choose between restore stock or create writeoff
+        Route::post('/orders/{id}/approve-refund-with-choice', [AdminOrderController::class, 'approveRefundWithChoice'])
+            ->name('admin.orders.approveRefundWithChoice');
+        // NEW: Direct writeoff creation
+        Route::post('/orders/{orderId}/create-writeoff', [AdminOrderController::class, 'createWriteoffDirect'])
+            ->name('admin.orders.createWriteoff');
+
+        // NEW: INSPECTION WORKFLOW
+        Route::post('/returns/{returnId}/mark-inspected', [AdminOrderController::class, 'markInspected'])
+            ->name('admin.returns.markInspected');
+
+        // NEW: RETURN REQUEST APPROVAL/REJECTION WORKFLOW
+        Route::post('/returns/{returnId}/approve', [AdminOrderController::class, 'approveReturnRequest'])
+            ->name('admin.returns.approve');
+        Route::post('/returns/{returnId}/reject', [AdminOrderController::class, 'rejectReturnRequest'])
+            ->name('admin.returns.reject');
+        Route::post('/returns/{returnId}/mark-received-from-shipper', [AdminOrderController::class, 'markGoodsReceivedFromShipper'])
+            ->name('admin.returns.markReceivedFromShipper');
+    });
+
+// DEBUG ROUTE - CHECK WEEKLY PROFIT CALCULATION
+Route::get('/debug/weekly-profit', function () {
+    $start = \Carbon\Carbon::now()->startOfWeek();
+    $end = \Carbon\Carbon::now()->endOfWeek();
+
+    $revenue = DB::table('orders')
+        ->join('payments', 'payments.order_id', '=', 'orders.id')
+        ->where('orders.status', 'completed')
+        ->where('payments.status', 'paid')
+        ->whereBetween('payments.paid_at', [$start->startOfDay(), $end->endOfDay()])
+        ->selectRaw('COUNT(DISTINCT orders.id) as order_count, SUM(orders.total_amount) as total_amount')
+        ->first();
+
+    $cogs = DB::table('order_items')
+        ->join('orders', 'orders.id', '=', 'order_items.order_id')
+        ->join('payments', 'payments.order_id', '=', 'orders.id')
+        ->where('orders.status', 'completed')
+        ->where('payments.status', 'paid')
+        ->whereBetween('payments.paid_at', [$start->startOfDay(), $end->endOfDay()])
+        ->selectRaw('COUNT(order_items.id) as item_count, SUM(order_items.quantity) as total_qty, SUM(COALESCE(order_items.cost_price, 0) * order_items.quantity) as total_cogs, AVG(COALESCE(order_items.cost_price, 0)) as avg_cost, MAX(COALESCE(order_items.cost_price, 0)) as max_cost')
+        ->first();
+
+    $topOrders = DB::table('order_items')
+        ->join('orders', 'orders.id', '=', 'order_items.order_id')
+        ->join('payments', 'payments.order_id', '=', 'orders.id')
+        ->where('orders.status', 'completed')
+        ->where('payments.status', 'paid')
+        ->whereBetween('payments.paid_at', [$start->startOfDay(), $end->endOfDay()])
+        ->select('orders.id', 'orders.total_amount', DB::raw('COALESCE(order_items.cost_price, 0) as cost_price'), 'order_items.quantity')
+        ->orderByRaw('order_items.cost_price * order_items.quantity DESC')
+        ->limit(10)
+        ->get();
+
+    return response()->json([
+        'period' => $start->format('Y-m-d') . ' to ' . $end->format('Y-m-d'),
+        'revenue' => $revenue,
+        'cogs' => $cogs,
+        'ratio_cogs_to_revenue' => ($revenue->total_amount > 0) ? round(($cogs->total_cogs / $revenue->total_amount) * 100, 2) : 0,
+        'top_cogs_orders' => $topOrders
+    ]);
+});
+
+// Staff leave requests - REMOVED
+
+
+// Staff attendance check-in/check-out
+Route::middleware(['auth', 'role:staff'])
+    ->prefix('staff')
+    ->group(function () {
+        Route::post('/attendances/{attendance}/check-in', [AttendanceController::class, 'checkIn'])
+            ->name('staff.attendances.checkIn');
+        Route::post('/attendances/{attendance}/check-out', [AttendanceController::class, 'checkOut'])
+            ->name('staff.attendances.checkOut');
+        Route::get('/attendances', [AttendanceController::class, 'staffIndex'])
+            ->name('staff.attendances.index');
     });
 
 // ADMIN + NHÂN VIÊN XỬ LÝ ĐƠN (order_staff) Mã giảm giá, Đánh giá
@@ -369,8 +504,6 @@ Route::middleware(['auth', 'role:staff'])
             ->name('staff.attendances.check_in');
         Route::post('/attendances/{attendance}/check-out', [AttendanceController::class, 'checkOut'])
             ->name('staff.attendances.check_out');
-        Route::post('/attendances/{attendance}/late-reason', [AttendanceController::class, 'submitLateReason'])
-            ->name('staff.attendances.submitLateReason');
         Route::post('/attendances/{attendance}/early-reason', [AttendanceController::class, 'submitEarlyReason'])
             ->name('staff.attendances.submitEarlyReason');
     });

@@ -3,9 +3,9 @@
 
 namespace MService\Payment\Shared\SharedModels;
 
-use Bramus\Monolog\Formatter\ColoredLineFormatter;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
+use Monolog\Formatter\LineFormatter;
 
 class MoMoLogger extends Logger
 {
@@ -17,7 +17,7 @@ class MoMoLogger extends Logger
 
         if ($loggingOff === false && count($handlers) === 0) {
             $consoleHandler = new StreamHandler("php://stdout");
-            $consoleHandler->setFormatter(new ColoredLineFormatter());
+            $consoleHandler->setFormatter(new LineFormatter());
 
             $handlers = array($consoleHandler);
         }
@@ -40,12 +40,14 @@ class MoMoLogger extends Logger
         $this->loggingOff = $loggingOff;
     }
 
-    public function addRecord($level, $message, array $context = array()) : bool
+    public function addRecord($level, $message, array $context = array(), $datetime = null): bool
     {
         if (!$this->loggingOff) {
+            if ($datetime !== null) {
+                return parent::addRecord($level, $message, $context, $datetime);
+            }
             return parent::addRecord($level, $message, $context);
         }
         return false;
     }
-
 }

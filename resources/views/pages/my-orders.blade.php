@@ -13,7 +13,7 @@
             ['label' => 'Đang giao', 'params' => ['status' => 'shipping'], 'active' => $currentStatus === 'shipping' && $reviewFilter !== 'unreviewed'],
             ['label' => 'Hoàn thành', 'params' => ['status' => 'completed'], 'active' => $currentStatus === 'completed' && $reviewFilter !== 'unreviewed'],
             ['label' => 'Đã huỷ', 'params' => ['status' => 'cancelled'], 'active' => $currentStatus === 'cancelled' && $reviewFilter !== 'unreviewed'],
-            ['label' => 'Chờ hoàn tiền', 'params' => ['status' => 'refund_requested'], 'active' => $currentStatus === 'refund_requested' && $reviewFilter !== 'unreviewed'],
+            ['label' => 'Chờ hoàn hàng', 'params' => ['status' => 'refund_requested'], 'active' => $currentStatus === 'refund_requested' && $reviewFilter !== 'unreviewed'],
             ['label' => 'Đã hoàn tiền', 'params' => ['status' => 'refunded'], 'active' => $currentStatus === 'refunded' && $reviewFilter !== 'unreviewed'],
         ];
         $statusConfig = [
@@ -22,7 +22,7 @@
             'shipping' => ['label' => 'Đang giao', 'icon' => 'fa-shipping-fast', 'color' => '#6366f1', 'bg' => '#eef2ff'],
             'completed' => ['label' => 'Hoàn thành', 'icon' => 'fa-check-double', 'color' => '#22c55e', 'bg' => '#f0fdf4'],
             'cancelled' => ['label' => 'Đã huỷ', 'icon' => 'fa-times-circle', 'color' => '#ef4444', 'bg' => '#fef2f2'],
-            'refund_requested' => ['label' => 'Chờ hoàn tiền', 'icon' => 'fa-undo-alt', 'color' => '#f97316', 'bg' => '#fff7ed'],
+            'refund_requested' => ['label' => 'Chờ hoàn hàng', 'icon' => 'fa-undo-alt', 'color' => '#f97316', 'bg' => '#fff7ed'],
             'refunded' => ['label' => 'Đã hoàn tiền', 'icon' => 'fa-wallet', 'color' => '#7fad39', 'bg' => '#f0fdf4'],
         ];
     @endphp
@@ -124,23 +124,24 @@
                                     ])->filter()->first();
                                 @endphp
                                 <div class="order-item-row">
-                                    <img src="{{ $imgSrc }}" class="order-item-img" alt="{{ $productName }}">
+                                    <img src="{{ $imgSrc }}" class="order-item-img" alt="{{ $productName }}"
+                                        onerror="this.src='{{ asset('frontend/images/product/product-1.jpg') }}';">
                                     <div class="order-item-info flex-grow-1">
                                         <div class="order-item-name">{{ $productName }}</div>
                                         @if($variantInfo)
                                             <div class="order-item-variant text-muted small">Phân loại: {{ $variantInfo }}</div>
                                         @endif
-                                        <div class="order-item-qty text-muted small">x{{ $item->quantity }}</div>
+                                        <div class="order-item-qty text-muted small">x{{ (int) max(1, $item->quantity ?? 1) }}</div>
                                     </div>
                                     <div class="order-item-price">
-                                        {{ number_format($item->price) }}&thinsp;đ
+                                        {{ number_format(max(0, (int) ($item->price ?? 0)), 0) }}&thinsp;đ
                                     </div>
                                 </div>
                             @endforeach
 
                             @if($extraCount > 0)
                                 <div class="ps-3 pb-2 text-muted small">
-                                    <i class="fa fa-ellipsis-h me-1"></i> và {{ $extraCount }} sản phẩm khác…
+                                    <i class="fa fa-ellipsis-h me-1"></i> và {{ (int) max(0, $extraCount ?? 0) }} sản phẩm khác…
                                 </div>
                             @endif
                         </div>
@@ -149,12 +150,12 @@
                         <div class="order-card-footer">
                             <div class="order-total">
                                 <span class="text-muted small">Tổng tiền:</span>
-                                <span class="order-total-amount">{{ number_format($order->total_amount) }}&thinsp;đ</span>
+                                <span
+                                    class="order-total-amount">{{ number_format(max(0, (int) ($order->total_amount ?? 0)), 0) }}&thinsp;đ</span>
                             </div>
                             <div class="order-actions">
                                 @if($firstUnreviewedItem)
-                                    <a href="{{ route('reviews.form', ['product' => $firstUnreviewedItem->variant->product_id, 'order' => $order->id]) }}"
-                                        class="btn-order-action btn-action-solid">
+                                    <a href="{{ route('reviews.batch-form', $order->id) }}" class="btn-order-action btn-action-solid">
                                         <i class="fa fa-star me-1"></i> Đánh giá sản phẩm
                                     </a>
                                 @endif

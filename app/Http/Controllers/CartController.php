@@ -17,6 +17,7 @@ class CartController extends Controller
     public function list()
     {
         $cart = session()->get('cart', []);
+        $completedOrdersCount = $this->getCompletedOrdersCount();
         $total = 0;
 
         foreach ($cart as $item) {
@@ -40,7 +41,9 @@ class CartController extends Controller
             })
             ->whereDoesntHave('products')
             ->with('products:id,name')
-            ->get();
+            ->get()
+            ->filter(fn(Discount $discount) => $discount->isEligibleForCompletedOrdersCount($completedOrdersCount))
+            ->values();
 
         $cartItems = $this->normalizeCartItems($cart);
 
@@ -51,8 +54,15 @@ class CartController extends Controller
                 ->where('code', session('cart_discount_code'))
                 ->first();
 
-            if ($appliedDiscount && $appliedDiscount->isActive()) {
+            if (
+                $appliedDiscount
+                && $appliedDiscount->isActive()
+                && $appliedDiscount->isEligibleForCompletedOrdersCount($completedOrdersCount)
+            ) {
                 $discountAmount = $this->calculateDiscountAmount($appliedDiscount, $cartItems);
+            } else {
+                $this->forgetAppliedDiscount();
+                $appliedDiscount = null;
             }
         }
 
@@ -88,8 +98,14 @@ class CartController extends Controller
         $code = trim((string) $request->input('code'));
 
         if ($code === '') {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không tìm thấy mã để lưu.'
+                ], 400);
+            }
             return redirect()->back()
-                ->with('discount_error', 'Không tìm thấy mã để lưu.');
+                ->with('warning', 'Không tìm thấy mã để lưu.');
         }
 
         $discount = Discount::where('code', $code)
@@ -97,23 +113,52 @@ class CartController extends Controller
             ->first();
 
         if (!$discount || !$discount->isActive()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Mã giảm giá không hợp lệ hoặc đã hết hạn.'
+                ], 400);
+            }
             return redirect()->back()
-                ->with('discount_error', 'Mã giảm giá không hợp lệ hoặc đã hết hạn.');
+                ->with('warning', 'Mã giảm giá không hợp lệ hoặc đã hết hạn.');
+        }
+
+        if (!$discount->isEligibleForCompletedOrdersCount($this->getCompletedOrdersCount())) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $discount->audience_restriction_message ?? 'Mã giảm giá này không áp dụng cho tài khoản của bạn.'
+                ], 400);
+            }
+            return redirect()->back()
+                ->with('warning', $discount->audience_restriction_message ?? 'Mã giảm giá này không áp dụng cho tài khoản của bạn.');
         }
 
         $savedCodes = collect(session('cart_saved_discount_codes', []));
 
         if ($savedCodes->contains($discount->code)) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Mã này đã được lưu trước đó.'
+                ], 200);
+            }
             return redirect()->back()
-                ->with('discount_success', 'Mã này đã được lưu trước đó.');
+                ->with('success', 'Mã này đã được lưu trước đó.');
         }
 
         $savedCodes->push($discount->code);
 
         session(['cart_saved_discount_codes' => $savedCodes->unique()->values()->all()]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Đã lưu mã giảm giá thành công.'
+            ], 200);
+        }
         return redirect()->back()
-            ->with('discount_success', 'Đã lưu mã giảm giá thành công.');
+            ->with('success', 'Đã lưu mã giảm giá thành công.');
     }
 
 
@@ -131,7 +176,10 @@ class CartController extends Controller
         $stock = $inventory->quantity ?? 0;
 
         if ($stock <= 0) {
-            return back()->with('error', 'Sản phẩm đã hết hàng');
+            if ($request->expectsJson()) {
+                return response()->json(['error' => 'Sản phẩm đã hết hàng'], 400);
+            }
+            return back()->with('showCartPopup', true)->with('error', 'Sản phẩm đã hết hàng');
         }
 
         $cart = session()->get('cart', []);
@@ -142,14 +190,42 @@ class CartController extends Controller
             : 0;
 
         if ($currentQty + $qtyRequest > $stock) {
-            return back()->with('error', 'Số lượng vượt quá tồn kho');
+            if ($request->expectsJson()) {
+                return response()->json(['error' => 'Số lượng vượt quá tồn kho'], 400);
+            }
+            return back()->with('showCartPopup', true)->with('error', 'Số lượng vượt quá tồn kho');
         }
 
+        // Check if quantity > 10 to show warning
+        $hasQuantityWarning = false;
+        if ($qtyRequest > 10) {
+            $hasQuantityWarning = true;
+        }
+
+        // Get variant image if exists, otherwise get product's primary image
         $image = ProductImage::where('product_variant_id', $variant->id)
             ->orderByDesc('is_primary')
             ->first();
 
-        $imagePath = $image ? $image->image_path : null;
+        if (!$image) {
+            $image = ProductImage::where('product_id', $variant->product_id)
+                ->whereNull('product_variant_id')
+                ->orderByDesc('is_primary')
+                ->first();
+        }
+
+        // Get image path with fallback to default if null
+        $imagePath = null;
+        if ($image) {
+            $imagePath = $image->image_path;
+        } elseif ($variant->product->image) {
+            $imagePath = $variant->product->image;
+        }
+
+        // Ensure we have a valid path, default to 'frontend/images/product/product-1.jpg' if empty
+        if (empty($imagePath)) {
+            $imagePath = 'frontend/images/product/product-1.jpg';
+        }
 
         $variantText = collect([
             $variant->color,
@@ -179,7 +255,26 @@ class CartController extends Controller
 
         session()->put('cart', $cart);
 
-        return back()->with('success', 'Đã thêm vào giỏ hàng');
+        // Handle AJAX requests
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Đã thêm vào giỏ hàng',
+                'cart_count' => count(session()->get('cart', []))
+            ]);
+        }
+
+        // Use ->with() method to ensure flash data persists for non-AJAX requests
+        $response = back()
+            ->with('showCartPopup', true);
+
+        if ($hasQuantityWarning) {
+            $response = $response->with('warning', 'Số lượng sản phẩm lớn hơn 10. Nếu cần đặt số lượng lớn, vui lòng liên hệ qua tin nhắn hoặc gửi liên hệ với chúng tôi.');
+        } else {
+            $response = $response->with('success', 'Đã thêm vào giỏ hàng');
+        }
+
+        return $response;
     }
 
     public function update(Request $request)
@@ -210,6 +305,14 @@ class CartController extends Controller
                     );
                 }
 
+                // Check if quantity > 10 to show warning
+                if ($quantity > 10) {
+                    session()->flash(
+                        'warning',
+                        'Số lượng sản phẩm lớn hơn 10. Nếu cần đặt số lượng lớn, vui lòng liên hệ qua tin nhắn hoặc gửi liên hệ với chúng tôi.'
+                    );
+                }
+
                 $cart[$variantId]['quantity'] = $quantity;
             }
         }
@@ -231,6 +334,14 @@ class CartController extends Controller
                     session()->flash(
                         'warning',
                         'Một số sản phẩm đã đạt số lượng tối đa trong kho'
+                    );
+                }
+
+                // Check if quantity > 10 to show warning
+                if ($quantity > 10) {
+                    session()->flash(
+                        'warning',
+                        'Một số sản phẩm có số lượng lớn hơn 10. Nếu cần đặt số lượng lớn, vui lòng liên hệ qua tin nhắn hoặc gửi liên hệ với chúng tôi.'
                     );
                 }
 
@@ -270,20 +381,49 @@ class CartController extends Controller
                 'cart_discount_amount'
             ]);
 
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Đã bỏ áp dụng mã giảm giá'
+                ], 200);
+            }
             return redirect()->route('cart.list')
-                ->with('discount_success', 'Đã bỏ áp dụng mã giảm giá');
+                ->with('success', 'Đã bỏ áp dụng mã giảm giá');
         }
 
         $discount = Discount::where('code', $code)->first();
 
         if (!$discount) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Mã không tồn tại!'
+                ], 400);
+            }
             return redirect()->route('cart.list')
-                ->with('discount_error', 'Mã không tồn tại!');
+                ->with('warning', 'Mã không tồn tại!');
         }
 
         if (!$discount->isActive()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Mã không hợp lệ!'
+                ], 400);
+            }
             return redirect()->route('cart.list')
-                ->with('discount_error', 'Mã không hợp lệ!');
+                ->with('warning', 'Mã không hợp lệ!');
+        }
+
+        if (!$discount->isEligibleForCompletedOrdersCount($this->getCompletedOrdersCount())) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $discount->audience_restriction_message ?? 'Mã giảm giá này không áp dụng cho tài khoản của bạn.'
+                ], 400);
+            }
+            return redirect()->route('cart.list')
+                ->with('warning', $discount->audience_restriction_message ?? 'Mã giảm giá này không áp dụng cho tài khoản của bạn.');
         }
 
         $cart = session()->get('cart', []);
@@ -292,14 +432,26 @@ class CartController extends Controller
 
         $discountAmount = $this->calculateDiscountAmount($discount, $cartItems);
         if ($discountAmount <= 0) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Mã không áp dụng cho sản phẩm hiện có trong giỏ hàng.'
+                ], 400);
+            }
             return redirect()->route('cart.list')
-                ->with('discount_error', 'Mã không áp dụng cho sản phẩm hiện có trong giỏ hàng.');
+                ->with('warning', 'Mã không áp dụng cho sản phẩm hiện có trong giỏ hàng.');
         }
 
         $savedCodes = collect(session('cart_saved_discount_codes', []));
         if (!$savedCodes->contains($discount->code)) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Vui lòng lưu mã trước khi áp dụng.'
+                ], 400);
+            }
             return redirect()->route('cart.list')
-                ->with('discount_error', 'Vui lòng lưu mã trước khi áp dụng.');
+                ->with('warning', 'Vui lòng lưu mã trước khi áp dụng.');
         }
 
         if (Auth::check()) {
@@ -308,8 +460,14 @@ class CartController extends Controller
                 ->exists();
 
             if ($used) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Bạn đã dùng mã này rồi!'
+                    ], 400);
+                }
                 return redirect()->route('cart.list')
-                    ->with('discount_error', 'Bạn đã dùng mã này rồi!');
+                    ->with('warning', 'Bạn đã dùng mã này rồi!');
             }
         }
 
@@ -321,8 +479,14 @@ class CartController extends Controller
             'cart_discount_amount' => $discountAmount,
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Áp dụng mã thành công!'
+            ], 200);
+        }
         return redirect()->route('cart.list')
-            ->with('discount_success', 'Áp dụng mã thành công!');
+            ->with('success', 'Áp dụng mã thành công!');
     }
 
     private function normalizeCartItems(array $cart): Collection
@@ -367,5 +531,30 @@ class CartController extends Controller
         }
 
         return $discount->getDiscountAmount($eligibleSubtotal);
+    }
+
+    private function getCompletedOrdersCount(): ?int
+    {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (!$user || !$user->isCustomer()) {
+            return null;
+        }
+
+        return $user->orders()
+            ->where('status', 'completed')
+            ->count();
+    }
+
+    private function forgetAppliedDiscount(): void
+    {
+        session()->forget([
+            'cart_discount',
+            'cart_discount_type',
+            'cart_discount_code',
+            'cart_discount_id',
+            'cart_discount_amount',
+        ]);
     }
 }

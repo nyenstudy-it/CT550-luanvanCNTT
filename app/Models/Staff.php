@@ -41,15 +41,28 @@ class Staff extends Model
         'probation_end' => 'date',
     ];
 
+    /**
+     * Relation to User (auth profile).
+     * - `staffs.user_id` references `users.id`.
+     * Use `$staff->user` to access authentication/profile fields (name, email).
+     */
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    /**
+     * HR relation: attendances for this staff profile.
+     * - DB mapping: `attendances.staff_id` stores `users.id` values and
+     *   is defined as FK -> `staffs.user_id` in migrations.
+     * - This returns Attendance models where `attendances.staff_id = staffs.user_id`.
+     * Use `$staff->attendances` when you need HR-level attendance data
+     * (position, wages, employment_status come from `staffs`).
+     */
     public function attendances()
-     {
+    {
         return $this->hasMany(Attendance::class, 'staff_id', 'user_id');
-     }
+    }
 
     public function isResigned()
     {

@@ -12,15 +12,18 @@ class SupplierController extends Controller
         $query = Supplier::query();
 
         if ($request->name) {
-            $query->where('name', 'like', '%' . $request->name . '%');
+            $escaped = addcslashes($request->name, '\\%_');
+            $query->where('name', 'like', '%' . $escaped . '%');
         }
 
         if ($request->phone) {
-            $query->where('phone', 'like', '%' . $request->phone . '%');
+            $escaped = addcslashes($request->phone, '\\%_');
+            $query->where('phone', 'like', '%' . $escaped . '%');
         }
 
         if ($request->address) {
-            $query->where('address', 'like', '%' . $request->address . '%');
+            $escaped = addcslashes($request->address, '\\%_');
+            $query->where('address', 'like', '%' . $escaped . '%');
         }
 
         $suppliers = $query

@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sơ đồ Dữ liệu - Senhong OCOP Database</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        .tabs button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            background: #f8f9fa;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: all 0.3s;
+            color: #495057;
+        }
+        
+        .tabs button:hover {
+            background: #e9ecef;
+        }
+        
+        .tabs button.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .content {
+            padding: 30px;
+            display: none;
+        }
+        
+        .content.active {
+            display: block;
+        }
+        
+        .diagram-container {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            overflow-x: auto;
+            border: 1px solid #dee2e6;
+        }
+        
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            min-height: 600px;
+        }
+        
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+            color: #004085;
+        }
+        
+        .table-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .table-card {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+        }
+        
+        .table-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .table-name {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        
+        .columns {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        
+        .column-item {
+            padding: 3px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .pk {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .fk {
+            color: #fd7e14;
+        }
+        
+        footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Sơ đồ Dữ liệu Senhong OCOP</h1>
+            <p>Physical Data Model (PDM) & Conceptual Data Model (CDM)</p>
+        </header>
+        
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="cdm">CDM - Mô hình Khái niệm</button>
+            <button class="tab-btn" data-tab="pdm">PDM - Mô hình Vật lý</button>
+            <button class="tab-btn" data-tab="tables">Danh sách Bảng</button>
+            <button class="tab-btn" data-tab="relationships">Mối Quan hệ</button>
+        </div>
+        
+        <!-- CDM Tab -->
+        <div id="cdm" class="content active">
+            <h2>💡 Mô hình Dữ liệu Khái niệm (CDM)</h2>
+            <p>Sơ đồ này thể hiện các thực thể chính và mối quan hệ giữa chúng ở cấp độ khái niệm (không quan tâm đến chi tiết kỹ thuật).</p>
+            
+            <div class="diagram-container">
+                <div class="mermaid">
+erDiagram
+    USER ||--o{ CUSTOMER : "creates account"
+    USER ||--o{ STAFF : "works as"
+    USER ||--o{ CONTACT : "sends"
+    USER ||--o{ NOTIFICATION : "receives"
+    
+    CUSTOMER ||--o{ ORDER : "places"
+    CUSTOMER ||--o{ REVIEW : "writes"
+    CUSTOMER ||--o{ WISHLIST : "adds"
+    CUSTOMER ||--o{ CUSTOMER_MESSAGE : "sends"
+    
+    ORDER ||--|{ ORDER_ITEM : "contains"
+    ORDER ||--o{ ORDER_CANCELLATION : "cancelled by"
+    ORDER ||--o{ ORDER_RETURN : "returns"
+    ORDER ||--o{ PAYMENT : "paid by"
+    ORDER ||--o{ DISCOUNT_USAGE : "uses"
+    
+    PRODUCT ||--o{ PRODUCT_VARIANT : "has variants"
+    PRODUCT ||--o{ PRODUCT_IMAGE : "has images"
+    PRODUCT ||--o{ REVIEW : "gets reviewed"
+    PRODUCT ||--o{ DISCOUNT_PRODUCT : "discounted"
+    PRODUCT ||--o{ CUSTOMER_MESSAGE : "asked about"
+    PRODUCT ||--o{ WISHLIST : "wishlisted"
+    
+    CATEGORY_PRODUCT ||--o{ PRODUCT : "categorizes"
+    SUPPLIER ||--o{ PRODUCT : "supplies"
+    SUPPLIER ||--o{ IMPORT : "sends"
+    
+    IMPORT ||--o{ IMPORT_ITEM : "contains"
+    IMPORT_ITEM ||--o{ INVENTORY_WRITEOFF : "written off"
+    
+    PRODUCT_VARIANT ||--o{ INVENTORY : "tracks stock"
+    PRODUCT_VARIANT ||--o{ IMPORT_ITEM : "receives"
+    PRODUCT_VARIANT ||--o{ ORDER_ITEM : "ordered as"
+    PRODUCT_VARIANT ||--o{ PRODUCT_IMAGE : "images for"
+    
+    STAFF ||--o{ ATTENDANCE : "marks"
+    STAFF ||--o{ SALARY : "earns"
+    STAFF ||--o{ IMPORT : "records"
+    STAFF ||--o{ INVENTORY_WRITEOFF : "writes off"
+    
+    REVIEW ||--o{ REVIEW_LIKE : "liked by"
+    REVIEW ||--o{ REVIEW_REPLY : "replied by"
+    
+    DISCOUNT ||--o{ DISCOUNT_PRODUCT : "applies to"
+    DISCOUNT ||--o{ DISCOUNT_USAGE : "used in"
+                </div>
+            </div>
+            
+            <div class="info-box">
+                <strong>📌 Giải thích CDM:</strong>
+                <ul style="margin-top: 10px; margin-left: 20px;">
+                    <li><strong>USER:</strong> Người dùng hệ thống (admin, staff, customer)</li>
+                    <li><strong>CUSTOMER:</strong> Khách hàng mua sắm</li>
+                    <li><strong>PRODUCT:</strong> Sản phẩm bán hàng</li>
+                    <li><strong>ORDER:</strong> Đơn hàng của khách</li>
+                    <li><strong>SUPPLIER:</strong> Nhà cung cấp sản phẩm</li>
+                    <li><strong>STAFF:</strong> Nhân viên công ty</li>
+                    <li><strong>PAYMENT:</strong> Thanh toán đơn hàng</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- PDM Tab -->
+        <div id="pdm" class="content">
+            <h2>🔧 Mô hình Dữ liệu Vật lý (PDM)</h2>
+            <p>Sơ đồ chi tiết với tất cả các bảng, cột, khóa chính (PK), khóa ngoại (FK) và mối quan hệ.</p>
+            
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-number">37</div>
+                    <div class="stat-label">Tổng số Bảng</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">42</div>
+                    <div class="stat-label">Mối Quan hệ FK</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">15</div>
+                    <div class="stat-label">Thực thể Chính</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">22</div>
+                    <div class="stat-label">Bảng Phụ trợ</div>
+                </div>
+            </div>
+            
+            <div class="diagram-container">
+                <div class="mermaid">
+erDiagram
+    USERS ||--o{ CUSTOMERS : "user_id"
+    USERS ||--o{ STAFFS : "user_id"
+    USERS ||--o{ CONTACTS : "reply_by"
+    USERS ||--o{ ORDERS : "customer_id"
+    USERS ||--o{ REVIEWS : "customer_id"
+    USERS ||--o{ WISHLISTS : "user_id"
+    USERS ||--o{ CUSTOMER_MESSAGES : "staff_id, customer_id"
+    USERS ||--o{ SESSIONS : "user_id"
+    USERS ||--o{ NOTIFICATIONS : "user_id"
+    USERS ||--o{ INVENTORY_WRITEOFFS : "written_off_by"
+    USERS ||--o{ ATTENDANCES : "early_leave_approved_by"
+    
+    CATEGORIES ||--o{ PRODUCTS : "category_id"
+    SUPPLIERS ||--o{ PRODUCTS : "supplier_id"
+    SUPPLIERS ||--o{ IMPORTS : "supplier_id"
+    
+    PRODUCTS ||--o{ PRODUCT_VARIANTS : "product_id"
+    PRODUCTS ||--o{ PRODUCT_IMAGES : "product_id"
+    PRODUCTS ||--o{ REVIEWS : "product_id"
+    PRODUCTS ||--o{ DISCOUNT_PRODUCTS : "product_id"
+    PRODUCTS ||--o{ CUSTOMER_MESSAGES : "product_id"
+    
+    PRODUCT_VARIANTS ||--o{ INVENTORIES : "product_variant_id"
+    PRODUCT_VARIANTS ||--o{ ORDER_ITEMS : "product_variant_id"
+    PRODUCT_VARIANTS ||--o{ IMPORT_ITEMS : "product_variant_id"
+    PRODUCT_VARIANTS ||--o{ INVENTORY_WRITEOFFS : "product_variant_id"
+    PRODUCT_VARIANTS ||--o{ PRODUCT_IMAGES : "product_variant_id"
+    
+    ORDERS ||--o{ ORDER_ITEMS : "order_id"
+    ORDERS ||--o{ ORDER_RETURNS : "order_id"
+    ORDERS ||--o{ ORDER_CANCELLATIONS : "order_id"
+    ORDERS ||--o{ PAYMENTS : "order_id"
+    ORDERS ||--o{ DISCOUNT_USAGES : "order_id"
+    ORDERS ||--o{ REVIEWS : "order_id"
+    
+    ORDER_RETURNS ||--o{ ORDER_RETURN_IMAGES : "order_return_id"
+    
+    REVIEWS ||--o{ REVIEW_LIKES : "review_id"
+    REVIEWS ||--o{ REVIEW_REPLIES : "review_id"
+    REVIEW_REPLIES ||--o{ REVIEW_REPLIES : "parent_id"
+    
+    DISCOUNTS ||--o{ DISCOUNT_PRODUCTS : "discount_id"
+    DISCOUNTS ||--o{ DISCOUNT_USAGES : "discount_id"
+    
+    STAFFS ||--o{ ATTENDANCES : "user_id"
+    STAFFS ||--o{ SALARIES : "staff_id"
+    STAFFS ||--o{ IMPORTS : "staff_id"
+    
+    IMPORTS ||--o{ IMPORT_ITEMS : "import_id"
+    IMPORT_ITEMS ||--o{ INVENTORY_WRITEOFFS : "import_item_id"
+                </div>
+            </div>
+            
+            <div class="info-box">
+                <strong>🔑 Ký hiệu:</strong>
+                <ul style="margin-top: 10px; margin-left: 20px;">
+                    <li><strong>PK (Primary Key):</strong> Khóa chính - định danh duy nhất cho bản ghi</li>
+                    <li><strong>FK (Foreign Key):</strong> Khóa ngoại - liên kết đến bảng khác</li>
+                    <li><strong>||--o{:</strong> Mối quan hệ 1-N (một-nhiều)</li>
+                    <li><strong>||--||:</strong> Mối quan hệ 1-1 (một-một)</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Tables Tab -->
+        <div id="tables" class="content">
+            <h2>📋 Danh sách Chi tiết Bảng</h2>
+            
+            <h3 style="margin-top: 30px; color: #667eea;">👥 Bảng Người Dùng & Xác thực</h3>
+            <div class="table-list">
+                <div class="table-card">
+                    <div class="table-name">users</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item">name - varchar(255)</div>
+                        <div class="column-item">email - varchar(255), UNI</div>
+                        <div class="column-item">password - varchar(255)</div>
+                        <div class="column-item">role - enum(admin, staff, customer)</div>
+                        <div class="column-item">status - enum(active, locked)</div>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <div class="table-name">customers</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item"><span class="fk">🔗 user_id</span> - bigint, FK, UNI</div>
+                        <div class="column-item">phone - varchar(255)</div>
+                        <div class="column-item">address - text</div>
+                        <div class="column-item">province, district, ward</div>
+                        <div class="column-item">gender - enum</div>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <div class="table-name">staffs</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 user_id</span> - bigint, PK, FK</div>
+                        <div class="column-item">phone - varchar(255)</div>
+                        <div class="column-item">position - enum(cashier, warehouse, order_staff)</div>
+                        <div class="column-item">employment_status</div>
+                        <div class="column-item">probation_hourly_wage</div>
+                        <div class="column-item">official_hourly_wage</div>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <div class="table-name">sessions</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - varchar(255), PK</div>
+                        <div class="column-item"><span class="fk">🔗 user_id</span> - bigint, FK</div>
+                        <div class="column-item">ip_address - varchar(45)</div>
+                        <div class="column-item">user_agent - text</div>
+                        <div class="column-item">last_activity - int</div>
+                    </div>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 30px; color: #667eea;">📦 Bảng Sản phẩm & Kho</h3>
+            <div class="table-list">
+                <div class="table-card">
+                    <div class="table-name">products</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item"><span class="fk">🔗 category_id</span> - bigint, FK</div>
+                        <div class="column-item"><span class="fk">🔗 supplier_id</span> - bigint, FK</div>
+                        <div class="column-item">name - varchar(255)</div>
+                        <div class="column-item">description - text</div>
+                        <div class="column-item">ocop_star, ocop_year</div>
+                        <div class="column-item">status - enum(active, inactive)</div>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <div class="table-name">product_variants</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item"><span class="fk">🔗 product_id</span> - bigint, FK</div>
+                        <div class="column-item">sku - varchar(255), UNI</div>
+                        <div class="column-item">volume, weight, color, size</div>
+                        <div class="column-item">price - decimal(10,2)</div>
+                        <div class="column-item">manufacture_date, expired_at</div>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <div class="table-name">inventories</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item"><span class="fk">🔗 product_variant_id</span> - bigint, FK, UNI</div>
+                        <div class="column-item">quantity - int</div>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <div class="table-name">category_products</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item">name - varchar(255)</div>
+                        <div class="column-item">description - text</div>
+                        <div class="column-item">image_url - varchar(255)</div>
+                    </div>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 30px; color: #667eea;">🛒 Bảng Đơn hàng & Thanh toán</h3>
+            <div class="table-list">
+                <div class="table-card">
+                    <div class="table-name">orders</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item"><span class="fk">🔗 customer_id</span> - bigint, FK</div>
+                        <div class="column-item">total_amount - decimal(15,2)</div>
+                        <div class="column-item">shipping_fee, discount_amount</div>
+                        <div class="column-item">status - enum(pending, confirmed, shipping, completed, cancelled, refund_requested, refunded)</div>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <div class="table-name">order_items</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item"><span class="fk">🔗 order_id</span> - bigint, FK</div>
+                        <div class="column-item"><span class="fk">🔗 product_variant_id</span> - bigint, FK</div>
+                        <div class="column-item">quantity - int</div>
+                        <div class="column-item">price, subtotal - decimal</div>
+                        <div class="column-item">cost_price - decimal(12,2)</div>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <div class="table-name">payments</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item"><span class="fk">🔗 order_id</span> - bigint, FK</div>
+                        <div class="column-item">method - enum(COD, VNPAY, MOMO, BANK_TRANSFER)</div>
+                        <div class="column-item">amount - decimal(12,2)</div>
+                        <div class="column-item">status - enum(pending, paid, failed)</div>
+                        <div class="column-item">transaction_code</div>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <div class="table-name">order_returns</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item"><span class="fk">🔗 order_id</span> - bigint, FK</div>
+                        <div class="column-item">reason - varchar(255)</div>
+                        <div class="column-item">status - enum(requested, approved, rejected, ...)</div>
+                        <div class="column-item">inspection_result - enum(good, defective)</div>
+                    </div>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 30px; color: #667eea;">📋 Bảng Bình luận & Đánh giá</h3>
+            <div class="table-list">
+                <div class="table-card">
+                    <div class="table-name">reviews</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item"><span class="fk">🔗 product_id</span> - bigint, FK</div>
+                        <div class="column-item"><span class="fk">🔗 customer_id</span> - bigint, FK</div>
+                        <div class="column-item"><span class="fk">🔗 order_id</span> - bigint, FK</div>
+                        <div class="column-item">rating - tinyint(4)</div>
+                        <div class="column-item">content - text</div>
+                        <div class="column-item">status - varchar(255)</div>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <div class="table-name">review_replies</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item"><span class="fk">🔗 review_id</span> - bigint, FK</div>
+                        <div class="column-item"><span class="fk">🔗 parent_id</span> - bigint, FK (self)</div>
+                        <div class="column-item"><span class="fk">🔗 user_id</span> - bigint, FK</div>
+                        <div class="column-item">author_name - varchar(255)</div>
+                        <div class="column-item">content - text</div>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <div class="table-name">review_likes</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item"><span class="fk">🔗 review_id</span> - bigint, FK</div>
+                        <div class="column-item"><span class="fk">🔗 customer_id</span> - bigint, FK</div>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <div class="table-name">customer_messages</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item"><span class="fk">🔗 customer_id</span> - bigint, FK</div>
+                        <div class="column-item"><span class="fk">🔗 product_id</span> - bigint, FK</div>
+                        <div class="column-item"><span class="fk">🔗 staff_id</span> - bigint, FK</div>
+                        <div class="column-item">message - text</div>
+                        <div class="column-item">sender_type - enum(customer, staff, admin)</div>
+                    </div>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 30px; color: #667eea;">💰 Bảng Nhân viên & Lương</h3>
+            <div class="table-list">
+                <div class="table-card">
+                    <div class="table-name">attendances</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item"><span class="fk">🔗 staff_id</span> - bigint, FK</div>
+                        <div class="column-item">work_date - date</div>
+                        <div class="column-item">shift - enum(morning, afternoon)</div>
+                        <div class="column-item">check_in, check_out - time</div>
+                        <div class="column-item">is_late, is_early_leave - tinyint</div>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <div class="table-name">salaries</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item"><span class="fk">🔗 staff_id</span> - bigint, FK</div>
+                        <div class="column-item">month, year - int</div>
+                        <div class="column-item">total_hours - decimal(8,2)</div>
+                        <div class="column-item">total_salary - decimal(12,2)</div>
+                        <div class="column-item">late_count, early_leave_count, absent_count</div>
+                    </div>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 30px; color: #667eea;">📥 Bảng Nhập kho & Chiết khấu</h3>
+            <div class="table-list">
+                <div class="table-card">
+                    <div class="table-name">imports</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item"><span class="fk">🔗 supplier_id</span> - bigint, FK</div>
+                        <div class="column-item"><span class="fk">🔗 staff_id</span> - bigint, FK</div>
+                        <div class="column-item">import_date - date</div>
+                        <div class="column-item">total_amount - decimal(15,2)</div>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <div class="table-name">import_items</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item"><span class="fk">🔗 import_id</span> - bigint, FK</div>
+                        <div class="column-item"><span class="fk">🔗 product_variant_id</span> - bigint, FK</div>
+                        <div class="column-item">quantity, remaining_quantity - int</div>
+                        <div class="column-item">manufacture_date, expired_at - date</div>
+                        <div class="column-item">unit_price - decimal(15,2)</div>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <div class="table-name">discounts</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item">code - varchar(255), UNI</div>
+                        <div class="column-item">type - enum(percent, fixed)</div>
+                        <div class="column-item">value - decimal(10,2)</div>
+                        <div class="column-item">usage_limit, used_count - int</div>
+                        <div class="column-item">start_at, end_at - timestamp</div>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <div class="table-name">inventory_writeoffs</div>
+                    <div class="columns">
+                        <div class="column-item"><span class="pk">🔑 id</span> - bigint, PK, AI</div>
+                        <div class="column-item"><span class="fk">🔗 product_variant_id</span> - bigint, FK</div>
+                        <div class="column-item"><span class="fk">🔗 import_item_id</span> - bigint, FK</div>
+                        <div class="column-item">quantity_written_off - int</div>
+                        <div class="column-item">reason - enum(expired, damaged, other)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Relationships Tab -->
+        <div id="relationships" class="content">
+            <h2>🔗 Mối Quan hệ Giữa Các Bảng</h2>
+            
+            <div class="info-box">
+                <strong>📌 Danh sách tất cả Foreign Keys (Khóa ngoại):</strong>
+            </div>
+            
+            <div style="overflow-x: auto; margin: 20px 0;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #667eea; color: white;">
+                            <th style="padding: 12px; text-align: left; border: 1px solid #dee2e6;">Bảng</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #dee2e6;">Cột FK</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #dee2e6;">Tham chiếu</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #dee2e6;">Mối quan hệ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">attendances</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">staff_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">staffs.user_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">attendances</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">early_leave_approved_by</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">staffs.user_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">blog_blocks</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">blog_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">blogs.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">contacts</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">reply_by</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">users.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">customers</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">user_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">users.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">1:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">customer_messages</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">customer_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">users.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">customer_messages</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">product_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">products.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">customer_messages</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">staff_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">users.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">discount_product</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">discount_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">discounts.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">discount_product</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">product_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">products.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">discount_usages</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">discount_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">discounts.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">discount_usages</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">order_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">orders.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">discount_usages</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">user_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">users.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">imports</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">staff_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">staffs.user_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">imports</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">supplier_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">suppliers.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">import_items</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">import_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">imports.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">import_items</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">product_variant_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">product_variants.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">inventories</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">product_variant_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">product_variants.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">1:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">inventory_writeoffs</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">import_item_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">import_items.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">inventory_writeoffs</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">product_variant_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">product_variants.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">inventory_writeoffs</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">written_off_by</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">users.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">order_cancellations</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">order_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">orders.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">order_items</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">order_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">orders.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">order_items</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">product_variant_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">product_variants.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">order_return_images</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">order_return_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">order_returns.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">order_returns</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">order_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">orders.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">payments</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">order_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">orders.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">product_images</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">product_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">products.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">product_images</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">product_variant_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">product_variants.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">product_variants</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">product_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">products.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">products</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">category_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">category_products.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">products</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">supplier_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">suppliers.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">reviews</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">customer_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">users.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">reviews</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">order_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">orders.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">reviews</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">product_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">products.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">review_likes</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">customer_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">customers.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">review_likes</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">review_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">reviews.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">review_replies</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">parent_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">review_replies.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1 (Self)</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">review_replies</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">review_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">reviews.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">review_replies</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">user_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">users.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">salaries</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">staff_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">staffs.user_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">sessions</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">user_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">users.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">staffs</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">user_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">users.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">1:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">wishlists</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">product_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">products.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr style="background: #f8f9fa;">
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">wishlists</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">user_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">users.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">orders</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">customer_id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">users.id</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">N:1</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <footer>
+            <p>🏢 Senhong OCOP Database - Sơ đồ Dữ liệu | 📅 Ngày: 22/04/2026</p>
+            <p>✅ Đã kiểm tra: Khóa chính, Khóa ngoại, Tính nhất quán dữ liệu</p>
+        </footer>
+    </div>
+    
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+        
+        // Tab switching
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const contentDivs = document.querySelectorAll('.content');
+        
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabName = btn.dataset.tab;
+                
+                // Remove active class from all tabs and contents
+                tabBtns.forEach(b => b.classList.remove('active'));
+                contentDivs.forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked tab and corresponding content
+                btn.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

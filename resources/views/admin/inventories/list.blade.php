@@ -6,9 +6,6 @@
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <div>
                     <h5 class="mb-1">Danh sách tồn kho</h5>
-                    <small class="text-muted">
-                        Theo dõi tồn kho, hạn dùng và tuổi tồn để quản lý chủ động hơn.
-                    </small>
                 </div>
                 <span class="badge bg-primary">Tổng biến thể: {{ $summary['total_variants'] }}</span>
             </div>
@@ -166,12 +163,6 @@
                         <input type="number" min="1" name="expiring_days" class="form-control"
                             value="{{ request('expiring_days', $expiringInDays) }}">
                     </div>
-                    <div class="col-12 col-md-4 col-lg-2">
-                        <label class="form-label mb-1">Tồn kho lâu (ngày)</label>
-                        <input type="number" min="1" name="stale_days" class="form-control"
-                            value="{{ request('stale_days', $staleDays) }}">
-                    </div>
-
                     <div class="col-12 col-lg-6 d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
                             <i class="fa fa-filter me-1"></i> Lọc dữ liệu
@@ -355,48 +346,51 @@
 
                                 <td>
                                     <div class="inventory-stock-value {{ $inv->is_out_of_stock || $inv->is_low_stock ? 'text-danger' : 'text-dark' }}">
-                                        {{ number_format($inv->quantity) }}
+                                        {{ number_format((int) max(0, $inv->quantity ?? 0), 0) }}
                                     </div>
                                     <div class="inventory-subtext mt-1">
-                                        {{ $inv->active_batch_count }} lô còn hàng | Theo lô: {{ number_format($inv->total_remaining_batch_quantity) }}
+                                        {{ (int) ($inv->active_batch_count ?? 0) }} lô còn hàng | Theo lô: {{ number_format((int) max(0, $inv->total_remaining_batch_quantity ?? 0), 0) }}
                                     </div>
 
                                     <div class="inventory-batch-bar" title="Phân bổ tồn theo trạng thái hạn dùng">
-                                        @if (($breakdown['expired'] ?? 0) > 0)
-                                            <span class="inventory-batch-segment expired" style="width: {{ (($breakdown['expired'] ?? 0) / $totalBatchQuantity) * 100 }}%"></span>
+                                        @php
+                                            $safeTotal = max(1, (int) max(0, ($breakdown['expired'] ?? 0) + ($breakdown['expiring'] ?? 0) + ($breakdown['promotion'] ?? 0) + ($breakdown['safe'] ?? 0) + ($breakdown['no_expiry'] ?? 0)));
+                                        @endphp
+                                        @if (((int) ($breakdown['expired'] ?? 0)) > 0)
+                                            <span class="inventory-batch-segment expired" style="width: {{ ((int) ($breakdown['expired'] ?? 0) / $safeTotal) * 100 }}%"></span>
                                         @endif
-                                        @if (($breakdown['expiring'] ?? 0) > 0)
-                                            <span class="inventory-batch-segment expiring" style="width: {{ (($breakdown['expiring'] ?? 0) / $totalBatchQuantity) * 100 }}%"></span>
+                                        @if (((int) ($breakdown['expiring'] ?? 0)) > 0)
+                                            <span class="inventory-batch-segment expiring" style="width: {{ ((int) ($breakdown['expiring'] ?? 0) / $safeTotal) * 100 }}%"></span>
                                         @endif
-                                        @if (($breakdown['promotion'] ?? 0) > 0)
-                                            <span class="inventory-batch-segment promotion" style="width: {{ (($breakdown['promotion'] ?? 0) / $totalBatchQuantity) * 100 }}%"></span>
+                                        @if (((int) ($breakdown['promotion'] ?? 0)) > 0)
+                                            <span class="inventory-batch-segment promotion" style="width: {{ ((int) ($breakdown['promotion'] ?? 0) / $safeTotal) * 100 }}%"></span>
                                         @endif
-                                        @if (($breakdown['safe'] ?? 0) > 0)
-                                            <span class="inventory-batch-segment safe" style="width: {{ (($breakdown['safe'] ?? 0) / $totalBatchQuantity) * 100 }}%"></span>
+                                        @if (((int) ($breakdown['safe'] ?? 0)) > 0)
+                                            <span class="inventory-batch-segment safe" style="width: {{ ((int) ($breakdown['safe'] ?? 0) / $safeTotal) * 100 }}%"></span>
                                         @endif
-                                        @if (($breakdown['no_expiry'] ?? 0) > 0)
-                                            <span class="inventory-batch-segment no-expiry" style="width: {{ (($breakdown['no_expiry'] ?? 0) / $totalBatchQuantity) * 100 }}%"></span>
+                                        @if (((int) ($breakdown['no_expiry'] ?? 0)) > 0)
+                                            <span class="inventory-batch-segment no-expiry" style="width: {{ ((int) ($breakdown['no_expiry'] ?? 0) / $safeTotal) * 100 }}%"></span>
                                         @endif
                                     </div>
 
                                     <div class="inventory-subtext">
-                                        @if (($breakdown['expired'] ?? 0) > 0)
-                                            Hết hạn: {{ number_format($breakdown['expired']) }}
+                                        @if (((int) ($breakdown['expired'] ?? 0)) > 0)
+                                            Hết hạn: {{ number_format((int) ($breakdown['expired'] ?? 0), 0) }}
                                         @endif
-                                        @if (($breakdown['expiring'] ?? 0) > 0)
-                                            @if (($breakdown['expired'] ?? 0) > 0) • @endif
-                                            Sắp hết hạn: {{ number_format($breakdown['expiring']) }}
+                                        @if (((int) ($breakdown['expiring'] ?? 0)) > 0)
+                                            @if (((int) ($breakdown['expired'] ?? 0)) > 0) • @endif
+                                            Sắp hết hạn: {{ number_format((int) ($breakdown['expiring'] ?? 0), 0) }}
                                         @endif
-                                        @if (($breakdown['promotion'] ?? 0) > 0)
-                                            @if ((($breakdown['expired'] ?? 0) > 0) || (($breakdown['expiring'] ?? 0) > 0)) • @endif
-                                            Nên đẩy bán: {{ number_format($breakdown['promotion']) }}
+                                        @if (((int) ($breakdown['promotion'] ?? 0)) > 0)
+                                            @if ((((int) ($breakdown['expired'] ?? 0)) + ((int) ($breakdown['expiring'] ?? 0))) > 0) • @endif
+                                            Nên đẩy bán: {{ number_format((int) ($breakdown['promotion'] ?? 0), 0) }}
                                         @endif
-                                        @if (($breakdown['safe'] ?? 0) > 0 && ($breakdown['expired'] ?? 0) === 0 && ($breakdown['expiring'] ?? 0) === 0 && ($breakdown['promotion'] ?? 0) === 0)
-                                            An toàn: {{ number_format($breakdown['safe']) }}
+                                        @if (((int) ($breakdown['safe'] ?? 0)) > 0 && ((int) ($breakdown['expired'] ?? 0)) === 0 && ((int) ($breakdown['expiring'] ?? 0)) === 0 && ((int) ($breakdown['promotion'] ?? 0)) === 0)
+                                            An toàn: {{ number_format((int) ($breakdown['safe'] ?? 0), 0) }}
                                         @endif
-                                        @if (($breakdown['no_expiry'] ?? 0) > 0)
-                                            @if ((($breakdown['expired'] ?? 0) + ($breakdown['expiring'] ?? 0) + ($breakdown['promotion'] ?? 0) + ($breakdown['safe'] ?? 0)) > 0) • @endif
-                                            Không HSD: {{ number_format($breakdown['no_expiry']) }}
+                                        @if (((int) ($breakdown['no_expiry'] ?? 0)) > 0)
+                                            @if ((((int) ($breakdown['expired'] ?? 0)) + ((int) ($breakdown['expiring'] ?? 0)) + ((int) ($breakdown['promotion'] ?? 0)) + ((int) ($breakdown['safe'] ?? 0))) > 0) • @endif
+                                            Không HSD: {{ number_format((int) ($breakdown['no_expiry'] ?? 0), 0) }}
                                         @endif
                                     </div>
                                 </td>
@@ -454,12 +448,40 @@
                                 </td>
 
                                 <td>
-                                    <div class="inventory-actions">
+                                    <div class="inventory-actions d-flex flex-column gap-1">
                                         <button type="button" class="btn btn-sm btn-outline-primary w-100 btn-show-batch-prices"
                                             data-url="{{ route('admin.inventories.batches', $inv->product_variant_id) }}"
                                             data-bs-toggle="modal" data-bs-target="#inventoryBatchModal">
                                             Xem lô chi tiết
                                         </button>
+
+                                        @if ($inv->is_expired)
+                                            <button type="button"
+                                                class="btn btn-sm btn-danger w-100 btn-writeoff-expired"
+                                                data-variant-id="{{ $inv->product_variant_id }}"
+                                                data-product-name="{{ $inv->variant->product->name ?? 'Sản phẩm' }}"
+                                                data-writeoff-url="{{ route('admin.inventories.writeoff', $inv->product_variant_id) }}"
+                                                data-bs-toggle="modal" data-bs-target="#writeoffConfirmModal">
+                                                Xuất kho hết hạn
+                                            </button>
+                                        @endif
+
+                                        <button type="button"
+                                            class="btn btn-sm btn-warning w-100 btn-writeoff-direct"
+                                            data-variant-id="{{ $inv->product_variant_id }}"
+                                            data-product-name="{{ $inv->variant->product->name ?? 'Sản phẩm' }}"
+                                            data-current-qty="{{ (int) $inv->quantity }}"
+                                            data-writeoff-url="{{ route('admin.inventories.writeoff-direct', $inv->product_variant_id) }}"
+                                            data-bs-toggle="modal" data-bs-target="#writeoffDirectModal">
+                                            Hủy lỗi
+                                        </button>
+
+                                        @if ($inv->is_expiring_soon || $inv->is_promotion_candidate)
+                                            <a href="{{ route('admin.discounts.create', ['product_id' => $inv->variant->product_id ?? '']) }}"
+                                                class="btn btn-sm btn-warning w-100">
+                                                Tạo mã KM
+                                            </a>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -496,6 +518,104 @@
             </div>
         </div>
     </div>
+
+    {{-- Modal xác nhận xuất kho hết hạn --}}
+    <div class="modal fade" id="writeoffConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">Xác nhận xuất kho hàng hết hạn</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Bạn đang chuẩn bị <strong>xuất toàn bộ lô hết hạn</strong> của sản phẩm:</p>
+                    <p class="fw-bold fs-6" id="writeoffProductName"></p>
+                    <div class="alert alert-warning mb-0">
+                        <i class="fa fa-exclamation-triangle me-1"></i>
+                        Hành động này sẽ:
+                        <ul class="mb-0 mt-1">
+                            <li>Đưa số lượng các lô hết hạn về 0</li>
+                            <li>Trừ số lượng tương ứng khỏi tồn kho</li>
+                            <li>Ghi nhận chi phí lỗ vào báo cáo doanh thu</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-danger" id="confirmWriteoffBtn">Xác nhận xuất kho</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal hủy sản phẩm lỗi trực tiếp (ƯU TIÊN 1) --}}
+    <div class="modal fade" id="writeoffDirectModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-warning">Hủy sản phẩm lỗi</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Hủy sản phẩm lỗi:</p>
+                    <p class="fw-bold fs-6" id="writeoffDirectProductName"></p>
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Số lượng hủy</label>
+                            <input type="number" id="writeoffDirectQuantity" class="form-control" 
+                                min="1" placeholder="Nhập số lượng" required>
+                            <small class="text-muted d-block mt-1" id="writeoffDirectQtyHint"></small>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Lý do hủy <span class="text-danger">*</span></label>
+                            <select id="writeoffDirectReason" class="form-select" required>
+                                <option value="">-- Chọn lý do --</option>
+                                <option value="damaged">Hư hỏng / Lỗi chung</option>
+                                <option value="broken_packaging">Bao bì bị phá</option>
+                                <option value="water_damage">Ẩm / Mốc / Nước</option>
+                                <option value="manufacturing_flaw">Lỗi sản xuất</option>
+                                <option value="color_fading">Phai màu</option>
+                                <option value="contaminated">Bị nhiễm bẩn</option>
+                                <option value="stock_adjustment">Điều chỉnh kho</option>
+                                <option value="other">Khác</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Ghi chú (tuỳ chọn)</label>
+                            <textarea id="writeoffDirectNote" class="form-control" rows="2" placeholder="Mô tả chi tiết vấn đề..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-3 mb-0">
+                        <i class="fa fa-info-circle me-1"></i>
+                        Hành động này sẽ:
+                        <ul class="mb-0 mt-2">
+                            <li>Hủy số sản phẩm đã chỉ định khỏi tồn kho</li>
+                            <li>Ghi nhận chi phí lỗ vào báo cáo doanh thu</li>
+                            <li>Cập nhật lịch sử hủy hàng</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-warning" id="confirmWriteoffDirectBtn">Xác nhận hủy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Toast thông báo --}}
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+        <div id="writeoffToast" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="writeoffToastBody"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
@@ -525,6 +645,141 @@
                 .catch((error) => {
                     modalBody.innerHTML = '<div class="alert alert-danger mb-0">' + error.message + '</div>';
                 });
+        });
+
+        // ----- Xuất kho hết hạn -----
+        let pendingWriteoffUrl = null;
+        let pendingWriteoffRow = null;
+
+        document.addEventListener('click', function (event) {
+            const btn = event.target.closest('.btn-writeoff-expired');
+            if (!btn) return;
+
+            pendingWriteoffUrl = btn.dataset.writeoffUrl;
+            pendingWriteoffRow = btn.closest('tr');
+            document.getElementById('writeoffProductName').textContent = btn.dataset.productName;
+        });
+
+        document.getElementById('confirmWriteoffBtn').addEventListener('click', function () {
+            if (!pendingWriteoffUrl) return;
+
+            const confirmBtn = this;
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Đang xử lý...';
+
+            fetch(pendingWriteoffUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({}),
+            })
+            .then(res => res.json())
+            .then(data => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('writeoffConfirmModal'));
+                if (modal) modal.hide();
+
+                showWriteoffToast(data.success, data.message);
+
+                if (data.success && pendingWriteoffRow) {
+                    // Reload trang sau 1.5s để cập nhật số liệu
+                    setTimeout(() => window.location.reload(), 1500);
+                }
+            })
+            .catch(() => {
+                showWriteoffToast(false, 'Đã xảy ra lỗi, vui lòng thử lại.');
+            })
+            .finally(() => {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Xác nhận xuất kho';
+                pendingWriteoffUrl = null;
+                pendingWriteoffRow = null;
+            });
+        });
+
+        function showWriteoffToast(success, message) {
+            const toastEl = document.getElementById('writeoffToast');
+            const toastBody = document.getElementById('writeoffToastBody');
+            toastEl.className = 'toast align-items-center text-white border-0 ' + (success ? 'bg-success' : 'bg-danger');
+            toastBody.textContent = message;
+            const toast = new bootstrap.Toast(toastEl, { delay: 4000 });
+            toast.show();
+        }
+
+        // ===== Hủy sản phẩm lỗi trực tiếp (ƯU TIÊN 1) =====
+        let pendingWriteoffDirectUrl = null;
+
+        document.addEventListener('click', function (event) {
+            const btn = event.target.closest('.btn-writeoff-direct');
+            if (!btn) return;
+
+            pendingWriteoffDirectUrl = btn.dataset.writeoffUrl;
+            const currentQty = parseInt(btn.dataset.currentQty) || 0;
+            
+            document.getElementById('writeoffDirectProductName').textContent = btn.dataset.productName;
+            document.getElementById('writeoffDirectQuantity').value = '';
+            document.getElementById('writeoffDirectQuantity').max = currentQty;
+            document.getElementById('writeoffDirectReason').value = '';
+            document.getElementById('writeoffDirectNote').value = '';
+            document.getElementById('writeoffDirectQtyHint').textContent = `Tồn kho hiện tại: ${currentQty} sản phẩm`;
+        });
+
+        document.getElementById('confirmWriteoffDirectBtn').addEventListener('click', function () {
+            if (!pendingWriteoffDirectUrl) return;
+
+            const quantity = parseInt(document.getElementById('writeoffDirectQuantity').value) || 0;
+            const reason = document.getElementById('writeoffDirectReason').value;
+            const note = document.getElementById('writeoffDirectNote').value;
+
+            if (quantity <= 0) {
+                showWriteoffToast(false, 'Vui lòng nhập số lượng hợp lệ.');
+                return;
+            }
+
+            if (!reason) {
+                showWriteoffToast(false, 'Vui lòng chọn lý do hủy.');
+                return;
+            }
+
+            const confirmBtn = this;
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Đang xử lý...';
+
+            fetch(pendingWriteoffDirectUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    quantity: quantity,
+                    reason: reason,
+                    note: note || null,
+                }),
+            })
+            .then(res => res.json())
+            .then(data => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('writeoffDirectModal'));
+                if (modal) modal.hide();
+
+                showWriteoffToast(data.success, data.message);
+
+                if (data.success) {
+                    // Reload trang sau 1.5s để cập nhật số liệu
+                    setTimeout(() => window.location.reload(), 1500);
+                }
+            })
+            .catch(() => {
+                showWriteoffToast(false, 'Đã xảy ra lỗi, vui lòng thử lại.');
+            })
+            .finally(() => {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Xác nhận hủy';
+                pendingWriteoffDirectUrl = null;
+            });
         });
     </script>
 @endpush

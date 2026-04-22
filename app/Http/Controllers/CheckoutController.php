@@ -13,13 +13,17 @@ use App\Models\ImportItem;
 use App\Models\Discount;
 use App\Models\DiscountUsage;
 use App\Models\ProductVariant;
+use App\Services\OrderEmailService;
 use Illuminate\Support\Collection;
 
 class CheckoutController extends Controller
 {
+    public function __construct(private OrderEmailService $orderEmailService) {}
+
     public function index()
     {
         $cart = session()->get('cart', []);
+        $completedOrdersCount = $this->getCompletedOrdersCount();
 
         if (empty($cart)) {
             return redirect()->route('cart.list')
@@ -34,15 +38,34 @@ class CheckoutController extends Controller
         $shippingFee = $total >= 300000 ? 0 : 20000;
 
         $discountAmount = 0;
+        $discountCode = null;
+        $discountType = 'fixed';
+        $discountValue = 0;
 
         if (!empty(session('cart_discount_code'))) {
             $discount = Discount::with('products:id,name')
                 ->where('code', session('cart_discount_code'))
                 ->first();
 
-            if ($discount && $discount->isActive()) {
+            if (
+                $discount
+                && $discount->isActive()
+                && $discount->isEligibleForCompletedOrdersCount($completedOrdersCount)
+            ) {
                 $cartItems = $this->normalizeCartItems($cart);
                 $discountAmount = $this->calculateDiscountAmount($discount, $cartItems);
+
+                $discountCode = $discount->code;
+                $discountType = $discount->type;
+                $discountValue = (float) $discount->value;
+            } else {
+                session()->forget([
+                    'cart_discount',
+                    'cart_discount_type',
+                    'cart_discount_code',
+                    'cart_discount_id',
+                    'cart_discount_amount'
+                ]);
             }
         }
 
@@ -55,6 +78,9 @@ class CheckoutController extends Controller
             'shippingFee',
             'totalPayment',
             'discountAmount',
+            'discountCode',
+            'discountType',
+            'discountValue',
             'orderPolicyRules'
         ));
     }
@@ -70,20 +96,29 @@ class CheckoutController extends Controller
         }
 
         $request->validate([
-            'receiver_name'    => 'required|string|max:255',
-            'receiver_phone'   => 'required|string|max:20',
-            'shipping_address' => 'required|string',
-            'payment_method'   => 'required|in:COD,VNPAY,MOMO',
-            'order_policy_agree' => 'accepted',
+            'receiver_name'      => 'required|string|max:255',
+            'receiver_phone'     => 'required|string|max:20',
+            'shipping_address'   => 'required|string',
+            'note'               => 'nullable|string|max:500',
+            'payment_method'     => 'required|in:COD,VNPAY,MOMO',
+            'order_policy_agree' => 'in:1',
         ], [
-            'order_policy_agree.accepted' => 'Bạn cần đồng ý chính sách đặt hàng và hoàn tiền để tiếp tục.',
+            'order_policy_agree.in' => 'Bạn cần đồng ý chính sách đặt hàng và hoàn tiền để tiếp tục.',
         ]);
 
         $cart = session()->get('cart', []);
+        $completedOrdersCount = $this->getCompletedOrdersCount();
 
         if (empty($cart)) {
             return redirect()->route('cart.list')
                 ->with('error', 'Giỏ hàng đang trống');
+        }
+
+        foreach ($cart as $item) {
+            if ($item['quantity'] > 10) {
+                return redirect()->route('cart.list')
+                    ->with('error', 'Số lượng đặt hàng tối đa là 10 sản phẩm/loại. Vui lòng liên hệ cửa hàng cho đơn hàng lớn hơn.');
+            }
         }
 
         DB::beginTransaction();
@@ -102,13 +137,36 @@ class CheckoutController extends Controller
                     throw new \Exception('Sản phẩm không đủ số lượng trong kho');
                 }
 
+                $batchStock = ImportItem::where('product_variant_id', $item['variant_id'])
+                    ->where('remaining_quantity', '>', 0)
+                    ->sum('remaining_quantity');
+
+                if ($batchStock < $item['quantity']) {
+                    // Tự khôi phục dữ liệu lô bị lệch (còn quantity nhưng remaining_quantity = 0).
+                    $brokenBatches = ImportItem::where('product_variant_id', $item['variant_id'])
+                        ->where('remaining_quantity', 0)
+                        ->where('quantity', '>', 0)
+                        ->get();
+
+                    $repaired = 0;
+                    foreach ($brokenBatches as $batch) {
+                        /** @var ImportItem $batch */
+                        $batch->update(['remaining_quantity' => $batch->quantity]);
+                        $repaired += $batch->quantity;
+                    }
+
+                    $batchStock += $repaired;
+
+                    if ($batchStock < $item['quantity']) {
+                        throw new \Exception("Sản phẩm không đủ batch để cấp phát. Hệ thống lỗi, vui lòng thử lại hoặc liên hệ hỗ trợ.");
+                    }
+                }
+
                 $totalAmount += $item['price'] * $item['quantity'];
             }
 
-            // ===== SHIPPING =====
             $shippingFee = $totalAmount >= 300000 ? 0 : 20000;
 
-            // ===== DISCOUNT =====
             $discountAmount = 0;
             $discountCode   = null;
             $discountId     = null;
@@ -119,6 +177,10 @@ class CheckoutController extends Controller
 
                 if (!$discount || !$discount->isActive()) {
                     throw new \Exception('Mã giảm giá không hợp lệ hoặc đã hết hạn');
+                }
+
+                if (!$discount->isEligibleForCompletedOrdersCount($completedOrdersCount)) {
+                    throw new \Exception($discount->audience_restriction_message ?? 'Mã giảm giá này không áp dụng cho tài khoản của bạn.');
                 }
 
                 $used = DiscountUsage::where('discount_id', $discount->id)
@@ -143,7 +205,7 @@ class CheckoutController extends Controller
             $totalPayment = $totalAmount + $shippingFee - $discountAmount;
 
             $order = Order::create([
-                'customer_id'      => $customer->id,
+                'customer_id'      => $customer->user_id,
                 'receiver_name'    => $request->receiver_name,
                 'receiver_phone'   => $request->receiver_phone,
                 'shipping_address' => $request->shipping_address,
@@ -196,6 +258,12 @@ class CheckoutController extends Controller
 
             DB::commit();
 
+            try {
+                $this->orderEmailService->sendOrderCreatedEmail((int) $order->id);
+            } catch (\Exception $emailError) {
+                //
+            }
+
             session()->forget([
                 'cart',
                 'cart_discount',
@@ -205,6 +273,11 @@ class CheckoutController extends Controller
             ]);
 
             if ($request->payment_method === 'VNPAY') {
+                if (!env('VNP_TMN_CODE') || !env('VNP_HASH_SECRET')) {
+                    return redirect()->route('orders.detail', $order->id)
+                        ->with('order_success', $order->id)
+                        ->with('warning', 'Cấu hình VNPAY không khả dụng, đơn hàng đã được tạo. Vui lòng thanh toán sau hoặc liên hệ hỗ trợ.');
+                }
                 return redirect()->route('vnpay.payment', $order->id);
             }
 
@@ -212,7 +285,8 @@ class CheckoutController extends Controller
                 return redirect()->route('momo.payment', $order->id);
             }
 
-            return redirect()->route('orders.success', $order->id)
+            return redirect()->route('orders.detail', $order->id)
+                ->with('order_success', $order->id)
                 ->with('success', 'Đặt hàng thành công');
         } catch (\Exception $e) {
 
@@ -224,11 +298,28 @@ class CheckoutController extends Controller
 
     private function deductStockFIFO($variantId, $quantity)
     {
-        $batches = ImportItem::where('product_variant_id', $variantId)
-            ->where('remaining_quantity', '>', 0)
-            ->orderBy('created_at', 'asc')
+        $brokenBatches = ImportItem::where('product_variant_id', $variantId)
+            ->where('remaining_quantity', 0)
+            ->where('quantity', '>', 0)
             ->lockForUpdate()
             ->get();
+
+        foreach ($brokenBatches as $batch) {
+            /** @var ImportItem $batch */
+            $batch->remaining_quantity = $batch->quantity;
+            $batch->save();
+        }
+
+        $batches = ImportItem::where('product_variant_id', $variantId)
+            ->where('remaining_quantity', '>', 0)
+            ->orderBy('id', 'asc')
+            ->lockForUpdate()
+            ->get();
+
+        $totalAvailable = $batches->sum('remaining_quantity');
+        if ($totalAvailable < $quantity) {
+            throw new \Exception("Sản phẩm không đủ số lượng. Còn lại: {$totalAvailable}, yêu cầu: {$quantity}");
+        }
 
         $remaining = $quantity;
         $totalCost = 0;
@@ -256,7 +347,7 @@ class CheckoutController extends Controller
         }
 
         if ($remaining > 0) {
-            throw new \Exception('Không đủ hàng theo batch');
+            throw new \Exception('Lỗi: Không thể trừ đủ hàng từ batch (hệ thống lỗi, vui lòng thử lại)');
         }
 
         return [
@@ -267,9 +358,10 @@ class CheckoutController extends Controller
 
     public function success($id)
     {
-        $customer = Auth::user()->customer;
+        $user = Auth::user();
+        $customer = $user->customer;
 
-        $order = Order::where('customer_id', $customer->id)
+        $order = Order::where('customer_id', $customer->user_id)
             ->findOrFail($id);
 
         return redirect()->route('pages.home')
@@ -325,10 +417,20 @@ class CheckoutController extends Controller
         return [
             'Đơn hàng sau khi đặt sẽ ở trạng thái chờ xử lý.',
             'Khách chỉ có thể tự hủy đơn khi đơn đang ở trạng thái chờ xử lý.',
-            'Với đơn đã thanh toán online (MoMo/VNPAY), khi hủy sẽ chuyển sang chờ xử lý hoàn tiền.',
-            'Yêu cầu hoàn tiền chỉ áp dụng cho đơn đã hoàn thành.',
-            'Yêu cầu hoàn tiền sẽ được admin duyệt; nếu được duyệt, đơn chuyển sang đã hoàn tiền.',
-            'Nếu yêu cầu hoàn tiền bị từ chối, đơn sẽ quay lại trạng thái trước đó.',
+            'Với đơn đã thanh toán online (MoMo/VNPAY), khi hủy sẽ chuyển sang chờ xử lý hoàn hàng.',
+            'Yêu cầu hoàn hàng chỉ áp dụng cho đơn đã hoàn thành.',
+            'Yêu cầu hoàn hàng sẽ được admin duyệt và kiểm tra hàng; khi hoàn tất hoàn tiền, đơn chuyển sang đã hoàn tiền.',
+            'Nếu yêu cầu hoàn hàng bị từ chối, đơn sẽ quay lại trạng thái trước đó.',
         ];
+    }
+
+    private function getCompletedOrdersCount(): int
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        return $user->orders()
+            ->where('status', 'completed')
+            ->count();
     }
 }
